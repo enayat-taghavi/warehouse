@@ -114,12 +114,12 @@
               <p class="text-sm font-black text-fg truncate">{{ inv.counterparty_name || 'طرف‌حساب نامشخص' }}</p>
               <p class="mt-0.5 text-[11px] text-fg-muted">
                 <span class="tabular-nums">{{ inv.invoice_date_shamsi }}</span>
-                @if (inv.invoice_number) { · شماره <bdi dir="ltr">{{ inv.invoice_number }}</bdi> }
-                @if (inv.number) { · داخلی <bdi dir="ltr">{{ inv.number }}</bdi> }
+                @if (inv.invoice_number) { · <bdi dir="ltr">{{ inv.invoice_number }}</bdi> }
+                @if (inv.number) { · <bdi dir="ltr" title="شمارهٔ داخلی">{{ inv.number }}</bdi> }
               </p>
             </div>
-            <span [ngClass]="getStatusBadgeClass(inv.status)"
-                  class="shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold border">{{ getStatusLabel(inv.status) }}</span>
+            <span [ngClass]="getStatusBadgeClass(inv.status)" [title]="getStatusLabel(inv.status)"
+                  class="shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold border">{{ statusShort(inv.status, inv.status_display) }}</span>
           </div>
           <p class="text-xs text-fg line-clamp-2">{{ inv.description || '-' }}</p>
           @if (inv.section_name) {
@@ -140,13 +140,11 @@
               @if (inv.vat_manual) { <span class="px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-800 border border-sky-200 text-[10px] font-bold">مالیات دستی</span> }
             </div>
           }
-          <div class="text-[10px] text-fg-muted flex flex-wrap gap-x-2 gap-y-0.5 pt-0.5 border-t border-line">
-            <span>ثبت‌کننده: <b class="text-fg">{{ inv.created_by_name || '—' }}</b></span>
-            <span>تاریخ ثبت: <b class="font-mono text-fg">{{ inv.created_at ? (inv.created_at | persianDate:'short-time') : '—' }}</b></span>
-            <span>آخرین تغییردهنده: <b class="text-fg">{{ inv.updated_by_name || '—' }}</b></span>
-            <span>تاریخ آخرین تغییر: <b class="font-mono text-fg">{{ inv.updated_at ? (inv.updated_at | persianDate:'short-time') : '—' }}</b></span>
-          </div>
-          <div class="flex flex-wrap items-center gap-1.5 pt-1">
+          <div class="flex flex-wrap items-center justify-end gap-1.5 pt-1 border-t border-line">
+            <span class="me-auto text-[11px] text-fg-muted inline-flex items-center gap-1 min-w-0" [title]="creatorHint(inv)" [attr.aria-label]="'ایجادکننده: ' + (inv.created_by_name || '—') + ' — ' + creatorHint(inv)">
+              <svg appIcon="user" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+              <b class="text-fg truncate">{{ inv.created_by_name || '—' }}</b>
+            </span>
             @if (roleActionsFor(inv); as ra) {
               @if (ra.approve && perm.canWriteDocuments()) {
                 <button type="button" appAction="approve" size="sm" data-role-action="approve" [label]="ra.approve.label" [hint]="ra.approve.hint" (click)="emitRoleAction('approve', inv)"></button>
@@ -197,12 +195,12 @@
             <th class="py-3 px-3 text-end">مبلغ (ریال)</th>
             <th class="py-3 px-3 text-center">پیوست</th>
             <th class="py-3 px-3 text-center">وضعیت</th>
-            <th class="py-3 px-3">ثبت و آخرین تغییر</th>
+            <th class="py-3 px-3">ایجادکننده</th>
             <th class="py-3 px-3 text-center">عملیات</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
-          <tr *ngFor="let inv of invoices; let idx = index" class="hidden md:table-row hover:bg-slate-50/80 transition-colors">
+          <tr *ngFor="let inv of invoices; let idx = index" class="hidden md:table-row hover:bg-slate-50/80 transition-colors whitespace-nowrap">
             
             <!-- ردیف -->
             <td class="py-2.5 px-3 text-center font-mono text-slate-400 text-[11px]">
@@ -211,14 +209,12 @@
 
             <!-- شماره فاکتور -->
             <td class="py-2.5 px-3 font-mono font-bold text-slate-900 whitespace-nowrap">
-              <span class="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[11px]">
-                {{ inv.invoice_number || '—' }}
+              <span class="inline-flex items-center gap-1.5">
+                <span class="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[11px]">{{ inv.invoice_number || '—' }}</span>
+                <span *ngIf="inv.number" class="text-[10px] text-fg-muted" title="شمارهٔ داخلی رسید پرداخت">{{ inv.number }}</span>
+                <span *ngIf="inv.possible_duplicate" class="font-sans px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">تکراری</span>
+                <span *ngIf="inv.vat_manual" class="font-sans px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-800 border border-sky-200 text-[10px] font-bold">مالیات دستی</span>
               </span>
-              <div *ngIf="inv.number" class="mt-1 text-[10px] text-fg-muted" title="شمارهٔ داخلی رسید پرداخت">شمارهٔ داخلی: {{ inv.number }}</div>
-              <div class="mt-1 flex flex-wrap gap-1 font-sans">
-                <span *ngIf="inv.possible_duplicate" class="px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">تکراری</span>
-                <span *ngIf="inv.vat_manual" class="px-1.5 py-0.5 rounded-md bg-sky-50 text-sky-800 border border-sky-200 text-[10px] font-bold">مالیات دستی</span>
-              </div>
             </td>
 
             <!-- تاریخ شمسی -->
@@ -235,9 +231,9 @@
             </td>
 
             <!-- پروژه / بخش -->
-            <td class="py-2.5 px-3 whitespace-nowrap" data-col="section">
-              <div class="text-[10px] text-slate-500">{{ inv.project_name || '—' }}</div>
-              <div class="font-bold text-slate-700">{{ inv.section_name || '—' }}</div>
+            <td class="py-2.5 px-3 whitespace-nowrap max-w-[12rem] truncate" data-col="section" [title]="(inv.project_name ? inv.project_name + ' ◀ ' : '') + (inv.section_name || '')">
+              <span *ngIf="inv.project_name" class="text-[10px] text-slate-500">{{ inv.project_name }} ◀ </span>
+              <span class="font-bold text-slate-700">{{ inv.section_name || '—' }}</span>
             </td>
 
             <!-- سرفصل هزینه -->
@@ -253,17 +249,9 @@
             </td>
 
             <!-- مبلغ (ریال و تومان) -->
-            <td class="py-2.5 px-3 text-end whitespace-nowrap font-mono">
-              <div class="font-black text-slate-900 text-xs" title="مبلغ قابل پرداخت">
-                {{ formatNumber(inv.amount) }}
-              </div>
-              <div class="text-[10px] text-fg-muted">
-                <bdi>{{ formatNumber(Math.floor((inv.amount || 0) / 10)) }}</bdi> تومان
-              </div>
-              <div *ngIf="inv.paid_amount && +inv.paid_amount > 0" class="text-[10px] text-emerald-700 mt-0.5">
-                پرداخت‌شده: {{ formatNumber(inv.paid_amount) }}
-                <span *ngIf="inv.remaining && +inv.remaining > 0" class="text-amber-700"> | مانده: {{ formatNumber(inv.remaining) }}</span>
-              </div>
+            <td class="py-2.5 px-3 text-end whitespace-nowrap font-mono" [title]="formatNumber(Math.floor((inv.amount || 0) / 10)) + ' تومان' + (inv.paid_amount && +inv.paid_amount > 0 ? ' — پرداخت‌شده ' + formatNumber(inv.paid_amount) : '')">
+              <span class="font-black text-slate-900 text-xs">{{ formatNumber(inv.amount) }}</span>
+              <span *ngIf="inv.remaining && +inv.remaining > 0 && inv.paid_amount && +inv.paid_amount > 0" class="font-sans text-[10px] text-amber-700 ms-1">مانده {{ formatNumber(inv.remaining) }}</span>
             </td>
 
             <!-- پیوست -->
@@ -283,17 +271,14 @@
 
             <!-- وضعیت -->
             <td class="py-2.5 px-3 text-center whitespace-nowrap">
-              <span [ngClass]="getStatusBadgeClass(inv.status)"
+              <span [ngClass]="getStatusBadgeClass(inv.status)" [title]="getStatusLabel(inv.status)"
                     class="px-2.5 py-1 rounded-full text-[10px] font-bold border inline-block shadow-sm">
-                {{ getStatusLabel(inv.status) }}
+                {{ statusShort(inv.status, inv.status_display) }}
               </span>
             </td>
 
-            <!-- ثبت و آخرین تغییر -->
-            <td class="py-2.5 px-3 text-slate-500 text-[11px] whitespace-nowrap">
-              <div><span class="text-fg-muted">ثبت‌کننده: </span>{{ inv.created_by_name || '—' }} <span *ngIf="inv.created_at" class="font-mono text-[10px] text-fg-muted">({{ inv.created_at | persianDate:'short-time' }})</span></div>
-              <div class="mt-0.5 text-fg-muted text-[10px]"><span class="text-fg-muted">آخرین تغییردهنده: </span>{{ inv.updated_by_name || '—' }} <span *ngIf="inv.updated_at" class="font-mono">({{ inv.updated_at | persianDate:'short-time' }})</span></div>
-            </td>
+            <!-- ایجادکننده؛ تاریخ دقیق و آخرین تغییر در راهنمای نشانگر -->
+            <td class="py-2.5 px-3 text-slate-600 text-[11px] whitespace-nowrap max-w-[10rem] truncate" [title]="creatorHint(inv)">{{ inv.created_by_name || '—' }}</td>
 
             <!-- عملیات -->
             <td class="py-2.5 px-3 text-center whitespace-nowrap">
@@ -353,6 +338,7 @@
                 <button
                   type="button"
                   appAction="print"
+                  display="icon"
                   label="چاپ / PDF"
                   size="sm"
                   (click)="printInvoice(inv)"
@@ -361,7 +347,7 @@
                 </button>
 
                 <!-- دانلود رسید پرداخت -->
-                <app-invoice-receipt-button *ngIf="inv.paid_amount && +inv.paid_amount > 0" [invoiceId]="inv.id"></app-invoice-receipt-button>
+                <app-invoice-receipt-button *ngIf="inv.paid_amount && +inv.paid_amount > 0" [invoiceId]="inv.id" display="icon"></app-invoice-receipt-button>
 
                 <!-- حذف فاکتور (فقط برای پیش‌نویس) -->
                 <button
@@ -379,6 +365,7 @@
                 <button
                   type="button"
                   appAction="view"
+                  display="icon"
                   label="پیش‌نمایش"
                   size="sm"
                   (click)="openInvoiceHistory(inv.id)"
@@ -389,7 +376,7 @@
                 <button
                   type="button"
                   appAction="share"
-                  display="label"
+                  display="icon"
                   label="همرسانی"
                   size="sm"
                   [busy]="sharingId === inv.id"

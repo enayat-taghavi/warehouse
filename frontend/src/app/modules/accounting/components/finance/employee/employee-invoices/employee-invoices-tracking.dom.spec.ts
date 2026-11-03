@@ -119,7 +119,7 @@ describe('EmployeeInvoicesHubComponent tracking values DOM spec', () => {
     await fixture.whenStable();
   });
 
-  it('row shows last modifier name', () => {
+  it('row shows the creator; last modifier and exact dates sit in the hover hint', () => {
     component.invoices = [
       {
         id: 101,
@@ -136,7 +136,11 @@ describe('EmployeeInvoicesHubComponent tracking values DOM spec', () => {
 
     const row = fixture.nativeElement.querySelector('table tbody tr');
     expect(row).toBeTruthy();
-    expect(row.textContent).toContain('علی کارشناس');
-    expect(row.textContent).toContain('آخرین تغییردهنده:');
+    expect(row.textContent).toContain('کارمند نمونه');
+    expect(row.textContent).not.toContain('آخرین تغییردهنده:');
+    const creatorCell = Array.from(row.querySelectorAll('td') as NodeListOf<HTMLElement>)
+      .find(td => td.textContent?.includes('کارمند نمونه'));
+    expect(creatorCell?.getAttribute('title')).toContain('علی کارشناس');
+    expect(creatorCell?.getAttribute('title')).toContain('تاریخ ثبت:');
   });
 });

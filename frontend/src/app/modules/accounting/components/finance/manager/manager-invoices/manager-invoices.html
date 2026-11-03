@@ -20,12 +20,12 @@
               (click)="openPreview(inv, 'preview')"
               class="text-start font-mono text-[11px] text-fg-muted hover:text-indigo-600 transition-colors cursor-pointer mt-0.5 block"
               title="مشاهده پیش‌نمایش و سابقه رسید پرداخت">
-              <span *ngIf="inv.number">داخلی: <bdi dir="ltr">{{ inv.number }}</bdi> · </span>
-              <span>شماره: <bdi dir="ltr">{{ inv.invoice_number || inv.id }}</bdi></span>
+              <bdi dir="ltr">{{ inv.invoice_number || inv.id }}</bdi>
+              <span *ngIf="inv.number" title="شمارهٔ داخلی"> · <bdi dir="ltr">{{ inv.number }}</bdi></span>
             </button>
           </div>
-          <span class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-indigo-50 text-indigo-700 border-indigo-200">
-            {{ inv.status === 'pending_manager' ? 'در انتظار تایید مدیر' : (inv.status === 'partially_paid' ? 'پرداخت ناقص' : (inv.status_display || inv.status)) }}
+          <span class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-indigo-50 text-indigo-700 border-indigo-200" [title]="inv.status_display || ''">
+            {{ statusShort(inv.status, inv.status_display) }}
           </span>
         </div>
 
@@ -49,20 +49,17 @@
             <span class="text-[10px] text-fg-subtle font-sans ms-1">ریال</span>
           </div>
         </div>
-        <div class="text-[10px] text-fg-muted flex flex-wrap gap-x-2 gap-y-0.5 pt-1 border-t border-line">
-          <span>ثبت‌کننده: <b class="text-fg">{{ inv.created_by_name || '—' }}</b></span>
-          <span>تاریخ ثبت: <b class="font-mono text-fg">{{ inv.created_at ? (inv.created_at | persianDate:'short-time') : '—' }}</b></span>
-          <span>آخرین تغییردهنده: <b class="text-fg">{{ inv.updated_by_name || '—' }}</b></span>
-          <span>تاریخ آخرین تغییر: <b class="font-mono text-fg">{{ inv.updated_at ? (inv.updated_at | persianDate:'short-time') : '—' }}</b></span>
-        </div>
-
         <div class="flex flex-wrap items-center justify-end gap-1.5 pt-2 border-t border-line">
+          <span class="me-auto text-[11px] text-fg-muted inline-flex items-center gap-1 min-w-0" [title]="creatorHint(inv)" [attr.aria-label]="'ایجادکننده: ' + (inv.created_by_name || '—') + ' — ' + creatorHint(inv)">
+            <svg appIcon="user" class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            <b class="text-fg truncate">{{ inv.created_by_name || '—' }}</b>
+          </span>
           <button type="button" appAction="approve" display="label" label="مجوز پرداخت" size="sm" (click)="approveInvoiceManager(inv)"></button>
           <button type="button" appAction="return" display="label" label="بازنگری" size="sm" (click)="rejectInvoiceManager(inv)"></button>
-          <button type="button" appAction="view" label="پیش‌نمایش" size="sm" (click)="openPreview(inv, 'preview')"></button>
-          <button type="button" appAction="share" label="همرسانی" size="sm" [busy]="sharingId === inv.id" (click)="shareInvoice(inv)" hint="همرسانی PDF رسید پرداخت"></button>
-          <button type="button" appAction="print" label="چاپ / PDF" size="sm" (click)="printInvoice(inv)"></button>
-          <app-invoice-receipt-button *ngIf="inv.paid_amount && +inv.paid_amount > 0" [invoiceId]="inv.id"></app-invoice-receipt-button>
+          <button type="button" appAction="view" display="icon" label="پیش‌نمایش" size="sm" (click)="openPreview(inv, 'preview')"></button>
+          <button type="button" appAction="share" display="icon" label="همرسانی" size="sm" [busy]="sharingId === inv.id" (click)="shareInvoice(inv)" hint="همرسانی PDF رسید پرداخت"></button>
+          <button type="button" appAction="print" display="icon" label="چاپ / PDF" size="sm" (click)="printInvoice(inv)"></button>
+          <app-invoice-receipt-button *ngIf="inv.paid_amount && +inv.paid_amount > 0" [invoiceId]="inv.id" display="icon"></app-invoice-receipt-button>
         </div>
       </div>
     </div>
@@ -78,49 +75,41 @@
             <th class="p-3">مبلغ کل (ریال)</th>
             <th class="p-3">تاریخ رسید پرداخت</th>
             <th class="p-3">وضعیت</th>
-            <th class="p-3">ثبت و آخرین تغییر</th>
+            <th class="p-3">ایجادکننده</th>
             <th class="p-3 text-center">عملیات مدیر</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 text-slate-700">
-          <tr *ngFor="let inv of invoicesList" class="hover:bg-slate-50 transition-colors">
+          <tr *ngFor="let inv of invoicesList" class="hover:bg-slate-50 transition-colors whitespace-nowrap">
             <td class="p-3 font-mono font-bold text-fg hover:text-indigo-600 transition-colors cursor-pointer" (click)="openPreview(inv, 'preview')" (keydown.enter)="openPreview(inv, 'preview')" (keydown.space)="$event.preventDefault(); openPreview(inv, 'preview')" tabindex="0" role="button" title="مشاهده پیش‌نمایش و سابقه رسید پرداخت">
-              <div *ngIf="inv.number"><bdi dir="ltr">{{ inv.number }}</bdi></div>
-              <div [class.text-[10px]]="inv.number" [class.text-slate-500]="inv.number"><bdi dir="ltr">{{ inv.invoice_number || inv.id }}</bdi></div>
-              <div class="flex flex-wrap gap-1 mt-1 font-sans">
-                <span *ngIf="inv.possible_duplicate" class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200" [attr.title]="inv.duplicate_reason || 'شمارهٔ تکراری'">تکراری</span>
-                <span *ngIf="inv.vat_manual" class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200" title="مالیات به‌صورت دستی تغییر کرده است">مالیات دستی</span>
-              </div>
+              <span class="inline-flex items-center gap-1.5">
+                <bdi dir="ltr">{{ inv.invoice_number || inv.id }}</bdi>
+                <span *ngIf="inv.number" class="text-[10px] text-slate-500" title="شمارهٔ داخلی"><bdi dir="ltr">{{ inv.number }}</bdi></span>
+                <span *ngIf="inv.possible_duplicate" class="font-sans px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200" [attr.title]="inv.duplicate_reason || 'شمارهٔ تکراری'">تکراری</span>
+                <span *ngIf="inv.vat_manual" class="font-sans px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200" title="مالیات به‌صورت دستی تغییر کرده است">مالیات دستی</span>
+              </span>
             </td>
-            <td class="p-3 font-bold">{{ inv.counterparty_name || '—' }}</td>
-            <td class="p-3">{{ inv.section_name || '—' }}</td>
-            <td class="p-3 font-mono font-black text-indigo-700">
-              <div>{{ (inv.amount ?? inv.total_amount ?? 0) | number }}</div>
-              <div class="font-sans font-normal text-[10px] text-slate-500 space-y-0.5">
-                <div *ngIf="inv.lines?.length">{{ faAmount(inv.lines.length) }} ردیف · جمع ردیف‌ها {{ faAmount(inv.subtotal) }}</div>
-                <div *ngIf="inv.discount_amount && +inv.discount_amount > 0">تخفیف {{ faAmount(inv.discount_amount) }}</div>
-                <div *ngIf="inv.vat_amount && +inv.vat_amount > 0">مالیات {{ faAmount(inv.vat_amount) }}</div>
-                <div *ngIf="inv.paid_amount && +inv.paid_amount > 0">پرداخت‌شده {{ faAmount(inv.paid_amount) }} · مانده {{ faAmount(inv.remaining) }}</div>
-              </div>
+            <td class="p-3 font-bold max-w-[12rem] truncate" [title]="inv.counterparty_name || ''">{{ inv.counterparty_name || '—' }}</td>
+            <td class="p-3 max-w-[10rem] truncate" [title]="inv.section_name || ''">{{ inv.section_name || '—' }}</td>
+            <td class="p-3 font-mono font-black text-indigo-700" [title]="amountHint(inv)">
+              {{ (inv.amount ?? inv.total_amount ?? 0) | number }}
+              <span *ngIf="inv.paid_amount && +inv.paid_amount > 0" class="font-sans font-normal text-[10px] text-amber-700 ms-1">مانده {{ faAmount(inv.remaining) }}</span>
             </td>
             <td class="p-3 font-mono">{{ inv.issue_date_shamsi || inv.date || '—' }}</td>
             <td class="p-3">
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-indigo-50 text-indigo-700 border-indigo-200">
-                {{ inv.status === 'pending_manager' ? 'در انتظار تایید مدیر' : (inv.status === 'partially_paid' ? 'پرداخت ناقص' : (inv.status_display || inv.status)) }}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-indigo-50 text-indigo-700 border-indigo-200" [title]="inv.status_display || ''">
+                {{ statusShort(inv.status, inv.status_display) }}
               </span>
             </td>
-            <td class="p-3 text-[11px] text-slate-500 whitespace-nowrap">
-              <div><span class="text-fg-muted">ثبت‌کننده: </span>{{ inv.created_by_name || '—' }} <span *ngIf="inv.created_at" class="font-mono text-[10px] text-fg-muted">({{ inv.created_at | persianDate:'short-time' }})</span></div>
-              <div class="text-[10px] text-fg-muted mt-0.5"><span class="text-fg-muted">آخرین تغییردهنده: </span>{{ inv.updated_by_name || '—' }} <span *ngIf="inv.updated_at" class="font-mono">({{ inv.updated_at | persianDate:'short-time' }})</span></div>
-            </td>
+            <td class="p-3 text-[11px] text-slate-600 max-w-[10rem] truncate" [title]="creatorHint(inv)">{{ inv.created_by_name || '—' }}</td>
             <td class="p-3 text-center">
               <div class="flex items-center justify-center gap-1.5">
                 <button type="button" appAction="approve" display="label" label="مجوز پرداخت" size="sm" (click)="approveInvoiceManager(inv)"></button>
                 <button type="button" appAction="return" display="label" label="بازنگری" size="sm" (click)="rejectInvoiceManager(inv)"></button>
-                <button type="button" appAction="view" label="پیش‌نمایش" size="sm" (click)="openPreview(inv, 'preview')"></button>
-                <button type="button" appAction="share" label="همرسانی" size="sm" [busy]="sharingId === inv.id" (click)="shareInvoice(inv)" hint="همرسانی PDF رسید پرداخت"></button>
-                <button type="button" appAction="print" label="چاپ / PDF" size="sm" (click)="printInvoice(inv)"></button>
-                <app-invoice-receipt-button *ngIf="inv.paid_amount && +inv.paid_amount > 0" [invoiceId]="inv.id"></app-invoice-receipt-button>
+                <button type="button" appAction="view" display="icon" label="پیش‌نمایش" size="sm" (click)="openPreview(inv, 'preview')"></button>
+                <button type="button" appAction="share" display="icon" label="همرسانی" size="sm" [busy]="sharingId === inv.id" (click)="shareInvoice(inv)" hint="همرسانی PDF رسید پرداخت"></button>
+                <button type="button" appAction="print" display="icon" label="چاپ / PDF" size="sm" (click)="printInvoice(inv)"></button>
+                <app-invoice-receipt-button *ngIf="inv.paid_amount && +inv.paid_amount > 0" [invoiceId]="inv.id" display="icon"></app-invoice-receipt-button>
               </div>
             </td>
           </tr>

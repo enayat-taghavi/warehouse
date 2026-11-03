@@ -13,12 +13,13 @@ import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab
 import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
 import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
 import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
+import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { PrintService } from '../../../../../../core/services/print.service';
 import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
 import { InvoicePreviewModalComponent } from '../../invoice-preview-modal/invoice-preview-modal.component';
-import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pipe';
+import { invoiceStatusShort, invoiceCreatorHint, invoiceAmountHint } from '../../../../payment-receipt';
 import { attendanceActionErrorMessage } from '../../../../attendance-period-error';
 
 @Component({
@@ -26,6 +27,7 @@ import { attendanceActionErrorMessage } from '../../../../attendance-period-erro
   standalone: true,
   imports: [
     CommonModule,
+    SvgIconDirective,
     FormsModule,
     ReactiveFormsModule,
     CommandCenterComponent,
@@ -34,12 +36,14 @@ import { attendanceActionErrorMessage } from '../../../../attendance-period-erro
     WorkflowReasonDialogComponent,
     InvoiceReceiptButtonComponent,
     InvoicePreviewModalComponent,
-    PersianDatePipe,
   ],
   templateUrl: './supervisor-invoices.html',
   styleUrl: './supervisor-invoices.css'
 })
 export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
+  readonly statusShort = invoiceStatusShort;
+  readonly creatorHint = invoiceCreatorHint;
+  readonly amountHint = invoiceAmountHint;
   /** درون فهرست یکپارچهٔ فاکتورها: فقط کارها و پنجره‌ها؛ بارگذاری و فهرست با میزبان است */
   @Input() embedded = false;
   /** پس از هر کار موفق در حالت embedded (میزبان فهرست را دوباره می‌خواند) */

@@ -28,10 +28,9 @@ import { ActionButtonComponent } from '../../../../../../shared/components/actio
 import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { AttachmentsComponent } from '../../../../../../shared/components/attachments/attachments.component';
-import { PAYMENT_RECEIPT_ACCEPT, PAYMENT_RECEIPT_LABEL, receiptFileError } from '../../../../payment-receipt';
+import { PAYMENT_RECEIPT_ACCEPT, PAYMENT_RECEIPT_LABEL, receiptFileError, invoiceStatusShort, invoiceCreatorHint, invoiceAmountHint } from '../../../../payment-receipt';
 import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
 import { InvoicePreviewModalComponent } from '../../invoice-preview-modal/invoice-preview-modal.component';
-import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pipe';
 
 export interface PayableInvoiceItem {
   id: number;
@@ -71,13 +70,15 @@ export interface PayableInvoiceItem {
     NgPersianDatepickerModule,
     SvgIconDirective,
     InvoiceReceiptButtonComponent,
-    InvoicePreviewModalComponent,
-    PersianDatePipe
+    InvoicePreviewModalComponent
   ],
   templateUrl: './treasurer-invoices.html',
   styleUrl: './treasurer-invoices.css'
 })
 export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
+  readonly statusShort = invoiceStatusShort;
+  readonly creatorHint = invoiceCreatorHint;
+  readonly amountHint = invoiceAmountHint;
   protected perm = inject(PermissionService);
   /** درون فهرست یکپارچهٔ فاکتورها: فقط کارها و پنجره‌ها؛ بارگذاری و فهرست با میزبان است */
   @Input() embedded = false;

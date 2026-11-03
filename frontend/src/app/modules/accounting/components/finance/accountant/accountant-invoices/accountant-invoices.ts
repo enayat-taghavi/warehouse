@@ -20,7 +20,7 @@ import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/
 import { PrintService } from '../../../../../../core/services/print.service';
 import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
 import { InvoicePreviewModalComponent } from '../../invoice-preview-modal/invoice-preview-modal.component';
-import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pipe';
+import { invoiceStatusShort, invoiceCreatorHint, invoiceAmountHint } from '../../../../payment-receipt';
 
 @Component({
   selector: 'app-accountant-invoices-hub',
@@ -35,13 +35,15 @@ import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pip
     WorkflowReasonDialogComponent,
     InvoiceReceiptButtonComponent,
     InvoicePreviewModalComponent,
-    SvgIconDirective,
-    PersianDatePipe
+    SvgIconDirective
   ],
   templateUrl: './accountant-invoices.html',
   styleUrl: './accountant-invoices.css'
 })
 export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
+  readonly statusShort = invoiceStatusShort;
+  readonly creatorHint = invoiceCreatorHint;
+  readonly amountHint = invoiceAmountHint;
   protected perm = inject(PermissionService);
   /** درون فهرست یکپارچهٔ فاکتورها: فقط کارها و پنجره‌ها؛ بارگذاری و فهرست با میزبان است */
   @Input() embedded = false;

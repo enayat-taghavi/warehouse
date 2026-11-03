@@ -11,7 +11,7 @@ import { PrintService } from '../../../../../../core/services/print.service';
 import { WebSocketService } from '../../../../../../core/http/websocket.service';
 import { InvoiceReceiptButtonComponent } from '../../invoice-receipt-button/invoice-receipt-button';
 import { InvoicePreviewModalComponent } from '../../invoice-preview-modal/invoice-preview-modal.component';
-import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pipe';
+import { invoiceStatusShort, invoiceCreatorHint, invoiceAmountHint } from '../../../../payment-receipt';
 
 /**
  * کارتابل فاکتور مدیر (صدور مجوز پرداخت)؛ از زیرتب «فاکتورهای هزینه» کارتابل تاییدات جدا شد
@@ -20,10 +20,13 @@ import { PersianDatePipe } from '../../../../../../shared/pipes/persian-date.pip
 @Component({
   selector: 'app-manager-invoices',
   standalone: true,
-  imports: [CommonModule, SvgIconDirective, ActionButtonComponent, WorkflowReasonDialogComponent, InvoiceReceiptButtonComponent, InvoicePreviewModalComponent, PersianDatePipe],
+  imports: [CommonModule, SvgIconDirective, ActionButtonComponent, WorkflowReasonDialogComponent, InvoiceReceiptButtonComponent, InvoicePreviewModalComponent],
   templateUrl: './manager-invoices.html',
 })
 export class ManagerInvoicesComponent implements OnInit, OnDestroy {
+  readonly statusShort = invoiceStatusShort;
+  readonly creatorHint = invoiceCreatorHint;
+  readonly amountHint = invoiceAmountHint;
   /** درون فهرست یکپارچهٔ فاکتورها: فقط کارها و پنجره‌ها؛ بارگذاری و فهرست با میزبان است */
   @Input() embedded = false;
   /** پس از هر کار موفق در حالت embedded (میزبان فهرست را دوباره می‌خواند) */
