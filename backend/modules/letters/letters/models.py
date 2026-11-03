@@ -9,8 +9,9 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
-LETTER_ENTITY = 'letters.letter'
-SECRETARIAT_ENTITY = 'letters.secretariat'
+# بی‌نقطه: API پیوست هسته نوع را با ^[a-z][a-z0-9_]{0,49}$ می‌پذیرد (یافتهٔ ل-ج)
+LETTER_ENTITY = 'letters_letter'
+SECRETARIAT_ENTITY = 'letters_secretariat'
 
 
 class Secretariat(models.Model):

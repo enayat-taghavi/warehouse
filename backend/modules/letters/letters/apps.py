@@ -19,8 +19,13 @@ class LettersConfig(AppConfig):
         from .numbering import LETTER_NUMBER_SERIES
         from .settings_spec import LETTER_COMPANY_SETTINGS
 
-        # قلاب‌های سند نامه (ن۱)؛ can_view، can_attach و گردش‌ها در ل-ج و ل-د
+        from .access import can_attach_letter, can_view_letter
+
+        # قلاب‌های سند نامه (ن۱)؛ گردش‌ها در ل-د
         contribute(f'entity_resolver:{LETTER_ENTITY}', resolve_letter)
+        # دیدن و پیوست (ن۹، ل-ج): True یا False صریح، تا سابقه و پیوست نامهٔ منع‌شده پنهان بماند
+        contribute(f'can_view:{LETTER_ENTITY}', can_view_letter)
+        contribute(f'can_attach:{LETTER_ENTITY}', can_attach_letter)
         contribute(f'company_of:{LETTER_ENTITY}', letter_company_id)
         contribute(f'is_locked:{LETTER_ENTITY}', letter_is_locked)
         contribute(f'is_confidential:{LETTER_ENTITY}', letter_is_confidential)

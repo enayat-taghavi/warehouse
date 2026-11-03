@@ -2,7 +2,7 @@
 مشخصات ماژول نامه‌های شرکت (letters) — طرح Documents/Release_v1/letters_module/plan_letters.md (ن۱ و ن۹).
 
 ماژول تا پایان ساخت opt-in است (س۸): فقط با نام صریح در WH_MODULES نصب می‌شود و پروفایل پیش‌فرض آن را ندارد.
-مسیرهای API (url_includes) در ل-ج اضافه می‌شوند.
+مسیرهای API (url_includes) از ل-ج: letters/urls.py زیر api/letters/.
 """
 from platform_core.registry import ModuleSpec
 
@@ -11,6 +11,9 @@ LETTERS_SPEC = ModuleSpec(
     title_fa='نامه‌های شرکت',
     django_apps=('letters.apps.LettersConfig',),
     api_prefixes=('api/letters/',),
+    url_includes=(
+        ('api/letters/', 'letters.urls'),
+    ),
     permission_markers=(
         'accounts.view_letters_hub',
     ),
