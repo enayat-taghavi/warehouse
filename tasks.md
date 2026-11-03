@@ -7080,7 +7080,7 @@ feat(frontend): role-policy E policy card, settled-outside labels, superuser vie
 
 ===
 
-[ ] Session 1 of 1 — Role-policy plan step F docs: glossary terms and a manual test section for missing-role step policies
+[DONE] [ ] Session 1 of 1 — Role-policy plan step F docs: glossary terms and a manual test section for missing-role step policies
 
 <!-- runner
 require: python scripts/automation/verify_tools.py clean-tree --allow tests/playwright/tools/index.py .agents/AGENTS.md CLAUDE.md
