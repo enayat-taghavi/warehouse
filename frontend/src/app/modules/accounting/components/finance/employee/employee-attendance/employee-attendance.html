@@ -490,7 +490,7 @@
     </div>
 
     <!-- Mobile Floating Bottom Action Bar -->
-    <div class="md:hidden fixed bottom-3 left-3 right-3 z-30 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-2.5 shadow-xl flex items-center justify-between gap-2">
+    <div class="md:hidden fixed bottom-safe-3 left-3 right-3 z-30 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-2.5 shadow-xl flex items-center justify-between gap-2">
       <div class="text-[11px] font-bold text-slate-700 leading-tight">
         <div>{{ attendanceCounts.present }} حاضر • {{ attendanceCounts.totalEffectiveHours }}س موثر</div>
         <div *ngIf="hasUnsavedChanges" class="text-amber-600 font-black text-[10px] flex items-center gap-1">

@@ -545,6 +545,17 @@ ng-persian-datepicker {
   :root[dir="rtl"] .pe-safe {
     padding-inline-end: env(safe-area-inset-left, 0px);
   }
+
+  /* فاصلهٔ ۰٫۷۵rem به‌اضافهٔ حاشیهٔ امن، برای پوشش‌ها و نوارهای چسبیده به لبهٔ صفحه */
+  .pt-safe-3 {
+    padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+  }
+  .pb-safe-3 {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
+  .bottom-safe-3 {
+    bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* Edge elements: mobile bottom navigation */

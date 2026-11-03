@@ -63,7 +63,7 @@ export function isInAppUrl(url: unknown): url is string {
         *ngIf="isOpen()"
         id="notification-center-panel"
         data-back-closes
-        class="fixed inset-x-2 top-16 sm:absolute sm:inset-x-auto sm:top-full sm:left-0 mt-2 sm:w-96 bg-surface dark:bg-slate-900 rounded-2xl shadow-2xl border border-line dark:border-slate-800 overflow-hidden z-50 transition-all fade-in slide-in-from-top-2 duration-150"
+        class="fixed inset-x-2 top-[calc(4rem+env(safe-area-inset-top,0px))] sm:absolute sm:inset-x-auto sm:top-full sm:left-0 mt-2 sm:w-96 bg-surface dark:bg-slate-900 rounded-2xl shadow-2xl border border-line dark:border-slate-800 overflow-hidden z-50 transition-all fade-in slide-in-from-top-2 duration-150"
       >
         <!-- Header -->
         <div class="px-4 py-1 min-h-10 bg-surface-muted/90 dark:bg-slate-800/80 border-b border-line dark:border-slate-700/80 flex items-center justify-between gap-2">

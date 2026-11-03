@@ -95,7 +95,7 @@ import { isWorkflowTaskAlreadyDone } from '../../../core/services/workflow-tasks
       <!-- Unified Popover Modal (پاپ‌اور یکپارچه مرکز همگام‌سازی — بازشونده به سمت چپ بدون تداخل با سایدبار) -->
       <div
         *ngIf="isPopoverOpen"
-        class="fixed inset-x-3 top-[74px] sm:absolute sm:inset-x-auto sm:right-0 sm:left-auto sm:top-full sm:mt-2 w-auto sm:w-[350px] bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xl z-50 overflow-hidden text-right fade-in flex flex-col max-h-[calc(100dvh-90px)] sm:max-h-[520px]"
+        class="fixed inset-x-3 top-[calc(74px+env(safe-area-inset-top,0px))] sm:absolute sm:inset-x-auto sm:right-0 sm:left-auto sm:top-full sm:mt-2 w-auto sm:w-[350px] bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xl z-50 overflow-hidden text-right fade-in flex flex-col max-h-[calc(100dvh-90px)] sm:max-h-[520px]"
         (click)="$event.stopPropagation()"
       >
         <!-- Modal Top Header -->

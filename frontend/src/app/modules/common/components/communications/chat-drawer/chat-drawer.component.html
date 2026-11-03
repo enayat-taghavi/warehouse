@@ -6,7 +6,7 @@
 
 <!-- Slide Drawer Panel -->
 <div *ngIf="commService.isChatDrawerOpen()" 
-     class="chat-drawer-panel fixed top-0 left-0 bottom-0 w-full sm:w-[400px] bg-white dark:bg-slate-900 shadow-2xl z-50 flex flex-col border-r border-slate-200 dark:border-slate-800 animate-slide-in"
+     class="chat-drawer-panel fixed top-0 left-0 bottom-0 pt-safe pb-safe w-full sm:w-[400px] bg-white dark:bg-slate-900 shadow-2xl z-50 flex flex-col border-r border-slate-200 dark:border-slate-800 animate-slide-in"
      (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)"
      dir="rtl">
 
@@ -782,7 +782,7 @@
   </ng-template>
 
   <!-- ─── گفتگوی ساخت گروه ─── -->
-  <div *ngIf="createOpen()" class="absolute inset-0 z-10 bg-surface-canvas/80 flex items-end sm:items-center justify-center p-3"
+  <div *ngIf="createOpen()" class="absolute inset-0 z-10 bg-surface-canvas/80 flex items-end sm:items-center justify-center px-3 pt-safe-3 pb-safe-3"
        (keydown)="onDialogKey($event, closeCreate.bind(this))">
     <div role="dialog" aria-modal="true" aria-labelledby="new-group-title" data-testid="create-dialog"
          class="w-full bg-surface border border-line rounded-2xl shadow-xl p-4 max-h-full overflow-y-auto">
@@ -810,7 +810,7 @@
   </div>
 
   <!-- ─── پنل «خوانده‌شده توسط» ─── -->
-  <div *ngIf="readByMsg()" class="absolute inset-0 z-20 bg-surface-canvas/80 flex items-end sm:items-center justify-center p-3"
+  <div *ngIf="readByMsg()" class="absolute inset-0 z-20 bg-surface-canvas/80 flex items-end sm:items-center justify-center px-3 pt-safe-3 pb-safe-3"
        (click)="$event.target === $event.currentTarget && closeReadBy()"
        (keydown)="onDialogKey($event, closeReadBy.bind(this))">
     <div role="dialog" aria-modal="true" aria-labelledby="read-by-title" data-testid="read-by-panel"
