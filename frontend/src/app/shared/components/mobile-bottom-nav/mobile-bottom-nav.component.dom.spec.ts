@@ -153,7 +153,7 @@ describe('MobileBottomNavComponent (DOM specs)', () => {
     expect(overlayOpened).toBe(true);
   });
 
-  it('6. clicking an item tab emits itemSelect with the item id; clicking more emits moreToggle', () => {
+  it('6. clicking an item tab emits itemSelect with the item id; clicking more opens the more sheet', () => {
     mockComm.isChatAvailable.set(true);
     mockComm.hasActiveConversation.set(false);
     fixture.componentRef.setInput('items', sampleItems);
@@ -163,10 +163,6 @@ describe('MobileBottomNavComponent (DOM specs)', () => {
     component.itemSelect.subscribe(id => {
       selectedId = id;
     });
-    let moreToggled = false;
-    component.moreToggle.subscribe(() => {
-      moreToggled = true;
-    });
 
     const item1Btn = fixture.nativeElement.querySelector('[data-testid="bottom-nav-item-item1"]') as HTMLButtonElement;
     item1Btn.click();
@@ -174,7 +170,10 @@ describe('MobileBottomNavComponent (DOM specs)', () => {
 
     const moreBtn = fixture.nativeElement.querySelector('[data-testid="bottom-nav-more"]') as HTMLButtonElement;
     moreBtn.click();
-    expect(moreToggled).toBe(true);
+    fixture.detectChanges();
+    expect(component.sheetOpen()).toBe(true);
+    expect(moreBtn.getAttribute('aria-expanded')).toBe('true');
+    expect(fixture.nativeElement.querySelector('[data-testid="mobile-more-sheet"]')).not.toBeNull();
   });
 
   it('7. the active item tab has aria-current="page"; the more dot is shown when no item is active and hidden when one is active', () => {

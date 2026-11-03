@@ -241,10 +241,10 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
     this.commService.toggleChatDrawer();
   }
 
-  /** تب‌های پویای نوار پایین موبایل؛ نوار خودش دو یا سه مورد اول را برمی‌دارد */
+  /** گزینه‌های نوار پایین موبایل؛ نوار دو یا سه مورد اول را نشان می‌دهد و باقی را در پنل «بیشتر» */
   public mobileBottomNavItems = computed<MobileBottomNavItem[]>(() => {
     const active = this.activeRoute();
-    return this.navItems.slice(0, 3).map(item => ({
+    return this.navItems.map(item => ({
       id: item.id, label: item.shortLabel, title: item.label, icon: item.icon, active: active === item.id
     }));
   });

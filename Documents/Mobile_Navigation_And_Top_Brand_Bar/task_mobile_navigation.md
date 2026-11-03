@@ -27,4 +27,13 @@
 - [x] اجرای نگهبان‌های تغییر و ارگونومی (`guardian_56_change_integrity.py`، `guardian_52_icon_registry.py`، `guardian_55_clickable_ergonomics.py`)
 - [x] اجرای بیلد بدون خطای فرانت‌اند (`npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js`)
 
+## فاز ۵: سه‌خط بالا، پنل آیکونی «بیشتر»، نوشتهٔ متعادل و نوار سفید مرورگر (۴ نوامبر)
+- [x] دکمهٔ سه‌خط «منوی کامل» سمت راست نوار برند در هر دو پوسته (`menuOpen`، `menuExpanded`)
+- [x] نوشتهٔ نوار برند کمی پایین آمد (`pt-2`، نوار ۴۴px)؛ `--mobile-top-chrome-height` از 92px به 100px
+- [x] `theme-color` در `index.html` و `theme_color` در `manifest.webmanifest` سفید (`#ffffff`)
+- [x] کامپوننت مشترک `mobile-more-sheet.component.ts`: شبکهٔ چهارستونی گزینه‌های بیرون از نوار، «همهٔ بخش‌ها»، بستن با انتخاب، Escape/برگشت، پس‌زمینه و دکمهٔ بستن
+- [x] «بیشتر» پنل را باز می‌کند؛ پوسته‌ها فهرست کامل را می‌دهند (`.slice(0, 3)` حذف شد)؛ منوی کامل فقط از سه‌خط
+- [ ] تست‌های DOM سه‌خط و پنل «بیشتر» (Antigravity)
+- [ ] بررسی دیداری پشت ورود در ۳۷۵×۸۱۲ (Antigravity روی `app`)
+
 </div>

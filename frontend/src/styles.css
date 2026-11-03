@@ -48,8 +48,8 @@
     --color-fg-muted: 71 85 105;         /* slate-600 — متن ثانویه */
     --color-fg-subtle: 148 163 184;      /* slate-400 — راهنما، placeholder */
     --color-line: 226 232 240;           /* slate-200 — حاشیهٔ معمول */
-    /* ناوبری موبایل (< 768px): بالا نوار برند ۳۶px + هدر ۵۶px، پایین نوار تب‌ها ۶۰px؛ حاشیهٔ امن گوشی روی آن‌ها افزوده می‌شود */
-    --mobile-top-chrome-height: calc(var(--domain-banner-h, 0px) + 92px + env(safe-area-inset-top, 0px));
+    /* ناوبری موبایل (< 768px): بالا نوار برند ۴۴px + هدر ۵۶px، پایین نوار تب‌ها ۶۰px؛ حاشیهٔ امن گوشی روی آن‌ها افزوده می‌شود */
+    --mobile-top-chrome-height: calc(var(--domain-banner-h, 0px) + 100px + env(safe-area-inset-top, 0px));
     --mobile-bottom-nav-height: calc(60px + env(safe-area-inset-bottom, 0px));
     --color-line-subtle: 241 245 249;    /* slate-100 — جداکنندهٔ کم‌رنگ */
   }

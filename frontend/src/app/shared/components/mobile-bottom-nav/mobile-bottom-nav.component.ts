@@ -1,9 +1,10 @@
-import { Component, computed, inject, input, output } from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { CommunicationService } from '../../../core/services/communication.service';
 import { SvgIconDirective } from '../../icons/svg-icon.directive';
 import { ACTION_ICONS, PLATFORM_ENTITY_ICONS } from '../../icons/semantic-icons';
 import { NotificationCenterComponent } from '../notification-center/notification-center.component';
+import { MobileMoreSheetComponent } from './mobile-more-sheet.component';
 
 /** یک گزینهٔ منوی فعال برای تب‌های پویای نوار پایین */
 export interface MobileBottomNavItem {
@@ -36,12 +37,12 @@ function badgeText(n: number): string | null {
 /**
  * نوار تب‌های پایین موبایل (سبک واتساپ، فقط زیر md): چت، اعلان، دو گزینهٔ اول منو و «بیشتر».
  * بدون دسترسی به چت، گزینهٔ سوم منو جای آن را می‌گیرد. با باز شدن چت پنهان می‌شود (بستن با دکمهٔ بستن چت).
- * پوسته فقط گزینه‌ها و کار «بیشتر» را می‌دهد؛ چت و اعلان را خود نوار باز و بسته می‌کند.
+ * پوسته فهرست کامل گزینه‌ها را می‌دهد؛ چت، اعلان و پنل آیکونی «بیشتر» (باقی گزینه‌ها) را خود نوار باز و بسته می‌کند.
  */
 @Component({
   selector: 'app-mobile-bottom-nav',
   standalone: true,
-  imports: [NgClass, SvgIconDirective],
+  imports: [NgClass, SvgIconDirective, MobileMoreSheetComponent],
   host: { class: 'md:hidden shrink-0 relative z-[45]' },
   template: `
     @if (!commService.hasActiveConversation() && !commService.isChatDrawerOpen()) {
@@ -73,22 +74,37 @@ function badgeText(n: number): string | null {
         }
       </nav>
     }
+    @if (sheetOpen() && !commService.isChatDrawerOpen()) {
+      <app-mobile-more-sheet [items]="sheetItems()" (itemSelect)="onSheetItem($event)" (closed)="closeSheet()" />
+    }
   `
 })
 export class MobileBottomNavComponent {
   readonly commService = inject(CommunicationService);
 
-  /** گزینه‌های منوی فعال به ترتیب؛ دو مورد اول (سه مورد بدون چت) نمایش داده می‌شوند */
+  /** همهٔ گزینه‌های منوی فعال به ترتیب؛ دو مورد اول (سه مورد بدون چت) در نوار و باقی در پنل «بیشتر» */
   readonly items = input<MobileBottomNavItem[]>([]);
   /** مرکز اعلان هدر؛ تب «اعلان» پنل همان را باز می‌کند */
   readonly notifications = input<NotificationCenterComponent | null>(null);
-  /** منوی کامل (سایدبار) باز است */
-  readonly moreOpen = input(false);
 
   readonly itemSelect = output<string>();
-  readonly moreToggle = output<void>();
-  /** چت یا اعلان باز شد؛ پوسته منوی کامل را می‌بندد */
+  /** چت، اعلان یا پنل «بیشتر» باز شد؛ پوسته منوی کامل را می‌بندد */
   readonly overlayOpen = output<void>();
+
+  /** پنل آیکونی «بیشتر» باز است */
+  readonly sheetOpen = signal(false);
+
+  private readonly shownCount = computed(() => (this.commService.isChatAvailable() ? 2 : 3));
+  readonly sheetItems = computed(() => this.items().slice(this.shownCount()));
+
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  constructor() {
+    // چت از راه دیگری (مثلاً اعلان) باز شد: پنل «بیشتر» بسته می‌شود تا پس از بستن چت دوباره پیدا نشود
+    effect(() => {
+      if (this.commService.isChatDrawerOpen()) untracked(() => this.sheetOpen.set(false));
+    });
+  }
 
   readonly tabs = computed<BottomTab[]>(() => {
     const tabs: BottomTab[] = [];
@@ -96,7 +112,7 @@ export class MobileBottomNavComponent {
     const chatOpen = this.commService.isChatDrawerOpen();
     const notif = this.notifications();
     const notifOpen = !!notif?.isOpen();
-    const moreOpen = this.moreOpen();
+    const moreOpen = this.sheetOpen() && !chatOpen;
     const overlay = chatOpen || notifOpen || moreOpen;
 
     if (chatOn) {
@@ -117,7 +133,7 @@ export class MobileBottomNavComponent {
         badgeClass: notif.hasNewPulse() ? 'animate-bounce bg-rose-600' : 'bg-brand-600', dot: false
       });
     }
-    const items = this.items().slice(0, chatOn ? 2 : 3);
+    const items = this.items().slice(0, this.shownCount());
     for (const it of items) {
       tabs.push({
         kind: 'item', id: 'item-' + it.id, label: it.label, title: it.title, ariaLabel: it.title,
@@ -125,7 +141,7 @@ export class MobileBottomNavComponent {
       });
     }
     tabs.push({
-      kind: 'more', id: 'more', label: 'بیشتر', title: 'منوی کامل', ariaLabel: 'بیشتر — منوی کامل',
+      kind: 'more', id: 'more', label: 'بیشتر', title: 'همهٔ بخش‌ها', ariaLabel: 'بیشتر — همهٔ بخش‌ها',
       icon: ACTION_ICONS.more, active: moreOpen, badge: null, badgeClass: '',
       // صفحهٔ فعلی جزو تب‌های نوار نیست: نقطه روی «بیشتر»
       dot: !overlay && !items.some(i => i.active)
@@ -137,22 +153,38 @@ export class MobileBottomNavComponent {
     switch (tab.kind) {
       case 'chat':
         this.closeNotifications();
+        this.sheetOpen.set(false);
         this.overlayOpen.emit();
         this.commService.toggleChatDrawer();
         break;
       case 'notifications':
+        this.sheetOpen.set(false);
         this.overlayOpen.emit();
         this.notifications()?.toggleDropdown(event);
         break;
       case 'item':
         this.closeNotifications();
+        this.sheetOpen.set(false);
         this.itemSelect.emit(tab.id.slice('item-'.length));
         break;
       case 'more':
         this.closeNotifications();
-        this.moreToggle.emit();
+        if (!this.sheetOpen()) this.overlayOpen.emit();
+        this.sheetOpen.update(v => !v);
         break;
     }
+  }
+
+  /** بستن پنل با Escape، پس‌زمینه یا دکمهٔ بستن؛ فوکوس به «بیشتر» برمی‌گردد */
+  closeSheet(): void {
+    if (!this.sheetOpen()) return;
+    this.sheetOpen.set(false);
+    this.host.nativeElement.querySelector<HTMLButtonElement>('[data-testid="bottom-nav-more"]')?.focus();
+  }
+
+  onSheetItem(id: string): void {
+    this.sheetOpen.set(false);
+    this.itemSelect.emit(id);
   }
 
   private closeNotifications(): void {

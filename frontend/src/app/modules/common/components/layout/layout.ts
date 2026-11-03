@@ -1213,7 +1213,7 @@ export class Layout implements OnInit, OnDestroy {
 
   /**
    * تب‌های پویای نوار پایین موبایل: گزینه‌های منوی فعال به ترتیب سایدبار (نام مختصر)؛
-   * پوستهٔ شرکت‌ها: «شرکت‌ها» و در صورت دسترسی «مدارک شرکت». نوار خودش دو یا سه مورد اول را برمی‌دارد.
+   * پوستهٔ شرکت‌ها: «شرکت‌ها» و در صورت دسترسی «مدارک شرکت». نوار دو یا سه مورد اول را نشان می‌دهد و باقی را در پنل «بیشتر».
    */
   readonly mobileBottomNavItems = computed<MobileBottomNavItem[]>(() => {
     if (this.isCompaniesShell) {
@@ -1233,14 +1233,13 @@ export class Layout implements OnInit, OnDestroy {
       ...this.accountantNavItems(),
       ...this.managerNavItems(),
       ...this.treasurerNavItems(),
-    ].filter((item, i, all) => !item.isPending && all.findIndex(x => x.id === item.id) === i).slice(0, 3);
+    ].filter((item, i, all) => !item.isPending && all.findIndex(x => x.id === item.id) === i);
     const items: MobileBottomNavItem[] = tabItems.map(item => ({
       id: item.id, label: item.shortLabel || item.label, title: item.label,
       icon: this.menuIcon(item.icon, 'box') as string, active: this.currentTab === item.id
     }));
     for (const sec of this.otherModuleNavSections()) {
       for (const item of sec.items) {
-        if (items.length >= 3) return items;
         items.push({
           id: `${MOBILE_NAV_MODULE_PREFIX}${sec.module.code}:${item.id}`, label: item.shortLabel || item.label, title: item.label,
           icon: this.menuIcon(item.icon, 'box') as string, active: this.isModuleNavItemActive(sec.module.code, item)

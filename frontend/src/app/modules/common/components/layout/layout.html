@@ -311,12 +311,13 @@
   <div class="flex-1 flex flex-col min-w-0 min-h-0 bg-slate-50 relative">
     
     <!-- نوار برند موبایل (حاشیهٔ امن بالا روی همین نوار است) -->
-    <app-mobile-brand-bar [badge]="store.isWarehouseContext() ? currentWarehouse?.name : null" [badgeColor]="currentWarehouse?.color" />
+    <app-mobile-brand-bar [badge]="store.isWarehouseContext() ? currentWarehouse?.name : null" [badgeColor]="currentWarehouse?.color"
+                          [menuExpanded]="isSidebarOpen" (menuOpen)="toggleSidebar()" />
 
     <!-- Top Header -->
     <header class="layout-header bg-white border-b border-slate-200 px-2 md:px-4 py-2 md:py-4 h-[56px] md:h-[70px] flex items-center justify-between shadow-sm relative z-[45] transition-all" [style.borderTop]="store.isWarehouseContext() ? '4px solid ' + (currentWarehouse?.color || '#4f46e5') : ''">
       
-      <!-- Right Side (RTL Start): User, Notifications, Progress (موبایل: منو، چت و اعلان در نوار پایین) -->
+      <!-- Right Side (RTL Start): User, Notifications, Progress (موبایل: منو در نوار برند، چت و اعلان در نوار پایین) -->
       <div class="flex items-center gap-0.5 sm:gap-3 flex-1 justify-start min-w-0 shrink-0">
         <button (click)="toggleDesktopSidebar()" class="hidden md:block p-2 rounded-lg hover:bg-slate-50 text-slate-600 shrink-0 transition-colors cursor-pointer" title="نمایش/مخفی کردن منو" aria-label="نمایش/مخفی کردن منو">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="menu"></svg>
@@ -464,13 +465,11 @@
       <router-outlet></router-outlet>
     </div>
 
-    <!-- نوار تب‌های پایین موبایل: چت، اعلان، دو گزینهٔ اول منو، بیشتر -->
+    <!-- نوار تب‌های پایین موبایل: چت، اعلان، دو گزینهٔ اول منو، بیشتر (پنل آیکونی باقی گزینه‌ها) -->
     <app-mobile-bottom-nav
       [items]="mobileBottomNavItems()"
       [notifications]="notifCenter"
-      [moreOpen]="isSidebarOpen"
       (itemSelect)="onMobileBottomNavItem($event)"
-      (moreToggle)="toggleSidebar()"
       (overlayOpen)="closeSidebar()" />
   </div>
 </div>
