@@ -144,9 +144,14 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, wo
                                        for t in tasks})
         for task in tasks:
             inst = instances[task.instance_id]
-            target = task.target_user_id if task.track == WorkflowTask.TRACK_REFERRAL else None
-            spec = specs.get(inst.workflow_key) if target is None else None
+            is_step = task.track == WorkflowTask.TRACK_STEP
+            spec = specs.get(inst.workflow_key) if is_step else None
             step = spec.step(task.step_key) if spec is not None else None
+            # ل-۰: کار مرحلهٔ assignees مثل کار ارجاع فقط گیرندهٔ انتخاب‌شدهٔ خودش را دارد (تغییر نقش آن را
+            # برنمی‌دارد و به دارندهٔ دیگری نمی‌دهد)؛ کار مرحلهٔ نقش‌محور مثل پیش
+            target = task.target_user_id if (not is_step or (step is not None and step.assignees is not None)) else None
+            if is_step and step is not None and step.assignees is not None and target is None:
+                target = 0  # کار اجباری بی نفر انتخاب‌شده: هرگز دارندگان نقش
             step_specs[task.pk] = step
             policy = policies.get((inst.company_id, inst.workflow_key))
             items.append((task.pk, scope_triplet(inst.section, inst.company_id), task.role, task.permission,
