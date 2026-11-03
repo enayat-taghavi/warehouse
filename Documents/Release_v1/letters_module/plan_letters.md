@@ -430,5 +430,9 @@
     - نگهبان 57 (فرانت) جدا از این کار بررسی شود.
     - `setup_cloud_env.sh` بستهٔ `import-linter==2.3` را نصب نمی‌کند؛ برای نگهبان 29 دستی نصب شد.
   - **اقدام بعدی:** ل-ج (API، دسترسی و `can_view`).
+- **۱۳ آبان ۱۴۰۵ (۴ نوامبر ۲۰۲۶) — ادغام ل-ب و ۳۸۹ تست سبز** (گفتگوی مدیر، روی کامپیوتر محلی).
+  - PR 3 در `main` ادغام شد. تست سریع روی کپی در `scratch/` با `WH_MODULES=warehouse,accounting,letters`: `manage.py test letters numbering settings_core workflow` ۳۸۹ تست سبز؛ `check` و `makemigrations --check` بی‌مشکل.
+  - رد شدن نگهبان 57 از این PR نیست: از `layout-modular.dom.spec.ts` (commit `870b6b97`، ناوبری موبایل) می‌آید و کار جداگانهٔ ناوبری در حال درست کردن آن است.
+  - **اقدام بعدی:** ل-ج در گفتگوی ابری تازه طبق `Documents/Release_v1/letters_module/cloud_brief_lc.md`.
 
 </div>
