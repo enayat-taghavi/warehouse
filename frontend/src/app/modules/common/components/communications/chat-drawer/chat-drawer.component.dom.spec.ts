@@ -560,4 +560,30 @@ describe('ChatDrawerComponent (DOM specs - chat stage 3-b groups)', () => {
     expect(shareSpy).toHaveBeenCalledWith(fakeBlob, 'invoice.pdf');
     expect(toast.error).not.toHaveBeenCalled();
   });
+
+  it('syncs comm.hasActiveConversation signal with active conversation state and clears on backToList and destroy', async () => {
+    await setup();
+    comm.isChatDrawerOpen.set(true);
+    fixture.componentInstance.activeTab.set('chat');
+    fixture.componentInstance.activeConv.set(groupConv());
+    fixture.detectChanges();
+    await flush(fixture);
+
+    expect(comm.hasActiveConversation()).toBe(true);
+
+    fixture.componentInstance.backToList();
+    fixture.detectChanges();
+    await flush(fixture);
+
+    expect(comm.hasActiveConversation()).toBe(false);
+
+    fixture.componentInstance.activeTab.set('chat');
+    fixture.componentInstance.activeConv.set(groupConv());
+    fixture.detectChanges();
+    await flush(fixture);
+    expect(comm.hasActiveConversation()).toBe(true);
+
+    fixture.destroy();
+    expect(comm.hasActiveConversation()).toBe(false);
+  });
 });

@@ -12,8 +12,31 @@ import { NavigationHistoryService } from '../../../../../core/services/navigatio
 import { CommunicationService } from '../../../../../core/services/communication.service';
 import { ActiveCompanyService } from '../../../../../core/services/active-company.service';
 import { ModuleRegistryService } from '../../../../../core/modules/module-registry.service';
+import { NO_ERRORS_SCHEMA, signal, Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MobileBrandBarComponent } from '../../../../../shared/components/mobile-bottom-nav/mobile-brand-bar.component';
+import { MobileBottomNavComponent } from '../../../../../shared/components/mobile-bottom-nav/mobile-bottom-nav.component';
+
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { SwUpdate } from '@angular/service-worker';
+
+
+@Component({
+  selector: 'app-notification-center',
+  standalone: true,
+  template: ''
+})
+class StubNotificationCenterComponent {
+  isOpen = signal(false);
+  unreadCount = signal(0);
+  hasNewPulse = signal(false);
+  toggleDropdown = vi.fn();
+}
 
 function createStorageMock() {
+
   let store: Record<string, string> = {};
   return {
     getItem: (key: string) => store[key] ?? null,
@@ -67,6 +90,7 @@ describe('OperationsLayoutComponent DOM & Modular Navigation Tests', () => {
     };
 
     mockComm = {
+      hasActiveConversation: () => false,
       isChatEnabled: () => false,
       isChatAvailable: () => false,
       totalUnreadCount: () => 0,
@@ -127,7 +151,7 @@ describe('OperationsLayoutComponent DOM & Modular Navigation Tests', () => {
         { provide: AuthService, useValue: mockAuth },
         { provide: AppPersonaService, useValue: mockPersona },
         { provide: SystemHealthService, useValue: mockHealth },
-        { provide: NavigationHistoryService, useValue: { getRecentBreadcrumbs: () => [] } },
+        { provide: NavigationHistoryService, useValue: { getRecentBreadcrumbs: () => [], canGoBack: () => false, canGoForward: () => false } },
         { provide: CommunicationService, useValue: mockComm },
         { provide: ActiveCompanyService, useValue: mockActiveCompany },
         { provide: ModuleRegistryService, useValue: mockRegistry }
@@ -227,6 +251,64 @@ describe('OperationsLayoutComponent DOM & Modular Navigation Tests', () => {
 
     component.navigateToQuickLink('/app/sample');
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/sample']);
+  });
+
+  describe('Mobile navigation phase 4 (brand bar, bottom nav, shortLabel)', () => {
+    it('every entry of component.navItems has a non-empty shortLabel', () => {
+      expect(component.navItems.length).toBeGreaterThan(0);
+      for (const item of component.navItems) {
+        expect(item.shortLabel).toBeDefined();
+        expect(item.shortLabel.trim().length).toBeGreaterThan(0);
+      }
+    });
+
+    it('mobileBottomNavItems()[0] has id cockpit, label فرماندهی and active true when the active route is cockpit', () => {
+      component.activeRoute.set('cockpit');
+      const items = component.mobileBottomNavItems();
+      expect(items[0]).toEqual(expect.objectContaining({
+        id: 'cockpit',
+        label: 'فرماندهی',
+        active: true
+      }));
+    });
+
+    it('app-mobile-brand-bar and app-mobile-bottom-nav are rendered', async () => {
+      TestBed.overrideComponent(OperationsLayoutComponent, {
+        set: {
+          imports: [CommonModule, MobileBrandBarComponent, MobileBottomNavComponent, StubNotificationCenterComponent],
+          schemas: [NO_ERRORS_SCHEMA]
+        }
+      });
+
+      await TestBed.configureTestingModule({
+        imports: [OperationsLayoutComponent],
+        providers: [
+          { provide: Router, useValue: mockRouter },
+          { provide: ActivatedRoute, useValue: { snapshot: { data: {} } } },
+          { provide: AuthService, useValue: mockAuth },
+          { provide: AppPersonaService, useValue: mockPersona },
+          { provide: SystemHealthService, useValue: mockHealth },
+          { provide: NavigationHistoryService, useValue: { getRecentBreadcrumbs: () => [], canGoBack: () => false, canGoForward: () => false } },
+          { provide: CommunicationService, useValue: mockComm },
+          { provide: ActiveCompanyService, useValue: mockActiveCompany },
+          { provide: ModuleRegistryService, useValue: mockRegistry },
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: SwUpdate, useValue: { isEnabled: false } }
+        ]
+      }).compileComponents();
+
+      const fixture = TestBed.createComponent(OperationsLayoutComponent);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-mobile-brand-bar')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('app-mobile-bottom-nav')).not.toBeNull();
+    });
+
+    it('onMobileBottomNavItem("snapshots") navigates to /app/operations/snapshots', () => {
+      component.onMobileBottomNavItem('snapshots');
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/operations/snapshots']);
+    });
   });
 });
 

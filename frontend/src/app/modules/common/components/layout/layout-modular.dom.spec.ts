@@ -20,6 +20,13 @@ import { WebSocketService } from '../../../../core/http/websocket.service';
 import { AppPersonaService } from '../../../../core/services/app-persona.service';
 import { ModuleRegistryService } from '../../../../core/modules/module-registry.service';
 import { ActiveCompanyService } from '../../../../core/services/active-company.service';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { SwUpdate } from '@angular/service-worker';
+import { WAREHOUSE_SYSTEM_NAV_ITEMS } from '../../../warehouse/nav-items';
+
 
 function createStorageMock() {
   let store: Record<string, string> = {};
@@ -51,6 +58,7 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
     };
 
     mockStore = {
+      currentTab: vi.fn().mockReturnValue('dashboard'),
       activeWarehouseId: vi.fn().mockReturnValue('1'),
       setCurrentTab: vi.fn(),
       isWarehouseContext: vi.fn().mockReturnValue(true),
@@ -156,6 +164,10 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
 
     const mockComm: any = {
       isChatDrawerOpen: vi.fn().mockReturnValue(false),
+      hasActiveConversation: vi.fn().mockReturnValue(false),
+      isChatAvailable: vi.fn().mockReturnValue(true),
+      totalUnreadCount: vi.fn().mockReturnValue(0),
+      hasNewIncomingPulse: vi.fn().mockReturnValue(false),
       activeConversation$: { value: null }
     };
 
@@ -461,6 +473,71 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
 
       expect(component.isCompanyDocumentsArchiveSupported).toBe(false);
       expect(component.hasCompanyDocumentsAccess).toBe(false);
+    });
+  });
+
+  describe('Mobile navigation phase 4 (brand bar, bottom nav, header declutter)', () => {
+    let fixture: ComponentFixture<Layout>;
+
+    beforeEach(async () => {
+      await TestBed.configureTestingModule({
+        imports: [Layout],
+        providers: [
+          provideRouter([]),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          { provide: SwUpdate, useValue: { isEnabled: false } }
+        ]
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(Layout);
+      fixture.detectChanges();
+    });
+
+    it('the template renders app-mobile-brand-bar and app-mobile-bottom-nav', () => {
+      const brandBar = fixture.nativeElement.querySelector('app-mobile-brand-bar');
+      const bottomNav = fixture.nativeElement.querySelector('app-mobile-bottom-nav');
+      expect(brandBar).not.toBeNull();
+      expect(bottomNav).not.toBeNull();
+    });
+
+    it('no header button has title="نمایش منو"', () => {
+      const menuBtn = fixture.nativeElement.querySelector('button[title="نمایش منو"]');
+      expect(menuBtn).toBeNull();
+    });
+
+    it('for the warehouse system menu, mobileBottomNavItems() labels equal the source shortLabel values of the first visible items and title equals the full label', () => {
+      mockStore.isWarehouseContext.mockReturnValue(false);
+      mockRegistry.getExtensions.mockImplementation((extKey: string) => {
+        if (extKey === 'layoutNav') {
+          return [
+            {
+              moduleCode: 'warehouse',
+              extension: {
+                showWarehouseSwitcher: true,
+                defaultExitRoute: '/app/warehouse/projects',
+                primaryItems: WAREHOUSE_SYSTEM_NAV_ITEMS
+              }
+            }
+          ];
+        }
+        return [];
+      });
+
+      const items = component.mobileBottomNavItems();
+      expect(items.length).toBeGreaterThanOrEqual(3);
+      const visibleSources = WAREHOUSE_SYSTEM_NAV_ITEMS.filter((item: any) => !item.isAccounting).slice(0, 3);
+      for (let i = 0; i < 3; i++) {
+        expect(items[i].id).toBe(visibleSources[i].id);
+        expect(items[i].label).toBe(visibleSources[i].shortLabel);
+        expect(items[i].title).toBe(visibleSources[i].label);
+      }
+    });
+
+    it('onMobileBottomNavItem(id) with a menu id calls switchTab with that id', () => {
+      const switchTabSpy = vi.spyOn(component, 'switchTab');
+      component.onMobileBottomNavItem('dashboard');
+      expect(switchTabSpy).toHaveBeenCalledWith('dashboard');
     });
   });
 });
