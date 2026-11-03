@@ -9,7 +9,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { AuthStore } from '../../../../core/stores/auth.store';
 import { StateService } from '../../../../core/services/state.service';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
-import { Router, NavigationEnd } from '@angular/router';
+import { Router, NavigationEnd, DefaultUrlSerializer } from '@angular/router';
 import { ScopeDirectoryService } from '../../../../core/http/scope-directory.service';
 import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { ConfigApiService } from '../../../../core/api/config-api.service';
@@ -25,7 +25,13 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { SwUpdate } from '@angular/service-worker';
-import { WAREHOUSE_SYSTEM_NAV_ITEMS } from '../../../warehouse/nav-items';
+/** نمونهٔ منوی اصلی (پوسته نباید از ماژول ایمپورت کند؛ نگهبان ۵۷) */
+const SAMPLE_PRIMARY_NAV_ITEMS = [
+  { id: 'sample-a', label: 'نمونهٔ نخست با نام کامل', shortLabel: 'نخست', icon: 'box' },
+  { id: 'sample-b', label: 'نمونهٔ دوم با نام کامل', shortLabel: 'دوم', icon: 'box' },
+  { id: 'sample-c', label: 'نمونهٔ سوم با نام کامل', shortLabel: 'سوم', icon: 'box' },
+  { id: 'sample-d', label: 'نمونهٔ چهارم با نام کامل', shortLabel: 'چهارم', icon: 'box' },
+];
 
 
 function createStorageMock() {
@@ -438,6 +444,25 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
       component.openCompaniesList();
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/app/companies']);
     });
+
+    it('«مدارک شرکت» در نوار پایین و سایدبار فقط در تب مدارک استودیو فعال است و «شرکت‌ها» در بقیهٔ حالت‌ها', () => {
+      enterCompaniesShell();
+      mockAuth.user = () => ({ id: 1, username: 'admin', is_superuser: true });
+      mockPersona.isSuperuser.mockReturnValue(true);
+      const serializer = new DefaultUrlSerializer();
+      mockRouter.parseUrl = (url: string) => serializer.parse(url);
+      const activeIds = () => component.mobileBottomNavItems().filter(i => i.active).map(i => i.id);
+      const go = (url: string) => mockRouter.events.next(new NavigationEnd(1, url, url));
+
+      go('/app/companies');
+      expect(activeIds()).toEqual(['__companies']);
+      go('/app/companies/7?tab=documents');
+      expect(component.isCompanyDocumentsActive()).toBe(true);
+      expect(activeIds()).toEqual(['__company-docs']);
+      go('/app/companies/7?tab=identity');
+      expect(component.isCompanyDocumentsActive()).toBe(false);
+      expect(activeIds()).toEqual(['__companies']);
+    });
   });
 
   describe('پیوند بایگانی اسناد شرکت‌ها (company-documents) بر اساس نقطه توسعه hasCompanyDocumentsArchive', () => {
@@ -516,7 +541,7 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
               extension: {
                 showWarehouseSwitcher: true,
                 defaultExitRoute: '/app/warehouse/projects',
-                primaryItems: WAREHOUSE_SYSTEM_NAV_ITEMS
+                primaryItems: SAMPLE_PRIMARY_NAV_ITEMS
               }
             }
           ];
@@ -526,7 +551,7 @@ describe('Layout Modular Extension Points & Shell Behavior Tests', () => {
 
       const items = component.mobileBottomNavItems();
       expect(items.length).toBeGreaterThanOrEqual(3);
-      const visibleSources = WAREHOUSE_SYSTEM_NAV_ITEMS.filter((item: any) => !item.isAccounting).slice(0, 3);
+      const visibleSources = SAMPLE_PRIMARY_NAV_ITEMS.slice(0, 3);
       for (let i = 0; i < 3; i++) {
         expect(items[i].id).toBe(visibleSources[i].id);
         expect(items[i].label).toBe(visibleSources[i].shortLabel);

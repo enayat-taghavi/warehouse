@@ -1,8 +1,8 @@
-import { Component, OnInit, OnDestroy, computed, ChangeDetectorRef, HostListener, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed, signal, ChangeDetectorRef, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterOutlet, Router, NavigationEnd, ActivatedRoute } from '@angular/router';
-import { companyDocumentsUrlTree } from '../../../../core/modules/documents-archive-route';
+import { COMPANY_DOCUMENTS_TAB, companyDocumentsUrlTree } from '../../../../core/modules/documents-archive-route';
 import { filter, Subscription } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AuthStore } from '../../../../core/stores/auth.store';
@@ -599,6 +599,17 @@ export class Layout implements OnInit, OnDestroy {
 
   private lastHandledCompanyId: number | null = null;
 
+  /** نشانی کامل جاری (با query)؛ تب استودیو فقط در query عوض می‌شود و currentTab آن را نمی‌بیند */
+  private readonly currentUrl = signal('');
+
+  /** تب «مدارک» استودیوی شرکت باز است (/app/companies/:id?tab=documents) */
+  readonly isCompanyDocumentsActive = computed(() => {
+    const tree = this.router.parseUrl(this.currentUrl() || '/');
+    const segments = tree.root.children['primary']?.segments.map(s => s.path) ?? [];
+    return segments[0] === 'app' && segments[1] === 'companies' && segments.length > 2
+      && tree.queryParams['tab'] === COMPANY_DOCUMENTS_TAB;
+  });
+
   constructor(
     public auth: AuthService,
     public store: AuthStore,
@@ -626,6 +637,7 @@ export class Layout implements OnInit, OnDestroy {
     };
 
     const initialTab = parseTabFromUrl(this.router.url);
+    this.currentUrl.set(this.router.url || '');
     this.store.setCurrentTab(initialTab);
     if (this.isCompaniesShell) this.updateTitle(initialTab);
     this.openRoleMenusForTab(initialTab);
@@ -634,6 +646,7 @@ export class Layout implements OnInit, OnDestroy {
       filter((e): e is NavigationEnd => e instanceof NavigationEnd)
     ).subscribe((e) => {
       const tab = parseTabFromUrl(e.urlAfterRedirects || e.url);
+      this.currentUrl.set(e.urlAfterRedirects || e.url);
       this.store.setCurrentTab(tab);
       this.updateTitle(tab);
       this.openRoleMenusForTab(tab);
@@ -1205,10 +1218,10 @@ export class Layout implements OnInit, OnDestroy {
   readonly mobileBottomNavItems = computed<MobileBottomNavItem[]>(() => {
     if (this.isCompaniesShell) {
       const items: MobileBottomNavItem[] = [
-        { id: MOBILE_NAV_COMPANIES, label: 'شرکت‌ها', title: 'فهرست شرکت‌های من', icon: 'building', active: true }
+        { id: MOBILE_NAV_COMPANIES, label: 'شرکت‌ها', title: 'فهرست شرکت‌های من', icon: 'building', active: !this.isCompanyDocumentsActive() }
       ];
       if (this.isCompanyDocumentsArchiveSupported && this.hasCompanyDocumentsAccess) {
-        items.push({ id: MOBILE_NAV_COMPANY_DOCS, label: 'مدارک شرکت', title: 'بایگانی اسناد و مدارک رسمی شرکت‌ها', icon: 'file-text', active: false });
+        items.push({ id: MOBILE_NAV_COMPANY_DOCS, label: 'مدارک شرکت', title: 'بایگانی اسناد و مدارک رسمی شرکت‌ها', icon: 'file-text', active: this.isCompanyDocumentsActive() });
       }
       return items;
     }

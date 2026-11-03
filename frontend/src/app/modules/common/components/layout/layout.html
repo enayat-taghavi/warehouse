@@ -28,8 +28,9 @@
           <button
             type="button"
             (click)="openCompaniesList()"
-            aria-current="page"
-            class="sidebar-link active w-full min-h-[40px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-300 hover:text-white hover:bg-slate-800/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+            [attr.aria-current]="isCompanyDocumentsActive() ? null : 'page'"
+            [class.active]="!isCompanyDocumentsActive()"
+            class="sidebar-link w-full min-h-[40px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-300 hover:text-white hover:bg-slate-800/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
             title="فهرست شرکت‌های من">
             <span class="shrink-0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building"></svg></span>
             <span>شرکت‌ها</span>
@@ -60,6 +61,8 @@
         <button
           type="button"
           (click)="openCompanyDocuments()"
+          [attr.aria-current]="isCompanyDocumentsActive() ? 'page' : null"
+          [class.active]="isCompanyDocumentsActive()"
           class="sidebar-link w-full min-h-[40px] flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all group cursor-pointer text-slate-300 hover:text-white hover:bg-slate-800/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           title="بایگانی اسناد و مدارک رسمی شرکت‌ها">
           <div class="flex items-center gap-3">
