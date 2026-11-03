@@ -38,37 +38,7 @@ import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/
   styleUrl: './accountant-petty-cash.css'
 })
 export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
-  protected perm = (() => {
-    try {
-      const auth = inject(AuthService, { optional: true });
-      if (auth) {
-        if (typeof (auth as any).isSuperuser !== 'function') (auth as any).isSuperuser = () => false;
-        if (typeof (auth as any).user !== 'function') (auth as any).user = () => null;
-        if (typeof (auth as any).userPermissions !== 'function') (auth as any).userPermissions = () => [];
-      }
-      const p = inject(PermissionService, { optional: true });
-      if (p) {
-        const orig = p.canWriteDocuments?.bind(p);
-        return new Proxy(p, {
-          get(target, prop, receiver) {
-            if (prop === 'canWriteDocuments') {
-              return () => {
-                try {
-                  return orig ? orig() : true;
-                } catch {
-                  return true;
-                }
-              };
-            }
-            return Reflect.get(target, prop, receiver);
-          }
-        });
-      }
-      return { canWriteDocuments: () => true } as PermissionService;
-    } catch {
-      return { canWriteDocuments: () => true } as PermissionService;
-    }
-  })();
+  protected perm = inject(PermissionService);
   loadError = '';
   activeSubTab: 'pending_review' | 'settled' | 'all' | 'accounts' = 'pending_review';
 
@@ -147,12 +117,7 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
     @Optional() private ws?: WebSocketService
-  ) {
-    if (this.auth) {
-      if (typeof (this.auth as any).isSuperuser !== 'function') (this.auth as any).isSuperuser = () => false;
-      if (typeof (this.auth as any).user !== 'function') (this.auth as any).user = () => null;
-      if (typeof (this.auth as any).userPermissions !== 'function') (this.auth as any).userPermissions = () => [];
-    }}
+  ) {}
 
   ngOnInit(): void {
     this.routeSub = this.route.queryParams.subscribe(params => {
