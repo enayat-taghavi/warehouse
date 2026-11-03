@@ -19425,3 +19425,186 @@ feat(invoices): J frontend - share button and history inside preview
   - Size: `1,744,67...
 
 ---
+
+### Task 1 of 1 — 2026-11-03 02:22:32
+- **Status:** DONE
+- **Conversation:** `e07b630b-e471-441f-802a-b777ea80f116`
+- **Steps:** 60
+- **Tokens:** 223869
+- **Duration:** 8m 23s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Role-policy plan step A tests: new test file for the WorkflowPolicy inheritance resolver (backend/core/workflow/policy.py), the new StepSpec validation and the 0003 data migration
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3 and 10 apply.
+- Create ONLY the new file `backend/core/workflow/tests/test_policy_resolver.py`. Never edit any other file (no production code, no other test, no migration).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch or stage them.
+- Never run `manage.py test` without labels (it would run root scripts against the real database). Never run `migrate`, `makemigrations` or `flush`.
+- If production code looks wrong, do not fix it: write the test for the behaviour described in sections 3 and 4, and name the failing test and the reason in your report.
+
+2. Context (read these exact ranges, nothing broader):
+- `backend/core/workflow/policy.py` (whole file, about 150 lines): `role_defaults()`, `EffectivePolicy` (`role_action(role, kind)`, `missing_action(step)`, properties `creator_may_approve_own`, `notify_mode`, `notify_user_ids`, method `source(name)` returning `'own'`, `'company'` or `'default'`), `effective_policies(pairs)` and `effective_policy(company_id, workflow_key)`. Constants `OWN`, `COMPANY`, `DEFAULT`.
+- `backend/core/workflow/models.py`: class `WorkflowPolicy` (search `class WorkflowPolicy`), fields `forced` and `wait_reason` on `WorkflowTask`, `settled_outside` on `WorkflowInstance`, and class `WorkflowCompanySettings`.
+- `backend/core/workflow/registry.py` lines 1-70 (`SKIP`, `WAIT`, `MISSING_ACTIONS`, `StepSpec.payment`, `StepSpec.fixed_missing_action`) and `_validate_step` (search `def _validate_step`).
+- `backend/core/workflow/migrations/0003_role_policies.py`: functions `copy_self_approval(apps, schema_editor)` and `mark_forced_tasks(apps, schema_editor)`.
+- `backend/core/workflow/tests/base.py` lines 1-145 (`WorkflowTestBase`, `make_spec`, `STEPS`, `ROLES`, `WF`, `KIND`, `self.co`, `self.co2`, `self.specs`, how contributions are patched with `mock.patch.dict(preg._CONTRIBUTIONS, ...)`).
+- `backend/core/workflow/tests/test_registry.py` lines 1-60 (how invalid specs are asserted with `ImproperlyConfigured` and `validate_specs([spec])`).
+
+3. Definitions:
+- Inheritance order of every value: workflow row (`WorkflowPolicy(company, workflow_key=<key>)`) -> company default row (`workflow_key=''`) -> module role default (`contributions('workflow_role_defaults')`, a dict role -> 'skip' or 'wait') -> step-kind default (`APPROVE` -> 'skip', `REVIEW` and `EXECUTE` -> 'wait'). `StepSpec.fixed_missing_action` ('skip' or 'wait') wins over everything.
+- For `workflow_key=''` the company row is the "own" row: `source()` gives 'own' when that row sets the value.
+- Module defaults: always patch them inside the test, never rely on the installed module. In your own `setUp` (after `super().setUp()`) or inside a test, start `mock.patch.dict(preg._CONTRIBUTIONS, {'workflow_role_defaults': [...]})` and stop it with `addCleanup`. Use `[]` when a test needs no module default.
+
+4. Task: create `backend/core/workflow/tests/test_policy_resolver.py` with one class `PolicyResolverTests(WorkflowTestBase)` (import from `.base`) and these tests (names exactly as given):
+- `test_no_rows_uses_module_default`: module defaults {'wf_reviewer': 'skip'}; no rows; REVIEW step of role wf_reviewer -> 'skip'; `source('wf_reviewer') == 'default'`.
+- `test_no_rows_no_module_default_uses_step_kind`: no module default; APPROVE step -> 'skip', REVIEW step -> 'wait', EXECUTE step -> 'wait'.
+- `test_company_row_overrides_module_default`: module {'wf_boss': 'wait'}, company row role_actions {'wf_boss': 'skip'} -> 'skip' with `source == 'company'` for workflow key `WF`, and `source == 'own'` for key ''.
+- `test_workflow_row_overrides_company_row`: company row {'wf_boss': 'skip'}, workflow row (key `WF`) {'wf_boss': 'wait'} -> 'wait', `source == 'own'`.
+- `test_role_missing_in_workflow_row_inherits_company`: workflow row {'wf_boss': 'wait'}, company row {'wf_lead': 'wait'} -> wf_lead 'wait' with source 'company'.
+- `test_invalid_stored_value_is_ignored`: workflow row {'wf_boss': 'maybe'}, company row {'wf_boss': 'skip'} -> 'skip'.
+- `test_fixed_missing_action_wins`: rows say 'skip' for the role at both levels and a `StepSpec(..., fixed_missing_action='wait')` -> `missing_action` gives 'wait'; the opposite ('skip' fixed, rows 'wait') gives 'skip'.
+- `test_creator_may_approve_own_inherits_and_overrides`: no rows -> False, source 'default'; company row True -> True (source 'company'); add workflow row False -> False (source 'own'); workflow row None with company True -> True.
+- `test_notify_mode_inherits`: no rows -> 'role_assigners' and `notify_user_ids == []`; company row notify_mode 'users' with notify_user_ids [self.boss.pk] -> key WF gives 'users' and [self.boss.pk] with source 'company'; then a workflow row notify_mode 'role_assigners' -> 'role_assigners'.
+- `test_other_company_untouched`: rows only for `self.co`; `effective_policies([(self.co2.pk, WF)])` gives defaults (source 'default' for the role).
+- `test_one_query_for_many_pairs`: rows for both companies; `with self.assertNumQueries(1): effective_policies([(self.co.pk, WF), (self.co.pk, ''), (self.co2.pk, WF), (self.co2.pk, 'other')])`; the result has the 4 keys.
+- `test_effective_policy_without_company`: `effective_policy(None, WF)` makes no query (`assertNumQueries(0)`) and returns step-kind or module defaults.
+- `test_module_default_conflict_raises`: two contributions {'wf_boss': 'skip'} and {'wf_boss': 'wait'} -> `role_defaults()` raises `ImproperlyConfigured`; an invalid value {'wf_boss': 'x'} also raises.
+- `test_registry_rejects_payment_on_non_execute`: `make_spec(steps=...)` where an APPROVE step has `payment=True` -> `validate_specs([spec])` raises `ImproperlyConfigured`.
+- `test_registry_rejects_payment_not_last`: an EXECUTE step with `payment=True` that is not the last step -> raises.
+- `test_registry_accepts_payment_last_execute`: the last EXECUTE step (`pay` in `STEPS`, rebuilt with `payment=True` via `dataclasses.replace`) -> `validate_specs` returns the spec.
+- `test_registry_rejects_bad_fixed_missing_action`: `fixed_missing_action='maybe'` -> raises; 'wait' and 'skip' are accepted.
+- `test_migration_copies_self_approval`: load the migration module with `importlib.import_module('workflow.migrations.0003_role_policies')`; make the registered spec use `company_self_approval=True` (replace the items of `self.specs` in place with `make_spec(company_self_approval=True)` and call `reset_workflow_cache()`); create `WorkflowCompanySettings(company=self.co, creator_may_approve_own=True)` and `WorkflowCompanySettings(company=self.co2, creator_may_approve_own=False)`; call `mod.copy_self_approval(django.apps.apps, None)` twice (idempotent) -> exactly one `WorkflowPolicy` row (company self.co, workflow_key WF, creator_may_approve_own True), no row for self.co2, and both settings rows unchanged.
+- `test_migration_marks_forced_tasks`: create instances by hand for documents of `self.co` (fields: workflow_key WF, entity_kind `KIND`, distinct entity_id, company, step_keys = the 4 keys of `STEPS`, current_step as below), each with one step task (`WorkflowTask(instance=..., step_key=..., step_kind=..., role=..., permission=...)`):
+  - instance 1: open task on 'review' plus `WorkflowStep(instance, task=task1, action='auto', from_step='', to_step='review')`;
+  - instance 2: open task on 'review' with only `WorkflowStep(action='submit', task=task2)`;
+  - instance 3: open task on 'pay' plus `WorkflowStep(action='auto', task=task3, from_step='old_removed', to_step='pay')`;
+  - instance 4: closed task (`is_open=False`) plus an auto row with empty from_step.
+  Call `mod.mark_forced_tasks(django.apps.apps, None)` -> task1 and task3 `forced` True; task2 and task4 False.
+Use `self.co`, `self.co2`, `WF` and the users from the base class. Every test asserts with `assertEqual`, `assertTrue` or `assertRaises` (no bare `print`).
+
+5. Tool policy:
+- Reading files is unrestricted.
+- Tests: from `backend`, `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test workflow.tests.test_policy_resolver workflow.tests.test_registry --keepdb` (always with labels; at most 6 runs). In PowerShell use `$env:PYTHONUTF8='1';` instead of `set`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: all tests in both labels pass (if one fails only because production code differs from sections 3 and 4, keep the test and report it), and `git status --short` shows only the new test file, the three files named in section 1 and runner files.
+
+7. Output and stop condition:
+- Stage only the new test file and commit with this message, without push:
+test(workflow): role-policy A resolver, registry and migration tests
+- Short English report: test names, test results, any test that fails and why. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده به فارسی (Explanation)
+کاربر درخواست نوشتن فایل تست جدید برای طرح سیاست نقش‌ها (گام A شامل ارث‌بری `WorkflowPolicy` در `backend/core/workflow/policy.py`، اعتبارسنجی‌های جدید `StepSpec` در رجیستری، و مایگریشن داده‌ای `0003_role_policies.py`) را داده است، به همراه اجرای آزمون‌ها و کامیت اختصاصی بدون دستکاری سایر فایل‌ها یا اجرای دستورات پس‌زمینه.
+
+### ۲. اعتبارسنجی فنی (Immediate Technical Verification)
+- ترتیب وراثت سیاست‌ها (`workflow_row` ← `company_row` ← `module_defaults` ← `step_kind`) با پیاده‌سازی موجود در [`policy.py`](file:///E:/comanager/backend/core/workflow/policy.py) کاملاً منطبق است.
+- اعتبارسنجی `StepSpec.payment` و `StepSpec.fix...
+
+---
+
+### Task 1 of 1 — 2026-11-03 03:17:45
+- **Status:** DONE
+- **Conversation:** `263cbd33-5786-4b32-ad8a-a394b614f429`
+- **Steps:** 138
+- **Tokens:** 278671
+- **Duration:** 11m 26s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 5/5 passed
+- **Task:**
+```
+[ ] Session 1 of 1 — Role-policy plan step B tests: new test file for the missing-role engine decisions (skip/wait), forced tasks, settled_outside, waiting notice recipients and the superuser view-only rule
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3 and 10 apply.
+- Create ONLY the new file `backend/core/workflow/tests/test_missing_role_engine.py`. Never edit any other file (no production code, no other test, no migration).
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- Never run `git stash`, `git reset`, `git restore` or `git checkout`. The files `tests/playwright/tools/index.py`, `.agents/AGENTS.md` and `CLAUDE.md` belong to another session and have uncommitted changes: never touch or stage them.
+- Never run `manage.py test` without labels (it would run root scripts against the real database). Never run `migrate`, `makemigrations` or `flush`.
+- If production code looks wrong, do not fix it: write the test for the behaviour described in sections 3 and 4, and name the failing test and the reason in your report.
+
+2. Context (read these exact ranges, nothing broader):
+- `backend/core/workflow/engine.py`: functions `wait_reason_for`, `SettleBlocked`, `settle_block`, `emit_waiting`, `_open_task`, `_enter_step`, `_advance`, `skip_lost_task`, `mark_waiting` (search `def wait_reason_for` and read about 170 lines from there), `superuser_view_only`, `_authorize`, `submit`, `open_at_step`, `act`, `refer` (search each `def`). Constants at the top: `SKIP_NO_RECIPIENT`, `SKIP_NO_SECOND_APPROVAL`, `SKIP_PAYMENT_OUTSIDE`.
+- `backend/core/workflow/policy.py`: `effective_policy`, `role_assigner_ids`, `waiting_targets` (search each `def`).
+- `backend/core/workflow/recompute.py`: `recompute_open_tasks` and `_emit_waiting_batch` (whole file, about 240 lines).
+- `backend/core/workflow/events.py` (whole file, about 75 lines): `WAITING`, `emit(..., to_superusers=True)`, payload key `to_superusers`.
+- `backend/core/workflow/models.py`: `WorkflowPolicy` (search `class WorkflowPolicy`), `WorkflowTask.forced`, `WorkflowTask.wait_reason`, `WAIT_NO_HOLDER`, `WAIT_CREATOR_ONLY`, `WorkflowInstance.settled_outside`.
+- `backend/core/workflow/registry.py` lines 1-70 (`SETTLED_OUTSIDE`, `StepSpec.payment`, `StepSpec.fixed_missing_action`).
+- `backend/core/workflow/tests/base.py` lines 1-145 (`WorkflowTestBase`, `make_spec`, `STEPS`, `ROLES`, `WF`, `KIND`, `self.co`, `self.co2`, `self.sec`, `self.other_sec`, users `self.lead`, `self.reviewer`, `self.boss`, `self.payer`, `self.member`, `self.su`, `self.doc()`, `self.assign()`, `self.user()`, `self.events` (list of emitted payloads, filled after commit)).
+- `backend/core/workflow/tests/test_engine.py` lines 1-80 (how a document is submitted and how events are captured with `self.captureOnCommitCallbacks(execute=True)`).
+- `backend/core/workflow/tests/test_policy_resolver.py` lines 1-60 (how `mock.patch.dict(preg._CONTRIBUTIONS, {'workflow_role_defaults': [...]})` is started and stopped).
+
+3. Definitions:
+- A step "has no principal" when no active user holds the step role with the step permission in the document scope (the creator is excluded unless `creator_may_act` or the policy `creator_may_approve_own` is on).
+- Effective action of a step without a principal: `effective_policy(company_id, WF).missing_action(step)` -> 'skip' or 'wait'. Default without rows and without module defaults: APPROVE 'skip', REVIEW and EXECUTE 'wait'. Set rows with `WorkflowPolicy.objects.create(company=self.co, workflow_key=WF, role_actions={...})` (or `workflow_key=''` for the company default).
+- 'skip': the step is skipped; the history row `skipped` list has `{'step': key, 'reason': 'no_recipient'}`, or `'no_second_approval'` when the only role holder is the creator.
+- 'wait': an open task with `has_recipients=False`, `wait_reason='no_holder'` (or `'creator_only'` when the only holder is the creator), and one `waiting` event.
+- Payment step: a spec whose last step is `dataclasses.replace(STEPS[3], payment=True)`. When it is skipped, the instance ends `status='completed'`, `settled_outside=True`, the document `states` list ends with `'settled_outside'` (not `'completed'`), and the skipped list has reason `'payment_outside'`.
+- `can_settle_outside:<KIND>` hook: contribution `fn(obj, instance) -> message or None`; a message keeps the payment task open and waiting.
+- Waiting recipients (notify_mode 'role_assigners', the default): active non-superuser users with `UserCompanyAccess(company=..., section_levels={'projects': 'write'})` in the same company. If there is nobody, the `waiting` event is emitted with empty `user_ids` and `to_superusers=True`. With notify_mode 'users' only `notify_user_ids` that are active members of the company (active `SectionAssignment` in it).
+- Superuser: `engine.act`, `engine.return_for_fix`, `engine.reject` and `engine.refer` by `self.su` raise `WorkflowPermissionDenied` with code `'superuser_view_only'` and status 403; `engine.can_act(self.su, task)` is False. The API `POST /api/workflow/tasks/<id>/action/` by the superuser returns 403 with code `superuser_view_only`; the history API of the same instance returns 200 (find the exact URL names in `backend/core/workflow/urls.py`).
+
+4. Task: create `backend/core/workflow/tests/test_missing_role_engine.py` with one class `MissingRoleEngineTests(WorkflowTestBase)` (import from `.base`). Patch `workflow_role_defaults` to `[]` in `setUp` unless a test sets its own. Tests (names exactly as given):
+- `test_approve_no_holder_skips_by_default`: remove the lead's role (deactivate the lead's assignment) -> submit -> skipped has `lead_ok` with reason `no_recipient`; the open task is on `review`.
+- `test_approve_no_holder_waits_with_row`: workflow row `{'wf_lead': 'wait'}` and no lead -> open task on `lead_ok` with `has_recipients=False`, `wait_reason='no_holder'`, one `waiting` event.
+- `test_review_no_holder_waits_by_default`: no reviewer -> task on `review` waiting with `wait_reason='no_holder'`.
+- `test_review_no_holder_skips_with_company_row`: company default row (`workflow_key=''`) `{'wf_reviewer': 'skip'}` -> `review` skipped with `no_recipient`.
+- `test_module_default_used`: module defaults `[{'wf_reviewer': 'skip'}]`, no rows -> review skipped.
+- `test_creator_only_skip_reason`: the reviewer is the only `wf_reviewer` and is the one who submits the document, company row `{'wf_reviewer': 'skip'}` -> review skipped with `no_second_approval`.
+- `test_creator_only_wait_reason`: same without a row (default wait) -> task waiting with `wait_reason='creator_only'`; the notification body built by `workflow.notify.create_for_event` for that event contains the words `ثبت‌کنندهٔ سند` (write this Persian text with your file editor, never through a shell command).
+- `test_creator_may_approve_own_policy`: workflow row `creator_may_approve_own=True`; the boss submits; the `boss_ok` task has the boss as principal and `engine.act(self.boss, task)` succeeds; with the row set to False the boss gets 403 `self_approval` (or the step is skipped/waits per policy).
+- `test_threshold_skip_unchanged`: a company `WorkflowThreshold` for `boss_ok` above the amount still gives reason `threshold` even with a row `{'wf_boss': 'wait'}`.
+- `test_forced_task_never_skipped`: `engine.open_at_step(WF, doc, self.member, 'boss_ok')` with no boss -> task `forced=True`, waiting; then a row `{'wf_boss': 'skip'}` and `recompute_open_tasks(company_ids=[self.co.pk])` -> the task is still open.
+- `test_recompute_skips_waiting_task_after_policy_change`: review waiting (no reviewer); add row `{'wf_reviewer': 'skip'}`; `recompute_open_tasks(company_ids=[self.co.pk])` -> review task closed with outcome `skipped`, next task on `boss_ok`, an `auto` history row with reason `no_recipient`.
+- `test_recompute_other_company_untouched`: a waiting task in `self.co2` (document in `self.other_sec`) and a skip row only for `self.co` -> after recompute for both companies the co2 task stays open.
+- `test_recompute_gained_holder_receives`: waiting review; assign a new reviewer; recompute -> `has_recipients=True`, `wait_reason=''`, a `received` event to that user.
+- `test_waiting_event_once_per_transition`: waiting review; run `recompute_open_tasks(company_ids=[self.co.pk])` twice -> exactly one `waiting` event in total for that task.
+- `test_waiting_recipients_role_assigners_same_company`: a user with `UserCompanyAccess(company=self.co, section_levels={'projects': 'write'})` and another with the same row for `self.co2` -> the `waiting` event `user_ids` contains only the first; no `to_superusers` key.
+- `test_waiting_recipients_fallback_superusers`: nobody with projects write -> the event has `to_superusers=True` and empty `user_ids`.
+- `test_waiting_recipients_users_mode`: company row `notify_mode='users'`, `notify_user_ids=[self.lead.pk, <user of co2 only>]` -> event `user_ids == [self.lead.pk]`.
+- `test_payment_skip_settles_outside`: spec with the payment step and a row `{'wf_payer': 'skip'}`, no payer; act through all earlier steps -> instance `completed`, `settled_outside=True`, document states end with `'settled_outside'`, last history `skipped` has `pay` with `payment_outside`.
+- `test_payment_skip_blocked_by_hook_waits`: same plus a `can_settle_outside:<KIND>` contribution returning a message -> the `pay` task is open, waiting, `settled_outside=False`.
+- `test_payment_skip_in_recompute`: payer present at arrival; then deactivate the payer and add the skip row; recompute -> instance completed with `settled_outside=True`.
+- `test_superuser_cannot_act_or_refer`: for an open task: `act`, `return_for_fix`, `reject`, `refer` by `self.su` raise code `superuser_view_only`; `can_act` False.
+- `test_superuser_api_403_history_200`: API action 403 with code `superuser_view_only`; history API 200.
+Every test asserts with `assertEqual`, `assertTrue`, `assertIn` or `assertRaises` (no bare `print`). Wrap engine calls that must deliver events in `with self.captureOnCommitCallbacks(execute=True):`.
+
+5. Tool policy:
+- Reading files is unrestricted.
+- Tests: from `backend`, `set PYTHONUTF8=1&& .\venv\Scripts\python.exe manage.py test workflow.tests.test_missing_role_engine --keepdb` (always with the label; at most 8 runs). In PowerShell use `$env:PYTHONUTF8='1';` instead of `set`.
+- If a command fails, read its output, do not repeat it unchanged, and change approach.
+
+6. Before finishing: all tests pass (if one fails only because production code differs from sections 3 and 4, keep the test and report it), and `git status --short` shows only the new test file, the three files named in section 1 and runner files.
+
+7. Output and stop condition:
+- Stage only the new test file and commit with this message, without push:
+test(workflow): role-policy B missing-role engine tests
+- Short English report: test names, test results, any test that fails and why. End the turn after the commit and the report.
+```
+- **Agent's last reply:**
+### Role-Policy Step B Test Suite Report
+
+Created test file: [`backend/core/workflow/tests/test_missing_role_engine.py`](file:///E:/comanager/backend/core/workflow/tests/test_missing_role_engine.py)
+
+#### Executed Tests & Results
+Ran: `manage.py test workflow.tests.test_missing_role_engine --keepdb`
+Result: `Ran 22 tests in 32.145s - OK` (All 22 passed, 0 failures, 0 errors).
+
+1. `test_approve_no_holder_skips_by_default`: **Passed** (Deactivating lead skips `lead_ok` with reason `no_recipient`; opens on `review`).
+2. `test_approve_no_holder_waits_with_row`: **Passed** (Workflow policy `wf_lead: wait` opens `lead_ok` with `wait_reason='no_holder'` and emits 1 `waiting` event).
+3. `test_review...
+
+---

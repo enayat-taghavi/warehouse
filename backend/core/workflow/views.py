@@ -26,7 +26,7 @@ from accounts.scoped_permissions import can, can_at_company_level
 from companies.models import Company, ProjectSection
 from platform_core.registry import entity_view_decision
 
-from . import engine
+from . import engine, policy_admin
 from . import serializers as ser
 from .errors import TaskAlreadyDone, WorkflowError, WorkflowPermissionDenied
 from .models import (WorkflowCompanySettings, WorkflowInstance, WorkflowStep, WorkflowTask, WorkflowTaskRecipient,
@@ -430,50 +430,120 @@ class ThresholdDetailView(WorkflowAPIView):
         return Response(status=204)
 
 
-def _settings_payload(row):
+def _settings_payload(row, creator_may_approve_own):
     return {'company_id': row.company_id, 'reminder_hours': row.reminder_hours,
-            'escalation_hours': row.escalation_hours, 'creator_may_approve_own': row.creator_may_approve_own,
+            'escalation_hours': row.escalation_hours, 'creator_may_approve_own': creator_may_approve_own,
             'is_default': row.pk is None,
             'updated_at': row.updated_at.isoformat() if row.updated_at else None}
 
 
 class CompanySettingsView(WorkflowAPIView):
+    """
+    مهلت‌ها (ت۱۲) و، برای سازگاری نسخهٔ قدیم فرانت (ق۱۷)، «تأیید سند خود» که از طرح نبودن نفر روی ردیف پیش‌فرض
+    WorkflowPolicy شرکت خوانده و نوشته می‌شود (ستون قدیم دیگر نه خوانده و نه نوشته می‌شود).
+    """
     def get(self, request, company_id):
         _require_editor(request.user, company_id)
-        return Response(_settings_payload(WorkflowCompanySettings.for_company(company_id)))
+        return Response(_settings_payload(WorkflowCompanySettings.for_company(company_id),
+                                          policy_admin.company_creator_flag(company_id)))
 
     def put(self, request, company_id):
         _require_editor(request.user, company_id)
         if not Company.objects.filter(pk=company_id).exists():
             raise _not_found('شرکت یافت نشد')
         with transaction.atomic():
+            # همان قفل و ترتیب policy_admin.apply (شرکت ← ردیف تنظیم) تا تأیید پیش‌نمایش هم‌زمان کهنه نشود
+            Company.objects.select_for_update().filter(pk=company_id).exists()
             row = (WorkflowCompanySettings.objects.select_for_update().filter(company_id=company_id).first()
                    or WorkflowCompanySettings(company_id=company_id))
             before = None if row.pk is None else {'reminder_hours': row.reminder_hours,
-                                                  'escalation_hours': row.escalation_hours,
-                                                  'creator_may_approve_own': row.creator_may_approve_own}
-            was_self_approval = row.creator_may_approve_own
+                                                  'escalation_hours': row.escalation_hours}
+            was_self_approval = policy_admin.company_creator_flag(company_id)
             reminder = _int(request.data.get('reminder_hours', row.reminder_hours), 'reminder_hours', required=True)
             escalation = _int(request.data.get('escalation_hours', row.escalation_hours), 'escalation_hours',
                               required=True)
             if not (1 <= reminder < escalation <= MAX_HOURS):
                 raise _bad('invalid_hours',
                            f'مدت یادآوری باید دست‌کم ۱ ساعت و کمتر از مدت خبر به بالاتر باشد و آن حداکثر {MAX_HOURS} ساعت')
-            self_approval = request.data.get('creator_may_approve_own', row.creator_may_approve_own)
+            self_approval = request.data.get('creator_may_approve_own', was_self_approval)
             if not isinstance(self_approval, bool):
                 raise _bad('invalid_creator_may_approve_own', 'مقدار «ایجادکننده سند خودش را تأیید کند» نامعتبر است')
             row.reminder_hours = reminder
             row.escalation_hours = escalation
-            row.creator_may_approve_own = self_approval
             row.updated_by = request.user
             row.save()
             _audit(request.user, 'UPDATE' if before else 'CREATE', 'WorkflowCompanySettings', row.pk, company_id,
-                   before=before, after={'reminder_hours': reminder, 'escalation_hours': escalation,
-                                         'creator_may_approve_own': self_approval})
-            if self_approval != was_self_approval:
+                   before=before, after={'reminder_hours': reminder, 'escalation_hours': escalation})
+            if 'creator_may_approve_own' in request.data and self_approval != was_self_approval:
+                policy_admin.set_company_creator_flag(request.user, company_id, self_approval)
                 # گام ط: دریافت‌کنندگان کارهای باز این شرکت با تنظیم تازه (ثبت‌کننده افزوده یا کم می‌شود)
                 transaction.on_commit(lambda: safe_recompute(company_ids={company_id}))
-        return Response(_settings_payload(row))
+        return Response(_settings_payload(row, self_approval))
+
+
+# ─── تنظیم «نبودن نفر در مرحله» (طرح ۱۲ آبان ۱۴۰۵، بند ۴-۴) ──────────────────
+
+def _policy_values(request, company_id, workflow_key):
+    data = request.data if isinstance(request.data, dict) else {}
+    return policy_admin.clean_values(data.get('values', data), company_id, workflow_key)
+
+
+def _confirm_token(request):
+    data = request.data if isinstance(request.data, dict) else {}
+    return data.get('confirm_token') or request.query_params.get('confirm_token')
+
+
+def _policy_response(company_id, result):
+    return Response({**policy_admin.company_policy(company_id), 'applied': result['preview'],
+                     'stats': result['stats']})
+
+
+class CompanyPolicyView(WorkflowAPIView):
+    """GET تنظیم شرکت و همهٔ گردش‌ها؛ PUT پیش‌فرض شرکت با confirm_token پیش‌نمایش."""
+    def get(self, request, company_id):
+        _require_editor(request.user, company_id)
+        if not Company.objects.filter(pk=company_id).exists():
+            raise _not_found('شرکت یافت نشد')
+        return Response(policy_admin.company_policy(company_id))
+
+    def put(self, request, company_id):
+        _require_editor(request.user, company_id)
+        values = _policy_values(request, company_id, '')
+        return _policy_response(company_id, policy_admin.apply(
+            request.user, company_id, '', values, _confirm_token(request)))
+
+
+class CompanyPolicyPreviewView(WorkflowAPIView):
+    """POST پیش‌نمایش بی‌نوشتن: {workflow_key، values} یا {workflow_key، reset: true} (برگشت به پیش‌فرض شرکت)."""
+    def post(self, request, company_id):
+        _require_editor(request.user, company_id)
+        if not Company.objects.filter(pk=company_id).exists():
+            raise _not_found('شرکت یافت نشد')
+        data = request.data if isinstance(request.data, dict) else {}
+        key = policy_admin.resolve_workflow_key(data.get('workflow_key'))
+        if data.get('reset') is True:
+            if not key:
+                raise _bad('invalid_reset', 'پیش‌فرض شرکت برگشت ندارد')
+            values = None
+        else:
+            values = _policy_values(request, company_id, key)
+        return Response(policy_admin.simulate(company_id, key, values))
+
+
+class WorkflowPolicyView(WorkflowAPIView):
+    """PUT تنظیم جدای یک گردش؛ DELETE = برگشت به پیش‌فرض شرکت. هر دو با confirm_token پیش‌نمایش."""
+    def put(self, request, company_id, workflow_key):
+        _require_editor(request.user, company_id)
+        key = policy_admin.resolve_workflow_key(workflow_key)
+        values = _policy_values(request, company_id, key)
+        return _policy_response(company_id, policy_admin.apply(
+            request.user, company_id, key, values, _confirm_token(request)))
+
+    def delete(self, request, company_id, workflow_key):
+        _require_editor(request.user, company_id)
+        key = policy_admin.resolve_workflow_key(workflow_key)
+        return _policy_response(company_id, policy_admin.apply(
+            request.user, company_id, key, None, _confirm_token(request)))
 
 
 # ─── جانشین موقت (ت۱۰) ───────────────────────────────────────────────────────

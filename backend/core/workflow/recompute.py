@@ -33,8 +33,10 @@ from .registry import SKIP, workflow_specs
 logger = logging.getLogger(__name__)
 
 
-def _affected_instance_ids(company_ids, user_ids, all_tasks) -> list:
+def _affected_instance_ids(company_ids, user_ids, all_tasks, workflow_keys=None) -> list:
     qs = WorkflowTask.objects.filter(is_open=True)
+    if workflow_keys is not None:
+        qs = qs.filter(instance__workflow_key__in=list(workflow_keys))
     if not all_tasks:
         users = {int(u) for u in (user_ids or ()) if u}
         companies = {int(c) for c in (company_ids or ()) if c}
@@ -86,11 +88,13 @@ def _skip_lost(spec, instance, task, holders, bundles, now, stats, policy=None) 
     return True
 
 
-def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, today=None, now=None) -> dict:
+def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, workflow_keys=None, today=None,
+                         now=None) -> dict:
     """
     محاسبهٔ دوبارهٔ ردیف‌های کارهای باز.
     مجموعهٔ اثرپذیرفته: کارهای باز نمونه‌های company_ids ∪ کارهای بازی که یکی از user_ids در آن‌ها ردیف دارد
     (خودش یا به جانشینی از او) ∪ کارهای باز شرکت‌های فعلی user_ids؛ all_tasks=True یعنی همهٔ کارهای باز.
+    workflow_keys (تغییر تنظیم، بند ۴-۴): فقط نمونه‌های همین گردش‌ها.
     شمار پرس‌وجو مستقل از شمار کارها و بخش‌هاست، به‌جز رد شدن‌های قاعدهٔ ۳ (برای هر کدام مسیر موتور).
     خروجی آمار: tasks، received، removed، skipped، alerts، gained، version_synced.
     """
@@ -99,7 +103,7 @@ def recompute_open_tasks(*, company_ids=None, user_ids=None, all_tasks=False, to
     today = today or timezone.localdate()
     now = now or timezone.now()
     with transaction.atomic():
-        instance_ids = _affected_instance_ids(company_ids, user_ids, all_tasks)
+        instance_ids = _affected_instance_ids(company_ids, user_ids, all_tasks, workflow_keys)
         if not instance_ids:
             return stats
         # کار ارجاع باز روی نمونهٔ پایان‌یافته یا عودت‌شده هم می‌ماند (ر۵ و ر۹ طرح ۲.۳-و)
