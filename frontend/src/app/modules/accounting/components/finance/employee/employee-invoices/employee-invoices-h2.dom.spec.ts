@@ -107,7 +107,7 @@ describe('EmployeeInvoicesHubComponent — فهرست یکپارچه، تیک «
     setup();
     const box: HTMLInputElement = fixture.nativeElement.querySelector('input[data-only-mine]');
     expect(box).toBeTruthy();
-    expect(box.closest('label')?.textContent).toContain('فقط رسیدهای خودم');
+    expect(box.closest('label')?.textContent).toContain('فقط خودم');
     expect(lastParams()).not.toHaveProperty('mine');
 
     component.page = 3;
@@ -225,7 +225,7 @@ describe('EmployeeInvoicesHubComponent — فهرست یکپارچه، تیک «
     const approve = tr.querySelector('[data-role-action="approve"]') as HTMLButtonElement;
     expect(approve.getAttribute('title')).toBe('صدور سند');
     expect(approve.getAttribute('aria-label')).toBe('صدور');
-    expect(tr.textContent).not.toContain('قفل');
+    expect(tr.querySelector('[aria-label^="قفل"]')).toBeNull();
 
     const spy = vi.fn();
     component.roleAction.subscribe(spy);
@@ -234,9 +234,10 @@ describe('EmployeeInvoicesHubComponent — فهرست یکپارچه، تیک «
     expect(spy).toHaveBeenNthCalledWith(1, { kind: 'approve', inv });
     expect(spy).toHaveBeenNthCalledWith(2, { kind: 'return', inv });
 
-    // بی کار نقش، نشان قفل همچنان دیده می‌شود
+    // بی کار نقش، نشان قفل (فقط شکل، بی واژه) همچنان دیده می‌شود
     component.invoices = [row(5, null, 'pending_accountant')];
     render();
-    expect(desktopRow().textContent).toContain('قفل');
+    expect(desktopRow().querySelector('[aria-label^="قفل"]')).not.toBeNull();
+    expect(desktopRow().textContent).not.toContain('قفل');
   });
 });

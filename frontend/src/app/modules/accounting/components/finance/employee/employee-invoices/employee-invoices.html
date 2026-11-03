@@ -36,7 +36,7 @@
           [checked]="onlyMine"
           (change)="setOnlyMine($any($event.target).checked)"
           class="w-4 h-4 accent-indigo-600 cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1" />
-        <span>فقط رسیدهای خودم</span>
+        <span title="فقط رسیدهایی که خودم ثبت کرده‌ام">فقط خودم</span>
       </label>
     </div>
 
@@ -47,7 +47,8 @@
         *ngIf="perm.canWriteDocuments()"
         type="button"
         appAction="create"
-        label="رسید پرداخت جدید"
+        label="رسید پرداخت"
+        hint="ثبت رسید پرداخت جدید"
         (click)="openNewInvoiceModal()"
       ></button>
 
@@ -135,8 +136,8 @@
         </ng-template>
         <ng-template #rowExtra let-inv>
           @if (!canEditInvoice(inv) && !roleActionsFor(inv)) {
-            <span class="text-[10px] text-fg-muted font-bold px-1.5 py-0.5 bg-slate-50 rounded border border-slate-100 inline-flex items-center gap-1">
-              <svg appIcon="lock" class="w-3.5 h-3.5 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg> قفل
+            <span class="text-fg-muted p-0.5 inline-flex items-center" role="img" title="قفل: قابل ویرایش نیست" aria-label="قفل: قابل ویرایش نیست">
+              <svg appIcon="lock" class="w-3.5 h-3.5 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
             </span>
           }
         </ng-template>
@@ -150,7 +151,7 @@
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
               </div>
               <p class="font-bold text-fg text-xs">هیچ رسید پرداختی در این وضعیت یا جستجو یافت نشد.</p>
-              <p class="text-[11px] text-fg-muted mt-1">با فشردن دکمهٔ «رسید پرداخت جدید» می‌توانید رسید پرداخت ثبت کنید.</p>
+              <p class="text-[11px] text-fg-muted mt-1">با فشردن دکمهٔ «رسید پرداخت» می‌توانید رسید پرداخت ثبت کنید.</p>
             </div>
     }
 
