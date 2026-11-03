@@ -130,18 +130,14 @@ class InvoicePaymentSmokeTests(TestCase):
         spec = company_setting_specs()[('accounting', 'invoice_print_approval_steps')]
         self.assertIs(spec.default, False)
         inv = self.payable_invoice()
-        titles = lambda doc: [t.title for t in doc.extra_tables]  # noqa: E731
-        self.assertNotIn('مراحل تایید', titles(printable_invoice(self.acc, inv.pk)))  # پیش‌فرض خاموش
+        doc = printable_invoice(self.acc, inv.pk)
+        self.assertEqual(doc.signers, [])  # پیش‌فرض خاموش: بی امضا
+        self.assertTrue(render_document_pdf(doc).startswith(b'%PDF'))
         CompanySetting.objects.create(company=self.company, module='accounting',
                                       key='invoice_print_approval_steps', value=True)
         doc = printable_invoice(self.acc, inv.pk)
-        table = next(t for t in doc.extra_tables if t.title == 'مراحل تایید')
-        self.assertEqual([r[2] for r in table.rows], ['ارسال', 'تایید', 'تایید', 'تایید'])
-        self.assertEqual(table.rows[0][1], 'ثبت و ارسال')
+        self.assertEqual([s.user_id for s in doc.signers], [self.emp.pk, self.sup.pk, self.acc.pk, self.mgr.pk])
         self.assertTrue(render_document_pdf(doc).startswith(b'%PDF'))
-        # جدول بلند به برگهٔ بعد می‌رود و می‌شکند، خطا نمی‌دهد
-        table.rows = table.rows * 40
-        self.assertGreater(render_document_pdf(doc).count(b'/Type /Page\n'), 1)
 
     def test_print_and_excel(self):
         import io

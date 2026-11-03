@@ -513,13 +513,11 @@ def render_document_pdf(doc: PrintableDocument) -> bytes:
     extra_title_style = ParagraphStyle(
         'et', parent=cell_style, fontName=bold, fontSize=base, leading=base * 1.5, alignment=TA_RIGHT
     )
-    # عنوان و جدول با هم: اگر در برگهٔ جاری جا نشد به برگهٔ بعد می‌روند؛ جدول بلندتر از یک برگه با سرستون تکراری می‌شکند
     for t in doc.extra_tables or []:
-        block = []
         if t.title:
-            block.append(_rtl_para(t.title, extra_title_style, content_w))
-            block.append(Spacer(1, 2 * mm))
-        block.append(_doc_table(
+            story.append(_rtl_para(t.title, extra_title_style, content_w))
+            story.append(Spacer(1, 2 * mm))
+        t_elem = _doc_table(
             t.headers,
             t.rows or [],
             content_w,
@@ -527,8 +525,8 @@ def render_document_pdf(doc: PrintableDocument) -> bytes:
             t.center_cols,
             cell_style=cell_style,
             head_style=head_style,
-        ))
-        story.append(KeepTogether(block))
+        )
+        story.append(t_elem)
         story.append(Spacer(1, block_space))
 
     if doc.signers:
