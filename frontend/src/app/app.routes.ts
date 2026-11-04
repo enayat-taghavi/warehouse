@@ -6,6 +6,7 @@ import { Login } from './modules/common/components/login/login';
 import { Layout } from './modules/common/components/layout/layout';
 import { AppLauncherComponent } from './modules/common/components/app-launcher/app-launcher';
 import { MyTasksComponent } from './modules/common/components/my-tasks/my-tasks';
+import { ChatPageComponent } from './modules/common/components/communications/chat-page/chat-page.component';
 import { ChangePassword } from './modules/common/components/change-password/change-password';
 import { VerifyCard } from './modules/common/components/verify-card/verify-card';
 import { AuthGuard, AuthGuardChild, moduleCompanyGuard } from './core/auth/auth.guard';
@@ -67,6 +68,8 @@ export const routes: Routes = [
   // ─── پورتال لانچر برنامه‌ها (App Launcher) و کارهای من ──────────────
   { path: 'app/launcher', component: AppLauncherComponent, canActivate: [AuthGuard] },
   { path: 'app/my-tasks', component: MyTasksComponent, canActivate: [AuthGuard] },
+  { path: 'app/chat', component: ChatPageComponent, canActivate: [AuthGuard] },
+  { path: 'app/chat/:id', component: ChatPageComponent, canActivate: [AuthGuard] },
 
   // ─── روت‌های ماژول‌های نصب‌شده (بارگذاری تنبل و پویا) ───────
   ...dynamicModuleRoutes,

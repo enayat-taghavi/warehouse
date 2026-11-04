@@ -7,6 +7,7 @@ import { AuthStore } from '../../../../core/stores/auth.store';
 import { ModuleRegistryService, FrontendModuleSpec } from '../../../../core/modules/module-registry.service';
 import { ConfigApiService } from '../../../../core/api/config-api.service';
 import { ActiveCompanyService } from '../../../../core/services/active-company.service';
+import { CommunicationService } from '../../../../core/services/communication.service';
 
 export interface AppLauncherCard {
   code: string;
@@ -180,6 +181,13 @@ export class AppLauncherComponent implements OnInit {
   private router = inject(Router);
   private store = inject(AuthStore);
   private activeCompany = inject(ActiveCompanyService);
+  public commService = inject(CommunicationService);
+
+  public showChatCard = computed<boolean>(() => this.commService.isChatAvailable());
+
+  enterChat(): void {
+    this.router.navigate(['/app/chat']);
+  }
 
   ngOnInit(): void {
     // استعلام بلادرنگ وضعیت ماژول‌های فعال سرور جهت بازتاب فوری در کارت‌ها
@@ -332,7 +340,8 @@ export class AppLauncherComponent implements OnInit {
    */
   get visibleCardsCount(): number {
     const opsCount = (this.hasOperations && this.appCards().some(c => c.code === 'operations')) ? 1 : 0;
-    return this.richCards().length + opsCount + this.extraCards().length + (this.showCompaniesCard() ? 1 : 0);
+    const chatCount = this.showChatCard() ? 1 : 0;
+    return this.richCards().length + opsCount + this.extraCards().length + (this.showCompaniesCard() ? 1 : 0) + chatCount;
   }
 
   get isSingleAppMode(): boolean {

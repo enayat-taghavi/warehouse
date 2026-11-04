@@ -398,6 +398,9 @@ export class Layout implements OnInit, OnDestroy {
   }
 
   toggleChatDrawer() {
+    if (this.router.url.startsWith('/app/chat')) {
+      return;
+    }
     this.commService.toggleChatDrawer();
     this.cdr.detectChanges();
   }

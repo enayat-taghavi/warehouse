@@ -1,6 +1,8 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed, effect, ViewChild, ElementRef, AfterViewChecked, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, input, signal, computed, effect, ViewChild, ElementRef, AfterViewChecked, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, ActivatedRoute, NavigationEnd, RouterLink } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { CommunicationService, Conversation, ChatMessage, UserShort, ConversationMember, ReadStatus, MessageAttachment } from '../../../../../core/services/communication.service';
 import { DocumentPreviewComponent, DocumentPreviewSource } from '../../../../../shared/components/document-preview/document-preview.component';
@@ -16,6 +18,7 @@ import { HttpContext } from '@angular/common/http';
 import { getChatThumb, putChatThumb } from './chat-thumb-cache';
 import { getChatAudio, putChatAudio } from './chat-audio-cache';
 import { SKIP_OFFLINE } from '../../../../../core/interceptors/offline.interceptor';
+import { SKIP_GLOBAL_ERROR_TOAST } from '../../../../../core/error/error.interceptor';
 import { NetworkStatusService } from '../../../../../core/services/network-status.service';
 import { isServerUnreachable } from '../../../../../core/services/server-reachability';
 import { isNativePlatform } from '../../../../../core/platform/platform';
@@ -53,11 +56,13 @@ export const CHAT_DEFAULT_MAX_FILE_MB = 100;
 @Component({
   selector: 'app-chat-drawer',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, DocumentPreviewComponent],
+  imports: [CommonModule, FormsModule, RouterLink, SvgIconDirective, ActionButtonComponent, DocumentPreviewComponent],
   templateUrl: './chat-drawer.component.html',
   styleUrls: ['./chat-drawer.component.css']
 })
 export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked {
+  public readonly mode = input<'drawer' | 'page'>('drawer');
+
   /** صفحهٔ «همکاران» (شروع گفتگو و ساخت گروه) از دکمهٔ کنار صافی گفتگوها باز می‌شود */
   openContacts(): void {
     this.searchQuery.set('');
@@ -80,6 +85,10 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private api = inject(ApiService);
   private configApi = inject(ConfigApiService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private http = inject(HttpClient);
+  public pendingRouteConvId: string | null = null;
   /** سقف مؤثر حجم هر فایل به مگابایت (تنظیم سرور، پیش‌فرض ۱۰۰) */
   public maxUploadMb = signal<number>(CHAT_DEFAULT_MAX_FILE_MB);
   private sub = new Subscription();
@@ -94,7 +103,9 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   /** پوسته‌ها می‌دانند کاربر داخل گفت‌وگوست یا فهرست؛ نوار تب‌های پایین موبایل داخل گفت‌وگو پنهان می‌شود */
   private readonly syncActiveConversation = effect(() => {
     this.commService.hasActiveConversation.set(
-      this.commService.isChatDrawerOpen() && this.activeTab() === 'chat' && this.activeConv() !== null
+      (this.mode() === 'page' || this.commService.isChatDrawerOpen()) &&
+      this.activeTab() === 'chat' &&
+      this.activeConv() !== null
     );
   });
   public messages = signal<ChatMessage[]>([]);
@@ -229,10 +240,52 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       })
     );
 
+    // بستن کشوی شناور در مسیر /app/chat
+    if (this.mode() === 'drawer') {
+      if (this.isOnChatPage()) {
+        this.commService.isChatDrawerOpen.set(false);
+      }
+      this.sub.add(
+        this.router.events.subscribe(ev => {
+          if (ev instanceof NavigationEnd && this.isOnChatPage()) {
+            this.commService.isChatDrawerOpen.set(false);
+          }
+        })
+      );
+    }
+
+    // هماهنگی شناسهٔ گفتگوی فعال با نشانی اینترنتی در حالت صفحه
+    if (this.mode() === 'page') {
+      this.commService.isChatDrawerOpen.set(false);
+      this.sub.add(
+        this.route.paramMap.subscribe(params => {
+          const id = params.get('id');
+          if (id) {
+            void this.handleRouteConversationId(id);
+          } else {
+            const cur = this.activeConv();
+            if (cur) {
+              this.commService.leaveConversation(cur.id);
+              this.commService.activeConversation$.next(null);
+              this.activeConv.set(null);
+              this.activeTab.set('conversations');
+            }
+          }
+        })
+      );
+    }
+
     // اشتراک در مکالمات
     this.sub.add(
       this.commService.conversations$.subscribe(convs => {
         this.conversations.set(convs);
+        if (this.mode() === 'page' && this.pendingRouteConvId) {
+          const found = convs.find(c => String(c.id) === String(this.pendingRouteConvId));
+          if (found) {
+            this.pendingRouteConvId = null;
+            this.selectConversation(found);
+          }
+        }
       })
     );
 
@@ -410,6 +463,9 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   public selectConversation(conv: Conversation): void {
     this.hasMoreMessages.set(true);
     this.commService.openConversation(conv);
+    if (this.mode() === 'page') {
+      this.router.navigate(['/app/chat', conv.id]);
+    }
   }
 
   public async loadOlder(): Promise<void> {
@@ -1257,6 +1313,51 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.activeConv.set(null);
     if (this.activeTab() === 'contacts') this.searchQuery.set('');
     this.activeTab.set('conversations');
+    if (this.mode() === 'page') {
+      this.router.navigateByUrl('/app/chat');
+    }
+  }
+
+  public expandToPage(): void {
+    const cur = this.activeConv();
+    const targetUrl = cur ? `/app/chat/${cur.id}` : '/app/chat';
+    this.commService.isChatDrawerOpen.set(false);
+    this.router.navigateByUrl(targetUrl);
+  }
+
+  public isOnChatPage(): boolean {
+    return this.router.url.startsWith('/app/chat');
+  }
+
+  private async handleRouteConversationId(id: string): Promise<void> {
+    const cur = this.activeConv();
+    if (cur && String(cur.id) === String(id)) return;
+    const list = this.conversations();
+    const found = list.find(c => String(c.id) === String(id));
+    if (found) {
+      this.pendingRouteConvId = null;
+      this.hasMoreMessages.set(true);
+      await this.commService.openConversation(found);
+      return;
+    }
+    this.pendingRouteConvId = id;
+    try {
+      const conv = await firstValueFrom(
+        this.http.get<Conversation>(`/api/communications/conversations/${id}/`, {
+          context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true)
+        })
+      );
+      if (conv && String(this.pendingRouteConvId) === String(id)) {
+        this.pendingRouteConvId = null;
+        this.hasMoreMessages.set(true);
+        await this.commService.openConversation(conv);
+      }
+    } catch {
+      if (this.mode() === 'page' && String(this.pendingRouteConvId) === String(id)) {
+        this.pendingRouteConvId = null;
+        this.router.navigateByUrl('/app/chat');
+      }
+    }
   }
 
   public closeDrawer(): void {

@@ -1,11 +1,11 @@
 <!-- Backdrop -->
-<div *ngIf="commService.isChatDrawerOpen()" 
+<div *ngIf="mode() === 'drawer' && commService.isChatDrawerOpen() && !isOnChatPage()" 
      (click)="closeDrawer()" 
      class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-50 transition-opacity duration-300">
 </div>
 
 <!-- Slide Drawer Panel -->
-<div *ngIf="commService.isChatDrawerOpen()" 
+<div *ngIf="mode() === 'drawer' && commService.isChatDrawerOpen() && !isOnChatPage()" 
      class="chat-drawer-panel fixed top-0 left-0 bottom-0 pt-safe pb-safe w-full sm:w-[400px] bg-white dark:bg-slate-900 shadow-2xl z-50 flex flex-col border-r border-slate-200 dark:border-slate-800 animate-slide-in"
      (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)"
      dir="rtl">
@@ -65,13 +65,15 @@
 
     <!-- Actions: Search, Mute & Close -->
     <div class="flex items-center gap-1">
-      <button *ngIf="activeTab() === 'conversations'" type="button" (click)="toggleSearch()"
+      <ng-container *ngIf="activeTab() === 'conversations'">
+        <button type="button" (click)="toggleSearch()"
               data-testid="conv-search-btn" [attr.aria-pressed]="searchOpen()"
               title="جستجو در گفتگوها" aria-label="جستجو در گفتگوها"
               [class.text-indigo-600]="searchOpen()" [class.bg-indigo-50]="searchOpen()"
               class="p-2 min-w-[40px] min-h-[40px] rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex items-center justify-center cursor-pointer tap-target focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="action-search"></svg>
       </button>
+      </ng-container>
 
       <button *ngIf="activeTab() === 'chat' && isGroup()" type="button" (click)="openInfo()"
               data-testid="group-info-btn"
@@ -89,6 +91,8 @@
         <svg *ngIf="commService.isMuted()" class="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-volume-off"></svg>
       </button>
 
+      <!-- دکمه باز کردن در صفحه کامل -->
+      <button appAction="expand" display="icon" (click)="expandToPage()" data-testid="drawer-expand-btn" title="باز کردن در صفحه کامل" aria-label="باز کردن در صفحه کامل"></button>
       <button *ngIf="activeTab() !== 'conversations'" appAction="close" display="icon" (click)="closeDrawer()"></button>
     </div>
   </div>
@@ -99,7 +103,7 @@
       <div role="radiogroup" aria-label="نوع گفتگو" data-testid="conv-filter"
            class="flex-1 min-w-0 flex bg-slate-100/90 p-1 rounded-xl border border-slate-200/80">
         <button *ngFor="let f of convFilters" type="button" role="radio"
-                [attr.aria-checked]="convFilter() === f.id" [attr.data-testid]="'conv-filter-' + f.id"
+                [attr.aria-label]="f.label" [attr.aria-checked]="convFilter() === f.id" [attr.data-testid]="'conv-filter-' + f.id"
                 (click)="convFilter.set(f.id)"
                 [class.bg-white]="convFilter() === f.id" [class.text-indigo-700]="convFilter() === f.id"
                 [class.shadow-sm]="convFilter() === f.id" [class.font-black]="convFilter() === f.id"
@@ -921,7 +925,7 @@
                 <button *ngIf="canRemove(m)" type="button" (click)="askRemove(m)" data-testid="remove-member"
                         title="حذف از گروه" aria-label="حذف از گروه"
                         class="min-w-[40px] min-h-[40px] rounded-xl text-rose-600 hover:bg-surface-muted flex items-center justify-center cursor-pointer tap-target">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="trash"></svg>
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="trash-2"></svg>
                 </button>
               </div>
             </li>
@@ -993,7 +997,7 @@
 
         <!-- صدا و ترک گروه -->
         <div class="flex flex-wrap gap-2">
-          <button type="button" (click)="toggleGroupMute()" data-testid="group-mute-btn"
+          <button type="button" (click)="toggleGroupMute()" data-testid="group-mute-btn" [attr.aria-label]="conv.is_muted ? 'صدادار کردن' : 'بی‌صدا کردن'"
                   class="min-h-[40px] px-3 rounded-xl border border-line text-xs font-bold text-fg hover:bg-surface-muted flex items-center gap-1.5 cursor-pointer tap-target">
             <svg *ngIf="!conv.is_muted" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-volume-off"></svg>
             <svg *ngIf="conv.is_muted" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-volume-up"></svg>
@@ -1025,6 +1029,1088 @@
     </div>
   </div>
 </div>
+
+
+<!-- ─── حالت صفحهٔ کامل (/app/chat و /app/chat/:id) ─── -->
+<div *ngIf="mode() === 'page'"
+     data-testid="chat-page-container"
+     class="chat-page-panel w-full h-[100dvh] bg-surface-canvas flex flex-col md:flex-row overflow-hidden relative"
+     (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)"
+     dir="rtl">
+
+  <!-- رها کردن فایل روی گفتگو در حالت صفحه -->
+  <div *ngIf="dragOver()" data-testid="page-drop-overlay" aria-hidden="true"
+       class="absolute inset-2 z-30 rounded-2xl border-2 border-dashed border-indigo-500 bg-indigo-50/90 dark:bg-indigo-950/80 flex flex-col items-center justify-center gap-2 pointer-events-none">
+    <svg class="w-8 h-8 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-clip"></svg>
+    <span class="text-sm font-bold text-indigo-700 dark:text-indigo-200">فایل‌ها را اینجا رها کنید</span>
+  </div>
+
+  <!-- ─── ستون راست (RTL Start): فهرست گفتگوها و همکاران (عرض ۳۶۰px در دسکتاپ، تمام‌صفحه در موبایل وقتی چت باز نیست) ─── -->
+  <aside data-testid="chat-page-sidebar"
+         class="w-full md:w-[360px] shrink-0 border-l border-line bg-surface flex flex-col h-full relative z-10"
+         [class.hidden]="activeTab() === 'chat' && activeConv() !== null"
+         [class.flex]="activeTab() !== 'chat' || activeConv() === null"
+         [class.md:flex]="true">
+
+    <!-- سربرگ ستون فهرست -->
+    <div class="h-14 sm:h-16 px-3 sm:px-4 border-b border-line flex items-center justify-between bg-surface-muted/50 backdrop-blur shrink-0">
+      <div class="flex items-center gap-2 min-w-0">
+        <button *ngIf="activeTab() === 'contacts'" appAction="back" display="icon" (click)="backToList()" data-testid="page-contacts-back"></button>
+        <ng-container *ngIf="activeTab() !== 'contacts'">
+        <a routerLink="/app/launcher"
+           class="p-2 min-w-[40px] min-h-[40px] rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-center cursor-pointer tap-target"
+           title="بازگشت به لانچر" aria-label="بازگشت به لانچر">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="arrow-right"></svg>
+        </a>
+        </ng-container>
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-chat"></svg>
+          </div>
+          <h2 class="text-sm font-bold text-fg truncate">
+            {{ activeTab() === 'contacts' ? 'همکاران و پرسنل' : 'پیام‌رسان سازمانی' }}
+          </h2>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1 shrink-0">
+        <ng-container *ngIf="activeTab() === 'conversations'">
+          <button type="button" (click)="toggleSearch()"
+                  data-testid="page-conv-search-btn" [attr.aria-pressed]="searchOpen()"
+                  title="جستجو در گفتگوها" aria-label="جستجو در گفتگوها"
+                  [class.text-indigo-600]="searchOpen()" [class.bg-indigo-50]="searchOpen()"
+                  class="p-2 min-w-[40px] min-h-[40px] rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex items-center justify-center cursor-pointer tap-target focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="action-search"></svg>
+          </button>
+        </ng-container>
+
+        <button (click)="commService.toggleMute()"
+                [title]="commService.isMuted() ? 'فعال‌سازی صدا' : 'بی‌صدا کردن'"
+                [attr.aria-label]="commService.isMuted() ? 'فعال‌سازی صدا' : 'بی‌صدا کردن'"
+                class="p-2 min-w-[40px] min-h-[40px] rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-center cursor-pointer tap-target">
+          <svg *ngIf="!commService.isMuted()" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-volume-up"></svg>
+          <svg *ngIf="commService.isMuted()" class="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-volume-off"></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- فیلتر و ابزارهای بالای فهرست در صفحه -->
+    <div class="px-3 sm:px-4 pt-3 pb-2 border-b border-line bg-surface shrink-0">
+      <div *ngIf="activeTab() === 'conversations'" class="flex items-center gap-2">
+        <div role="radiogroup" aria-label="نوع گفتگو" data-testid="page-conv-filter"
+             class="flex-1 min-w-0 flex bg-slate-100/90 dark:bg-slate-800/80 p-1 rounded-xl border border-line">
+          <button *ngFor="let f of convFilters" type="button" role="radio"
+                  [attr.aria-label]="f.label" [attr.aria-checked]="convFilter() === f.id" [attr.data-testid]="'page-conv-filter-' + f.id"
+                  (click)="convFilter.set(f.id)"
+                  [class.bg-white]="convFilter() === f.id" [class.text-indigo-700]="convFilter() === f.id"
+                  [class.dark:bg-slate-900]="convFilter() === f.id" [class.dark:text-indigo-300]="convFilter() === f.id"
+                  [class.shadow-sm]="convFilter() === f.id" [class.font-black]="convFilter() === f.id"
+                  [class.text-slate-600]="convFilter() !== f.id" [class.font-bold]="convFilter() !== f.id"
+                  class="flex-1 min-w-0 min-h-[40px] px-1.5 rounded-lg text-xs flex items-center justify-center gap-1 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+            <span>{{ f.label }}</span>
+            <span class="text-[10px] font-mono font-bold px-1 rounded-md tabular-nums"
+                  [class.bg-indigo-50]="convFilter() === f.id" [class.bg-slate-200]="convFilter() !== f.id">{{ convKindCount(f.id).toLocaleString('fa-IR') }}</span>
+          </button>
+        </div>
+        <button type="button" (click)="openContacts()" data-testid="page-open-contacts-btn"
+                title="همکاران و شروع گفتگو" aria-label="همکاران و شروع گفتگو"
+                class="shrink-0 self-stretch min-w-[44px] px-2.5 rounded-xl border border-line text-indigo-700 bg-indigo-50 hover:bg-indigo-100 text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer tap-target focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="user-plus"></svg>
+          <span class="hidden sm:inline">همکاران</span>
+        </button>
+      </div>
+
+      <div *ngIf="activeTab() === 'contacts' && canCreateGroup()" class="mb-2.5">
+        <button type="button" (click)="openCreate()" data-testid="page-new-group-btn"
+                title="گروه جدید" aria-label="گروه جدید"
+                class="w-full min-h-[40px] px-3 rounded-xl border border-line text-fg text-xs font-bold hover:bg-surface-muted transition-colors flex items-center justify-center gap-2 cursor-pointer tap-target">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="users"></svg>
+          <span>گروه جدید</span>
+        </button>
+      </div>
+
+      <div *ngIf="activeTab() === 'contacts' || searchOpen() || searchQuery()" class="relative"
+           [class.mt-2.5]="activeTab() === 'conversations'">
+        <input type="text" data-testid="page-search-input"
+               [ngModel]="searchQuery()"
+               (ngModelChange)="searchQuery.set($event)"
+               [attr.aria-label]="activeTab() === 'conversations' ? 'جستجو در گفتگوها' : 'جستجوی نام همکار'"
+               [placeholder]="activeTab() === 'conversations' ? 'جستجو در گفتگوها...' : 'جستجوی نام همکار...'"
+               class="w-full bg-slate-50 dark:bg-slate-800/50 text-xs text-slate-800 dark:text-slate-100 pl-3 pr-8 py-2 rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all" />
+        <svg class="w-4 h-4 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="action-search"></svg>
+      </div>
+    </div>
+
+    <!-- فهرست پیمایش‌پذیر گفتگوها و مخاطبان در ستون راست -->
+    <div class="flex-1 overflow-y-auto bg-surface-muted/30 p-2 space-y-1">
+      <!-- 1. گفتگوها -->
+      <ng-container *ngIf="activeTab() === 'conversations'">
+        <div *ngIf="filteredConversations().length === 0" class="text-center py-12 text-slate-400 text-xs">
+          <ng-container *ngIf="convFilter() === 'group' && !searchQuery().trim(); else pageNoConvText">هنوز گروهی ندارید.</ng-container>
+          <ng-template #pageNoConvText>گفتگویی یافت نشد. با دکمهٔ «همکاران» گفتگوی تازه شروع کنید.</ng-template>
+        </div>
+
+        <button *ngFor="let conv of filteredConversations(); trackBy: trackByConvId"
+                (click)="selectConversation(conv)"
+                [class.bg-indigo-50]="activeConv()?.id === conv.id"
+                [class.border-indigo-200]="activeConv()?.id === conv.id"
+                [class.dark:bg-indigo-950/40]="activeConv()?.id === conv.id"
+                class="w-full p-3 rounded-2xl flex items-center justify-between hover:bg-white dark:hover:bg-slate-800/80 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all text-right group cursor-pointer">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="relative shrink-0">
+              <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white font-bold flex items-center justify-center text-sm shadow-sm group-hover:scale-105 transition-transform">
+                <svg *ngIf="conv.conv_type === 'group'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="users" aria-hidden="true"></svg>
+                <ng-container *ngIf="conv.conv_type !== 'group'">{{ getConversationTitle(conv).charAt(0) }}</ng-container>
+              </div>
+              <span *ngIf="conv.conv_type === 'direct' && isOtherUserOnline(conv)"
+                    class="absolute -bottom-0.5 -left-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900"
+                    title="آنلاین"></span>
+            </div>
+            <div class="min-w-0">
+              <h4 class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                {{ getConversationTitle(conv) }}
+                <span *ngIf="conv.conv_type === 'group' && conv.member_count" class="text-[10px] font-normal text-fg-muted ms-1">· {{ conv.member_count.toLocaleString('fa-IR') }} عضو</span>
+              </h4>
+              <p class="text-[11px] text-fg-muted truncate max-w-[190px] mt-0.5 flex items-center gap-1">
+                <ng-container *ngIf="conv.last_message?.text; else pageNoText">{{ conv.last_message?.text }}</ng-container>
+                <ng-template #pageNoText>
+                  <ng-container *ngIf="conv.last_message?.has_attachment; else pageNoMsg">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-clip" aria-hidden="true"></svg>
+                    <span>فایل</span>
+                  </ng-container>
+                </ng-template>
+                <ng-template #pageNoMsg>بدون پیام</ng-template>
+              </p>
+            </div>
+          </div>
+          <div class="flex flex-col items-end gap-1 shrink-0">
+            <span class="text-[10px] text-slate-400 font-mono">{{ formatTime(conv.last_message?.created_at) }}</span>
+            <span *ngIf="conv.unread_count && conv.unread_count > 0"
+                  class="min-w-[18px] h-[18px] px-1 bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              {{ conv.unread_count }}
+            </span>
+          </div>
+        </button>
+      </ng-container>
+
+      <!-- 2. همکاران -->
+      <ng-container *ngIf="activeTab() === 'contacts'">
+        <button *ngFor="let user of filteredContacts()"
+                (click)="startDirectChat(user)"
+                class="w-full p-2.5 rounded-2xl flex items-center justify-between hover:bg-white dark:hover:bg-slate-800/80 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all text-right cursor-pointer">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="relative shrink-0">
+              <div class="w-9 h-9 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center text-xs">
+                {{ user.full_name.charAt(0) }}
+              </div>
+              <span *ngIf="commService.isUserOnline(user.id)"
+                    class="absolute -bottom-0.5 -left-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900"
+                    title="آنلاین"></span>
+            </div>
+            <div class="min-w-0">
+              <h4 class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">{{ user.full_name }}</h4>
+              <span class="text-[10px] text-slate-400 font-mono"><bdi dir="ltr">@{{ user.username }}</bdi></span>
+            </div>
+          </div>
+          <span class="text-xs text-blue-600 dark:text-blue-400 font-bold flex items-center gap-1 shrink-0">
+            شروع چت
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="message-square" aria-hidden="true"></svg>
+          </span>
+        </button>
+      </ng-container>
+    </div>
+  </aside>
+
+  <!-- ─── ستون چپ (RTL End): گفتگوی فعال یا پیام خالی (در دسکتاپ flex-1، در موبایل تمام‌صفحه وقتی چت باز است) ─── -->
+  <main class="flex-1 flex flex-col h-full bg-surface-canvas relative min-w-0 overflow-hidden"
+        [class.hidden]="activeTab() !== 'chat' || activeConv() === null"
+        [class.flex]="activeTab() === 'chat' && activeConv() !== null"
+        [class.md:flex]="true">
+
+    <!-- حالت گفتگوی فعال -->
+    <ng-container *ngIf="activeConv() as currentConv">
+      <!-- هدر گفتگوی فعال -->
+      <div class="h-14 sm:h-16 px-3 sm:px-4 border-b border-line flex items-center justify-between bg-surface shadow-sm shrink-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <!-- دکمه بازگشت در موبایل (در دسکتاپ md:hidden) -->
+          <button class="md:hidden" appAction="back" display="icon" (click)="backToList()" data-testid="page-thread-back"></button>
+
+          <div class="relative shrink-0">
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white font-bold flex items-center justify-center text-sm shadow-sm">
+              {{ getConversationTitle(currentConv).charAt(0) }}
+            </div>
+            <span *ngIf="currentConv.conv_type === 'direct' && isOtherUserOnline()"
+                  class="absolute bottom-0 left-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900"
+                  title="آنلاین"></span>
+          </div>
+          <div class="min-w-0">
+            <h3 class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate max-w-[260px] sm:max-w-md">
+              {{ getConversationTitle(currentConv) }}
+            </h3>
+            <p class="text-[10px] text-emerald-500 font-medium" *ngIf="typingUserText()">{{ typingUserText() }}</p>
+            <ng-container *ngIf="!typingUserText()">
+              <p *ngIf="currentConv.conv_type === 'direct' && isOtherUserOnline()" class="text-[10px] text-emerald-500 font-medium flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block"></span>
+                آنلاین
+              </p>
+              <p *ngIf="currentConv.conv_type === 'direct' && !isOtherUserOnline()" class="text-[10px] text-slate-400">
+                آفلاین
+              </p>
+              <p *ngIf="currentConv.conv_type !== 'direct'" class="text-[10px] text-slate-400">
+                {{ (currentConv.member_count ?? currentConv.participants_details?.length ?? 0).toLocaleString('fa-IR') }} عضو
+              </p>
+            </ng-container>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1 shrink-0">
+          <button *ngIf="isGroup()" type="button" (click)="openInfo()"
+                  data-testid="page-group-info-btn"
+                  title="اطلاعات گروه" aria-label="اطلاعات گروه"
+                  class="p-2 min-w-10 min-h-10 rounded-xl text-fg-muted hover:text-fg hover:bg-surface-muted transition-colors flex items-center justify-center gap-1.5 cursor-pointer tap-target">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="info"></svg>
+            <span class="hidden sm:inline text-[11px] font-bold">اطلاعات</span>
+          </button>
+
+          <button (click)="commService.toggleMute()"
+                  [title]="commService.isMuted() ? 'فعال‌سازی صدا' : 'بی‌صدا کردن'"
+                  [attr.aria-label]="commService.isMuted() ? 'فعال‌سازی صدا' : 'بی‌صدا کردن'"
+                  class="p-2 min-w-[40px] min-h-[40px] rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-center cursor-pointer tap-target">
+            <svg *ngIf="!commService.isMuted()" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-volume-up"></svg>
+            <svg *ngIf="commService.isMuted()" class="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-volume-off"></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- محتوای پیام‌های گفتگوی فعال در صفحه -->
+      <div #messagesScrollContainer (scroll)="onThreadScroll()" class="flex-1 overflow-y-auto bg-slate-50/50 dark:bg-slate-950/40 relative">
+        <div *ngIf="activeTab() === 'chat'" class="p-4 space-y-3 min-h-full flex flex-col">
+      <!-- Load older messages button -->
+      <div *ngIf="messages().length >= 30 && hasMoreMessages()" class="text-center pb-2 shrink-0">
+        <button (click)="loadOlder()" 
+                [disabled]="isLoadingOlder()"
+                class="text-[11px] font-bold text-fg bg-surface-muted hover:bg-line-subtle min-h-[40px] px-3 py-1 rounded-full transition-colors disabled:opacity-50 inline-flex items-center gap-1.5 cursor-pointer">
+          <span *ngIf="!isLoadingOlder()" class="inline-flex items-center gap-1.5">
+            بارگذاری پیام‌های قدیمی‌تر
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="arrow-up" aria-hidden="true"></svg>
+          </span>
+          <span *ngIf="isLoadingOlder()">در حال دریافت...</span>
+        </button>
+      </div>
+
+      <!-- فاصله انعطاف‌پذیر جهت چسبیدن پیام‌ها به بالای کادر تایپ در چت‌های کم‌پیام -->
+      <div class="flex-1 min-h-0"></div>
+
+      <ng-container *ngFor="let it of items(); trackBy: trackItem">
+      <!-- جداکنندهٔ روز -->
+      <div *ngIf="it.kind === 'sep'" data-testid="date-sep" class="shrink-0 flex justify-center py-1">
+        <span class="text-[11px] font-bold text-fg-muted bg-surface-muted border border-line-subtle rounded-full px-3 py-0.5">{{ $any(it).label }}</span>
+      </div>
+
+      <ng-container *ngIf="asMsg(it) as msg">
+      <!-- پیام سیستمی: وسط، کوچک، بدون حباب -->
+      <div *ngIf="msg.is_system" data-testid="system-message"
+           class="shrink-0 text-center text-[11px] text-fg-muted px-4 py-1">
+        {{ msg.text }}
+      </div>
+
+      <div *ngIf="!msg.is_system"
+           class="flex flex-col shrink-0 group"
+           [attr.data-msg-id]="msg.id"
+           [class.items-start]="!msg.is_me"
+           [class.items-end]="msg.is_me">
+
+        <!-- Sender info for incoming (فقط در گروه) -->
+        <span *ngIf="!msg.is_me && isGroup()" data-testid="sender-name"
+              class="text-[10px] font-bold mb-1 px-1" [ngClass]="senderColor(msg)">
+          {{ msg.sender_details?.full_name || 'کاربر' }}
+        </span>
+
+        <div class="flex items-center gap-1 max-w-full" [attr.data-msg-menu-root]="msg.id">
+        <!-- Message Bubble -->
+        <div class="max-w-[80%] min-w-0 rounded-2xl p-3 text-xs leading-relaxed shadow-sm break-words"
+             [class.bg-blue-600]="msg.is_me"
+             [class.text-white]="msg.is_me"
+             [class.rounded-br-none]="msg.is_me"
+             [class.bg-white]="!msg.is_me"
+             [class.dark:bg-slate-800]="!msg.is_me"
+             [class.text-slate-800]="!msg.is_me"
+             [class.dark:text-slate-100]="!msg.is_me"
+             [class.border]="!msg.is_me"
+             [class.border-slate-200]="!msg.is_me"
+             [class.dark:border-slate-700]="!msg.is_me"
+             [class.rounded-bl-none]="!msg.is_me">
+
+          <!-- نقل‌قول پیام اصلی (پاسخ) -->
+          <ng-container *ngIf="replyInfo(msg) as ri">
+            <button type="button" data-testid="reply-quote"
+                    (click)="goToQuoted(ri)"
+                    [attr.title]="ri.deleted ? 'پیام حذف شد' : 'رفتن به پیام اصلی'"
+                    [class.border-white/60]="msg.is_me" [class.bg-white/10]="msg.is_me"
+                    [class.border-indigo-500]="!msg.is_me" [class.bg-surface-muted]="!msg.is_me"
+                    class="block w-full text-start mb-2 rounded-lg border-s-4 px-2 py-1 text-[11px] cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500">
+              <ng-container *ngIf="ri.deleted"><span class="italic opacity-80">پیام حذف شد</span></ng-container>
+              <ng-container *ngIf="!ri.deleted">
+                <span *ngIf="ri.sender" class="block font-bold truncate">{{ ri.sender }}</span>
+                <span class="block truncate opacity-90">
+                  <ng-container *ngIf="ri.text">{{ ri.text }}</ng-container>
+                  <ng-container *ngIf="!ri.text && ri.hasAttachment">فایل</ng-container>
+                </span>
+              </ng-container>
+            </button>
+          </ng-container>
+
+          <!-- Attachment Preview -->
+          <div *ngIf="msg.attachments && msg.attachments.length > 0" class="mb-2 space-y-1.5">
+            <!-- عکس‌ها -->
+            <ng-container *ngIf="msg.attachments.filter((a) => attachmentKind(a) === 'image') as images">
+              <!-- یک عکس -->
+              <div *ngIf="images.length === 1">
+                <button
+                  type="button"
+                  data-testid="att-image"
+                  (click)="openAttachment(msg, images[0])"
+                  [attr.aria-label]="'نمایش ' + images[0].file_name"
+                  [attr.title]="'نمایش ' + images[0].file_name"
+                  class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 block w-full text-start rounded-xl overflow-hidden border border-white/20 hover:opacity-90 transition-opacity bg-black/5 dark:bg-white/5 cursor-pointer">
+                  <div
+                    class="w-full max-h-64 overflow-hidden flex items-center justify-center bg-black/10 dark:bg-white/10"
+                    [style.aspect-ratio]="images[0].width && images[0].height ? images[0].width + ' / ' + images[0].height : null">
+                    <div *ngIf="!attachmentPreview(images[0])" class="animate-pulse bg-black/10 dark:bg-white/10 w-full h-full min-h-[120px]"></div>
+                    <img
+                      *ngIf="attachmentPreview(images[0]) as src"
+                      [src]="src"
+                      [alt]="images[0].file_name"
+                      loading="lazy"
+                      class="w-full h-full object-cover" />
+                  </div>
+                </button>
+              </div>
+
+              <!-- دو یا چند عکس -->
+              <div *ngIf="images.length > 1" class="grid grid-cols-2 gap-1" data-testid="att-grid">
+                <button
+                  *ngFor="let img of images.slice(0, 4); let i = index"
+                  type="button"
+                  data-testid="att-image"
+                  (click)="openAttachment(msg, img)"
+                  [attr.aria-label]="'نمایش ' + img.file_name"
+                  [attr.title]="'نمایش ' + img.file_name"
+                  class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 relative aspect-square w-full rounded-xl overflow-hidden border border-white/20 hover:opacity-90 transition-opacity bg-black/5 dark:bg-white/5 cursor-pointer">
+                  <div *ngIf="!attachmentPreview(img)" class="animate-pulse bg-black/10 dark:bg-white/10 w-full h-full"></div>
+                  <img
+                    *ngIf="attachmentPreview(img) as src"
+                    [src]="src"
+                    [alt]="img.file_name"
+                    loading="lazy"
+                    class="w-full h-full object-cover" />
+                  <div
+                    *ngIf="i === 3 && images.length > 4"
+                    data-testid="att-more"
+                    class="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-base font-bold">
+                    +{{ (images.length - 3).toLocaleString('fa-IR') }}
+                  </div>
+                </button>
+              </div>
+            </ng-container>
+
+            <!-- سایر پیوست‌ها (PDF و فایل‌ها) -->
+            <ng-container *ngFor="let att of msg.attachments.filter((a) => attachmentKind(a) !== 'image')">
+              <!-- پیام صوتی: پخش، نوار جای پخش، مدت و دانلود -->
+              <div *ngIf="attachmentKind(att) === 'audio'" data-testid="att-audio"
+                   class="rounded-xl border border-white/20 bg-black/5 p-1.5 flex items-center gap-1.5 min-w-[200px]">
+                <button type="button" (click)="toggleAudio(att)" data-testid="audio-toggle"
+                        [attr.aria-label]="audioLoadingId() === att.id + '' ? 'در حال بارگیری پیام صوتی' : (isPlaying(att) ? 'توقف پیام صوتی' : 'پخش پیام صوتی')"
+                        [attr.title]="isPlaying(att) ? 'توقف' : 'پخش'"
+                        class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-10 h-10 min-w-[40px] min-h-[40px] rounded-full bg-black/10 hover:bg-black/20 flex items-center justify-center shrink-0 cursor-pointer tap-target">
+                  <svg *ngIf="audioLoadingId() === att.id + ''" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="refresh-cw" aria-hidden="true"></svg>
+                  <svg *ngIf="audioLoadingId() !== att.id + ''" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1" [appIcon]="isPlaying(att) ? 'pause' : 'play'" aria-hidden="true"></svg>
+                </button>
+                <div class="flex-1 min-w-0">
+                  <input type="range" dir="ltr" min="0" step="0.1" data-testid="audio-seek"
+                         [max]="playingAudioId() === att.id + '' ? (audioDur() || att.duration || 0) : (att.duration || 0)"
+                         [value]="playingAudioId() === att.id + '' ? audioPos() : 0"
+                         [disabled]="playingAudioId() !== att.id + ''"
+                         (input)="seekAudio(att, $any($event.target).valueAsNumber)"
+                         aria-label="جای پخش پیام صوتی"
+                         [attr.aria-valuetext]="playingAudioId() === att.id + '' ? durationFa(audioPos()) + ' از ' + durationFa(audioDur() || att.duration) : durationFa(att.duration)"
+                         class="w-full h-6 cursor-pointer accent-current disabled:cursor-default disabled:opacity-60" />
+                  <p class="text-[11px] font-bold opacity-90 flex justify-between gap-2" data-testid="audio-time">
+                    <span>پیام صوتی</span>
+                    <span>{{ playingAudioId() === att.id + '' ? durationFa(audioPos()) + ' / ' : '' }}{{ durationFa(playingAudioId() === att.id + '' ? (audioDur() || att.duration) : att.duration) }}</span>
+                  </p>
+                </div>
+                <button type="button" (click)="downloadAttachment(att)"
+                        aria-label="دانلود پیام صوتی" title="دانلود پیام صوتی"
+                        class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl opacity-80 hover:bg-black/10 flex items-center justify-center shrink-0 cursor-pointer tap-target">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-download" aria-hidden="true"></svg>
+                </button>
+                <button *ngIf="canShare" type="button" (click)="shareAttachment(att)"
+                        [attr.aria-label]="'اشتراک‌گذاری ' + att.file_name"
+                        [title]="'اشتراک‌گذاری ' + att.file_name"
+                        class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl opacity-80 hover:bg-black/10 flex items-center justify-center shrink-0 cursor-pointer tap-target">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="share" aria-hidden="true"></svg>
+                </button>
+              </div>
+
+              <!-- PDF -->
+              <div *ngIf="attachmentKind(att) === 'pdf'" data-testid="att-card-pdf" class="rounded-xl border border-white/20 bg-black/5 dark:bg-white/5 overflow-hidden">
+                <button
+                  type="button"
+                  (click)="openAttachment(msg, att)"
+                  [attr.aria-label]="'نمایش ' + att.file_name"
+                  [attr.title]="'نمایش ' + att.file_name"
+                  class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 block w-full text-start cursor-pointer hover:opacity-90 transition-opacity">
+                  <div *ngIf="att.thumbnail_url || att.preview_status === 'pending'"
+                       class="w-full max-h-64 overflow-hidden flex items-center justify-center bg-black/10 dark:bg-white/10"
+                       [style.aspect-ratio]="att.width && att.height ? att.width + ' / ' + att.height : null">
+                    <div *ngIf="!attachmentPreview(att)" class="animate-pulse bg-black/10 dark:bg-white/10 w-full h-full min-h-[100px]"></div>
+                    <img *ngIf="attachmentPreview(att) as src" [src]="src" [alt]="att.file_name" loading="lazy" class="w-full h-full object-cover" />
+                  </div>
+                  <div *ngIf="!att.thumbnail_url && att.preview_status !== 'pending'"
+                       [class.text-rose-500]="!msg.is_me" class="w-full h-24 flex items-center justify-center bg-rose-500/10">
+                    <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" appIcon="file-pdf"></svg>
+                  </div>
+                </button>
+                <div class="p-2.5 flex items-center justify-between gap-2 border-t border-white/10">
+                  <button
+                    type="button"
+                    (click)="openAttachment(msg, att)"
+                    [attr.aria-label]="'نمایش ' + att.file_name"
+                    class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 min-w-0 flex-1 text-start cursor-pointer">
+                    <p class="truncate text-[11px] font-bold" [title]="att.file_name">{{ att.file_name }}</p>
+                    <p class="text-[10px] opacity-80 font-bold mt-0.5">{{ fileMetaFa(att) }}</p>
+                  </button>
+                  <button
+                    type="button"
+                    (click)="downloadAttachment(att)"
+                    [attr.aria-label]="'دانلود ' + att.file_name"
+                    [attr.title]="'دانلود ' + att.file_name"
+                    class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl opacity-80 hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center shrink-0 cursor-pointer tap-target">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-download"></svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- سایر فایل‌ها -->
+              <div
+                *ngIf="attachmentKind(att) !== 'pdf' && attachmentKind(att) !== 'audio'"
+                data-testid="att-card-file"
+                class="rounded-xl border border-white/20 bg-black/5 dark:bg-white/5 p-2.5 flex items-center justify-between gap-2">
+                <button type="button" (click)="downloadAttachment(att)" [attr.aria-label]="'دانلود ' + att.file_name"
+                        class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 flex items-center gap-2 min-w-0 flex-1 text-start cursor-pointer hover:opacity-90 transition-opacity rounded-lg">
+                  <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-black/5 dark:bg-white/5">
+                    <svg [class.text-blue-500]="!msg.is_me" *ngIf="attachmentKind(att) === 'word'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="file-word"></svg>
+                    <svg [class.text-emerald-500]="!msg.is_me" *ngIf="attachmentKind(att) === 'excel'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="file-excel"></svg>
+                    <svg [class.text-slate-500]="!msg.is_me" *ngIf="attachmentKind(att) === 'text'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
+                    <svg [class.text-slate-400]="!msg.is_me" *ngIf="attachmentKind(att) === 'file'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="hero-paper-clip"></svg>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-[11px] font-bold" [title]="att.file_name">{{ att.file_name }}</p>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                      <span *ngIf="fileExt(att.file_name)" dir="ltr" class="text-[10px] font-mono font-bold uppercase px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 opacity-80">
+                        {{ fileExt(att.file_name).toUpperCase() }}
+                      </span>
+                      <span *ngIf="fileSizeFa(att.file_size) as size" class="text-[10px] opacity-80 font-bold">{{ size }}</span>
+                    </div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  (click)="downloadAttachment(att)"
+                  [attr.aria-label]="'دانلود ' + att.file_name"
+                  [attr.title]="'دانلود ' + att.file_name"
+                  class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl opacity-80 hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center shrink-0 cursor-pointer tap-target">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="action-download"></svg>
+                </button>
+                <button
+                  *ngIf="canShare"
+                  type="button"
+                  (click)="shareAttachment(att)"
+                  [attr.aria-label]="'اشتراک‌گذاری ' + att.file_name"
+                  [title]="'اشتراک‌گذاری ' + att.file_name"
+                  class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-10 h-10 min-w-[40px] min-h-[40px] rounded-xl opacity-80 hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center shrink-0 cursor-pointer tap-target">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="share"></svg>
+                </button>
+              </div>
+            </ng-container>
+          </div>
+
+          <!-- فایلی که هنوز آپلود نشده (در انتظار یا ناموفق) -->
+          <div *ngIf="msg.pending_file_name && (msg.delivery_status === 'pending' || msg.delivery_status === 'failed')"
+               class="mb-2 flex items-center gap-1.5 rounded-lg border border-white/20 bg-black/5 dark:bg-white/5 p-2 text-[11px]">
+            <svg class="w-4 h-4 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-clip"></svg>
+            <span class="truncate font-bold">{{ msg.pending_file_name }}</span>
+            <span class="shrink-0 opacity-80">{{ msg.delivery_status === 'failed' ? '(ارسال نشد)' : (msg.waiting_network ? '' : '(در حال ارسال)') }}</span>
+          </div>
+
+          <!-- پیشرفت آپلود فایل جاری و لغو -->
+          <div *ngIf="msg.delivery_status === 'pending' && msg.upload_progress !== null && msg.upload_progress !== undefined"
+               data-testid="upload-progress" class="mb-2 flex items-center gap-2 text-[10px]">
+            <div class="flex-1 min-w-0">
+              <span class="block font-bold">
+                فایل {{ (msg.upload_index || 1).toLocaleString('fa-IR') }} از {{ (msg.upload_total || 1).toLocaleString('fa-IR') }} · {{ (msg.upload_progress || 0).toLocaleString('fa-IR') }}٪
+              </span>
+              <div class="mt-1 h-1.5 rounded-full bg-white/30 overflow-hidden" role="progressbar"
+                   aria-label="پیشرفت آپلود" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="msg.upload_progress">
+                <div class="h-full bg-white transition-all" [style.width.%]="msg.upload_progress"></div>
+              </div>
+            </div>
+            <button type="button" (click)="cancelUpload(msg)" data-testid="upload-cancel"
+                    title="لغو ارسال فایل" aria-label="لغو ارسال فایل"
+                    class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 min-w-[40px] min-h-[40px] shrink-0 rounded-xl hover:bg-white/20 flex items-center justify-center cursor-pointer tap-target">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="x" aria-hidden="true"></svg>
+            </button>
+          </div>
+
+          <p class="whitespace-pre-wrap"><ng-container *ngFor="let seg of segments(msg.text)"><a *ngIf="seg.url" [href]="seg.text" target="_blank" rel="noopener noreferrer" class="underline break-all" dir="ltr">{{ seg.text }}</a><ng-container *ngIf="!seg.url">{{ seg.text }}</ng-container></ng-container></p>
+
+          <!-- پیام در صندوق خروجی منتظر اینترنت است و خودکار فرستاده می‌شود -->
+          <p *ngIf="msg.delivery_status === 'pending' && msg.waiting_network" data-testid="waiting-network" role="status"
+             class="mt-1 text-[11px] font-bold">در انتظار اینترنت؛ پس از وصل شدن خودکار فرستاده می‌شود</p>
+
+          <!-- علت رد قطعی سرور برای پیام ناموفق -->
+          <p *ngIf="msg.delivery_status === 'failed' && msg.failure_reason"
+             role="alert"
+             class="mt-1 text-[10px] font-bold text-rose-100 bg-rose-500/20 rounded px-1.5 py-0.5">{{ msg.failure_reason }}</p>
+          
+          <!-- Timestamp & Status -->
+          <div class="flex items-center justify-end gap-1.5 mt-1.5 text-[10px]">
+            <span *ngIf="msg.edited_at" data-testid="edited-label">ویرایش‌شده</span>
+            <span>{{ formatTime(msg.created_at) }}</span>
+            <ng-container *ngIf="msg.is_me">
+              <!-- Pending State -->
+              <svg *ngIf="msg.delivery_status === 'pending' || (msg.is_pending && msg.delivery_status !== 'failed')"
+                   class="w-3 h-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="clock"
+                   role="img" title="در حال ارسال..." aria-label="در حال ارسال"></svg>
+
+              <!-- Sent vs Read State -->
+              <ng-container *ngIf="msg.delivery_status !== 'failed' && !msg.is_pending">
+                <!-- Two ticks: Read / Seen -->
+                <svg *ngIf="msg.read_by_count && msg.read_by_count > 0"
+                     class="w-3.5 h-3.5 text-sky-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="check-check"
+                     role="img" title="خوانده شده" aria-label="خوانده شده"></svg>
+                <!-- Single tick: Sent to server -->
+                <svg *ngIf="!msg.read_by_count || msg.read_by_count === 0"
+                     class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="check"
+                     role="img" title="ارسال شده" aria-label="ارسال شده"></svg>
+                <!-- خوانده‌شده توسط (فقط گروه) -->
+                <button *ngIf="canShowReadBy(msg)" type="button" (click)="openReadBy(msg)"
+                        data-testid="read-by-btn"
+                        title="خوانده‌شده توسط" aria-label="خوانده‌شده توسط"
+                        class="min-w-[40px] min-h-[40px] -my-3 rounded-xl flex items-center justify-center cursor-pointer tap-target hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="eye"></svg>
+                </button>
+              </ng-container>
+              
+              <!-- Failed State + Retry Button -->
+              <div *ngIf="msg.delivery_status === 'failed'" class="flex items-center gap-1 bg-rose-500/20 text-rose-200 px-1.5 py-0.5 rounded border border-rose-400/30">
+                <span title="خطا در ارسال پیام" class="inline-flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="alert-triangle" aria-hidden="true"></svg>
+                  ناموفق
+                </span>
+                <button (click)="retryMessage(msg)" 
+                        type="button"
+                        title="تلاش مجدد برای ارسال"
+                        aria-label="تلاش مجدد برای ارسال"
+                        class="underline hover:text-white font-bold ml-0.5 transition-colors flex items-center gap-1 cursor-pointer">
+                  <span>تلاش مجدد</span>
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="action-refresh"></svg>
+                </button>
+                <button (click)="discardMessage(msg)"
+                        type="button"
+                        title="حذف این پیام ارسال‌نشده"
+                        aria-label="حذف این پیام ارسال‌نشده"
+                        class="underline hover:text-white font-bold transition-colors flex items-center gap-1 cursor-pointer">
+                  <span>حذف</span>
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="action-delete"></svg>
+                </button>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+
+        <!-- منوی پیام -->
+        <div *ngIf="hasMenu(msg)" class="relative shrink-0">
+          <button type="button" (click)="toggleMenu(msg, $event)"
+                  data-testid="msg-menu-btn"
+                  title="گزینه‌های پیام" aria-label="گزینه‌های پیام"
+                  [attr.aria-expanded]="isMenuOpen(msg)"
+                  class="min-w-[40px] min-h-[40px] rounded-xl text-fg-muted hover:text-fg hover:bg-surface-muted flex items-center justify-center cursor-pointer tap-target transition-opacity sm:opacity-60 sm:group-hover:opacity-100 sm:focus-visible:opacity-100 [@media(hover:none)]:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500"
+                  [class.sm:opacity-100]="isMenuOpen(msg)">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="more-vertical"></svg>
+          </button>
+          <div *ngIf="isMenuOpen(msg)" data-testid="msg-menu"
+               [class.top-full]="!menuPlacement().up" [class.mt-1]="!menuPlacement().up"
+               [class.bottom-full]="menuPlacement().up" [class.mb-1]="menuPlacement().up"
+               [class.end-0]="!menuPlacement().flipX" [class.start-0]="menuPlacement().flipX"
+               class="absolute z-20 w-40 bg-surface border border-line rounded-xl shadow-lg p-1">
+            <button *ngIf="canReply()" type="button" data-testid="menu-reply" (click)="startReply(msg)"
+                    class="w-full min-h-[40px] px-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-fg hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-reply" aria-hidden="true"></svg>پاسخ
+            </button>
+            <button *ngIf="canEdit(msg)" type="button" data-testid="menu-edit" (click)="startEdit(msg)"
+                    [disabled]="!isOnline()"
+                    class="w-full min-h-[40px] px-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-fg hover:bg-surface-muted disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="edit" aria-hidden="true"></svg>ویرایش
+            </button>
+            <button *ngIf="msg.text" type="button" data-testid="menu-copy" (click)="copyText(msg)"
+                    class="w-full min-h-[40px] px-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-fg hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="copy" aria-hidden="true"></svg>کپی
+            </button>
+            <button *ngIf="canDelete(msg)" type="button" data-testid="menu-delete" (click)="askRemoveMsg(msg)"
+                    [disabled]="!isOnline()"
+                    class="w-full min-h-[40px] px-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-rose-600 hover:bg-surface-muted disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 cursor-pointer">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="action-delete" aria-hidden="true"></svg>حذف
+            </button>
+          </div>
+        </div>
+        </div>
+      </div>
+      </ng-container>
+      </ng-container>
+
+      <!-- دکمهٔ شناور «پیام جدید» -->
+      <div *ngIf="showNewBtn()" class="sticky bottom-2 h-0 shrink-0 flex justify-center overflow-visible z-10">
+        <button type="button" data-testid="new-msg-btn" (click)="jumpToNew()"
+                title="رفتن به پیام جدید" aria-label="رفتن به پیام جدید"
+                class="-translate-y-full min-h-[40px] px-3 rounded-full bg-indigo-600 text-white text-xs font-bold shadow-lg inline-flex items-center gap-1.5 cursor-pointer">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="arrow-down" aria-hidden="true"></svg>
+          پیام جدید
+        </button>
+      </div>
+    </div>
+      </div>
+
+      <!-- تأیید حذف پیام -->
+      <!-- تأیید حذف پیام -->
+  <div *ngIf="deleteTarget()" class="absolute inset-0 z-20 bg-surface-canvas/80 flex items-center justify-center p-4"
+       (keydown)="onDialogKey($event, cancelRemoveMsg.bind(this))">
+    <div role="alertdialog" aria-modal="true" aria-labelledby="msg-delete-title" data-testid="delete-dialog"
+         class="w-full bg-surface border border-line rounded-2xl shadow-xl p-4">
+      <h3 id="msg-delete-title" class="text-sm font-bold text-fg">حذف پیام</h3>
+      <p class="text-xs text-fg-muted mt-2">این پیام برای همه حذف می‌شود و برگشت‌پذیر نیست. ادامه می‌دهید؟</p>
+      <div class="mt-3 flex items-center justify-end gap-2">
+        <button id="msg-delete-cancel" type="button" (click)="cancelRemoveMsg()"
+                class="min-h-[40px] px-4 rounded-xl border border-line text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer">انصراف</button>
+        <button type="button" (click)="runRemoveMsg()" [disabled]="deleteBusy()" data-testid="delete-confirm"
+                class="min-h-[40px] px-4 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 disabled:opacity-50 cursor-pointer">
+          {{ deleteBusy() ? 'در حال حذف...' : 'حذف' }}</button>
+      </div>
+    </div>
+  </div>
+
+      <!-- فوتر ورودی پیام -->
+      <!-- ─── Message Input Footer (In Chat Mode) ─── -->
+  <div *ngIf="activeTab() === 'chat' && activeConv()?.can_post === false" data-testid="cannot-post-note"
+       class="p-3 border-t border-line bg-surface text-center text-[11px] font-bold text-fg-muted">
+    فقط مدیران می‌توانند در این کانال پیام بفرستند
+  </div>
+  <div *ngIf="activeTab() === 'chat' && activeConv()?.can_post !== false" class="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+
+    <!-- نوار فایل‌های پیش از ارسال: عکس واقعی، صفحهٔ اول PDF یا کارت فایل؛ متن پیام توضیح آن‌هاست -->
+    <div *ngIf="pickedFiles().length > 0" data-testid="picked-strip" class="mb-2">
+      <ul class="flex gap-2 overflow-x-auto pb-1" aria-label="فایل‌های آمادهٔ ارسال">
+        <li *ngFor="let p of pickedFiles(); trackBy: trackPick" [attr.data-testid]="'picked-' + p.kind"
+            class="relative shrink-0 w-24 rounded-xl border border-line bg-surface-muted overflow-hidden">
+          <img *ngIf="p.previewUrl" [src]="p.previewUrl" [alt]="p.file.name" class="w-24 h-24 object-cover bg-white" />
+          <!-- پیام صوتیِ آمادهٔ ارسال: کاربر پیش از فرستادن گوش می‌دهد -->
+          <div *ngIf="p.kind === 'audio'" class="w-24 h-24 flex flex-col items-center justify-center gap-1 p-2 text-fg">
+            <button type="button" (click)="togglePickedAudio(p)" data-testid="picked-audio-toggle"
+                    [attr.aria-label]="isPickPlaying(p) ? 'توقف پیام صوتی' : 'گوش دادن به پیام صوتی پیش از فرستادن'"
+                    [attr.title]="isPickPlaying(p) ? 'توقف' : 'گوش دادن'"
+                    class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-11 h-11 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center cursor-pointer tap-target">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1" [appIcon]="isPickPlaying(p) ? 'pause' : 'play'" aria-hidden="true"></svg>
+            </button>
+            <span class="text-[11px] font-bold tabular-nums" data-testid="picked-audio-time">{{ playingAudioId() === 'pick:' + p.key ? durationFa(audioPos()) + ' / ' : '' }}{{ durationFa(voiceNameSeconds(p.file.name) || audioDur()) }}</span>
+          </div>
+          <div *ngIf="!p.previewUrl && p.kind !== 'audio'" class="w-24 h-24 flex flex-col items-center justify-center gap-1 p-2 text-fg-muted">
+            <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="file-text" aria-hidden="true"></svg>
+            <span class="text-[10px] font-bold uppercase" dir="ltr">{{ fileExt(p.file.name) }}</span>
+          </div>
+          <div class="px-1.5 py-1 text-[10px] text-fg">
+            <span class="block truncate font-bold" [title]="p.file.name">{{ p.kind === 'audio' ? 'پیام صوتی' : p.file.name }}</span>
+            <span class="block text-fg-muted">{{ fileSizeFa(p.file.size) }}</span>
+          </div>
+          <button type="button" (click)="removePicked(p.key)" data-testid="picked-remove"
+                  [attr.aria-label]="'حذف ' + p.file.name" [attr.title]="'حذف ' + p.file.name"
+                  class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 absolute top-0 end-0 w-10 h-10 flex items-center justify-center cursor-pointer tap-target">
+            <span class="w-6 h-6 rounded-full bg-slate-900/70 text-white flex items-center justify-center">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="x" aria-hidden="true"></svg>
+            </span>
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <!-- نوار پاسخ / ویرایش -->
+    <div *ngIf="replyTo() as r" data-testid="reply-strip"
+         class="flex items-center justify-between gap-2 p-2 mb-2 bg-surface-muted rounded-lg border-s-4 border-indigo-500 text-xs">
+      <div class="min-w-0">
+        <span class="block font-bold text-fg truncate">پاسخ به {{ r.is_me ? 'خودم' : (r.sender_details?.full_name || 'کاربر') }}</span>
+        <span class="block text-fg-muted truncate">{{ r.text || (r.attachments?.length ? 'فایل' : '') }}</span>
+      </div>
+      <button type="button" (click)="cancelCompose()" data-testid="reply-cancel"
+              title="لغو پاسخ" aria-label="لغو پاسخ"
+              class="min-w-[40px] min-h-[40px] shrink-0 rounded-xl text-fg-muted hover:bg-line-subtle flex items-center justify-center cursor-pointer tap-target">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="x"></svg>
+      </button>
+    </div>
+    <div *ngIf="editing() as e" data-testid="edit-strip"
+         class="flex items-center justify-between gap-2 p-2 mb-2 bg-surface-muted rounded-lg border-s-4 border-amber-500 text-xs">
+      <div class="min-w-0">
+        <span class="block font-bold text-fg">ویرایش پیام</span>
+        <span class="block text-fg-muted truncate">{{ e.text }}</span>
+      </div>
+      <button type="button" (click)="cancelCompose()" data-testid="edit-cancel"
+              title="لغو ویرایش" aria-label="لغو ویرایش"
+              class="min-w-[40px] min-h-[40px] shrink-0 rounded-xl text-fg-muted hover:bg-line-subtle flex items-center justify-center cursor-pointer tap-target">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="x"></svg>
+      </button>
+    </div>
+
+    <!-- در حال ضبط پیام صوتی -->
+    <div *ngIf="recording()" data-testid="recording-bar" class="flex items-center gap-1.5">
+      <button type="button" (click)="stopRecording(false)" data-testid="record-cancel"
+              aria-label="لغو پیام صوتی" title="لغو پیام صوتی"
+              class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 min-w-[44px] min-h-[44px] rounded-xl text-rose-600 hover:bg-rose-50 flex items-center justify-center cursor-pointer tap-target">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="trash-2" aria-hidden="true"></svg>
+      </button>
+      <div class="flex-1 flex items-center gap-2 bg-surface-muted border border-line rounded-xl px-3 min-h-[44px] text-xs text-fg">
+        <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse shrink-0" aria-hidden="true"></span>
+        <span class="font-bold">در حال ضبط</span>
+        <span class="ms-auto font-bold tabular-nums" data-testid="record-time" role="timer" aria-label="مدت ضبط">{{ durationFa(recordSeconds()) }}</span>
+      </div>
+      <button type="button" (click)="stopRecording('review')" data-testid="record-review"
+              aria-label="پایان ضبط و گوش دادن پیش از فرستادن" title="پایان ضبط و گوش دادن"
+              class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 min-w-[44px] min-h-[44px] rounded-xl border border-line text-fg hover:bg-line-subtle flex items-center justify-center cursor-pointer tap-target">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="check" aria-hidden="true"></svg>
+      </button>
+      <button type="button" (click)="stopRecording(true)" data-testid="record-send"
+              aria-label="فرستادن پیام صوتی" title="فرستادن پیام صوتی"
+              class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 min-w-[44px] min-h-[44px] rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center cursor-pointer tap-target">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="send" aria-hidden="true"></svg>
+      </button>
+    </div>
+
+    <!-- Input Form -->
+    <div *ngIf="!recording()" class="flex items-end gap-1.5">
+      <label class="min-w-[44px] min-h-[44px] p-2.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors flex items-center justify-center tap-target" title="پیوست فایل" aria-label="پیوست فایل">
+        <input type="file" multiple data-testid="file-input" (change)="onFileSelected($event)" class="hidden" accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.xlsx,.xls,.doc,.docx,.txt,.csv,.webm,.ogg,.m4a" />
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-clip"></svg>
+      </label>
+
+      <textarea #composer rows="1"
+                data-testid="composer"
+                [(ngModel)]="messageInputText"
+                (input)="onInputTyping(); autoGrow()"
+                (keydown.enter)="onComposerKey($any($event))"
+                (paste)="onComposerPaste($event)"
+                aria-label="متن پیام"
+                placeholder="پیام خود را بنویسید..."
+                class="flex-1 resize-none text-xs bg-surface-muted border border-line rounded-xl px-3 py-3 min-h-[44px] max-h-[120px] text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all"></textarea>
+
+      <!-- میکروفون فقط وقتی متن و فایلی نیست (مثل پیام‌رسان‌های رایج)؛ سقف مدت ندارد -->
+      <button *ngIf="canRecord() && !messageInputText.trim() && pickedFiles().length === 0 && !editing(); else sendBtn"
+              type="button" (click)="startRecording()" data-testid="record-start"
+              aria-label="ضبط پیام صوتی" title="ضبط پیام صوتی"
+              class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 min-w-[44px] min-h-[44px] rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center cursor-pointer tap-target">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="mic" aria-hidden="true"></svg>
+      </button>
+      <ng-template #sendBtn>
+      <button appAction="send"
+              size="lg"
+              display="icon"
+              tone="primary"
+              [disabled]="(!messageInputText.trim() && pickedFiles().length === 0) || isSending()"
+              [busy]="isSending()"
+              (click)="sendMessage()">
+      </button>
+      </ng-template>
+    </div>
+  </div>
+
+      <!-- پنجره‌های مودال درون صفحه -->
+      <!-- ─── انتخاب‌گر کاربران (مشترک بین ساخت گروه و افزودن عضو) ─── -->
+  <ng-template #userPicker>
+    <div class="relative">
+      <input type="text" [ngModel]="pickerSearch()" (ngModelChange)="pickerSearch.set($event)"
+             placeholder="جستجوی همکار..." aria-label="جستجوی همکار" data-testid="picker-search"
+             class="w-full bg-surface-muted text-xs text-fg ps-3 pe-8 py-2 rounded-xl border border-line focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <svg class="w-4 h-4 text-fg-subtle absolute end-2.5 top-2.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="search"></svg>
+    </div>
+    <p class="text-[11px] text-fg-muted mt-2" data-testid="picked-count">{{ pickedIds().length.toLocaleString('fa-IR') }} نفر انتخاب شده</p>
+    <ul class="mt-1 max-h-56 overflow-y-auto divide-y divide-line-subtle border border-line rounded-xl">
+      <li *ngFor="let u of pickerCandidates()">
+        <label class="flex items-center gap-3 px-3 py-2 min-h-[40px] cursor-pointer hover:bg-surface-muted">
+          <input type="checkbox" class="w-4 h-4" [checked]="isPicked(u.id)" (change)="togglePick(u.id)" [attr.data-testid]="'pick-' + u.id" />
+          <span class="text-xs text-fg font-bold">{{ u.full_name || u.username }}</span>
+          <span class="text-[10px] text-fg-muted font-mono"><bdi dir="ltr">@{{ u.username }}</bdi></span>
+        </label>
+      </li>
+      <li *ngIf="pickerCandidates().length === 0" class="px-3 py-4 text-center text-[11px] text-fg-muted">کاربری یافت نشد</li>
+    </ul>
+    <p *ngIf="groupError()" role="alert" data-testid="group-error" class="mt-2 text-[11px] font-bold text-rose-600">{{ groupError() }}</p>
+  </ng-template>
+
+  <!-- ─── گفتگوی ساخت گروه ─── -->
+  <div *ngIf="createOpen()" class="absolute inset-0 z-10 bg-surface-canvas/80 flex items-end sm:items-center justify-center px-3 pt-safe-3 pb-safe-3"
+       (keydown)="onDialogKey($event, closeCreate.bind(this))">
+    <div role="dialog" aria-modal="true" aria-labelledby="new-group-title" data-testid="create-dialog"
+         class="w-full bg-surface border border-line rounded-2xl shadow-xl p-4 max-h-full overflow-y-auto">
+      <div class="flex items-center justify-between mb-3">
+        <h3 id="new-group-title" class="text-sm font-bold text-fg">گروه جدید</h3>
+        <button type="button" (click)="closeCreate()" title="بستن" aria-label="بستن"
+                class="min-w-[40px] min-h-[40px] rounded-xl text-fg-muted hover:bg-surface-muted flex items-center justify-center cursor-pointer tap-target">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="x"></svg>
+        </button>
+      </div>
+      <label class="block text-[11px] font-bold text-fg-muted mb-1" for="group-title-input">نام گروه</label>
+      <input id="group-title-input" type="text" maxlength="120" autofocus data-testid="group-title-input"
+             [ngModel]="groupTitle()" (ngModelChange)="groupTitle.set($event)"
+             class="w-full mb-3 bg-surface-muted text-xs text-fg px-3 py-2 min-h-[40px] rounded-xl border border-line focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <ng-container *ngTemplateOutlet="userPicker"></ng-container>
+      <div class="mt-3 flex items-center justify-end gap-2">
+        <button type="button" (click)="closeCreate()"
+                class="min-h-[40px] px-4 rounded-xl border border-line text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer">انصراف</button>
+        <button type="button" (click)="submitCreateGroup()" [disabled]="!canSubmitGroup()" data-testid="create-submit"
+                class="min-h-[40px] px-4 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 cursor-pointer">
+          {{ groupBusy() ? 'در حال ساخت...' : 'ساخت گروه' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── پنل «خوانده‌شده توسط» ─── -->
+  <div *ngIf="readByMsg()" class="absolute inset-0 z-20 bg-surface-canvas/80 flex items-end sm:items-center justify-center px-3 pt-safe-3 pb-safe-3"
+       (click)="$event.target === $event.currentTarget && closeReadBy()"
+       (keydown)="onDialogKey($event, closeReadBy.bind(this))">
+    <div role="dialog" aria-modal="true" aria-labelledby="read-by-title" data-testid="read-by-panel"
+         class="w-full bg-surface border border-line rounded-2xl shadow-xl p-4 max-h-full overflow-y-auto">
+      <div class="flex items-center justify-between mb-3">
+        <h3 id="read-by-title" tabindex="-1" class="text-sm font-bold text-fg focus:outline-none">خوانده‌شده توسط</h3>
+        <button type="button" (click)="closeReadBy()" title="بستن" aria-label="بستن"
+                class="min-w-[40px] min-h-[40px] rounded-xl text-fg-muted hover:bg-surface-muted flex items-center justify-center cursor-pointer tap-target">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="x"></svg>
+        </button>
+      </div>
+      <p *ngIf="readByLoading()" class="text-[11px] text-fg-muted py-2" data-testid="read-by-loading">در حال بارگذاری…</p>
+      <div *ngIf="readByError() && !readByLoading()" role="alert" data-testid="read-by-error" class="flex items-center justify-between gap-2 py-2">
+        <p class="text-[11px] font-bold text-rose-600">خطا در دریافت</p>
+        <button type="button" (click)="loadReadBy()"
+                class="min-h-[40px] px-3 rounded-xl border border-line text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer">تلاش دوباره</button>
+      </div>
+      <ng-container *ngIf="readByStatus() && !readByLoading()">
+        <ul *ngIf="readByReaders().length > 0" class="divide-y divide-line-subtle border border-line rounded-xl" data-testid="read-by-list">
+          <li *ngFor="let r of readByReaders()" class="px-3 py-2 text-xs font-bold text-fg" [attr.data-testid]="'read-by-' + r.user_id"><bdi>{{ r.name }}</bdi></li>
+        </ul>
+        <p *ngIf="readByReaders().length === 0" class="text-[11px] text-fg-muted py-2" data-testid="read-by-empty">هنوز کسی این پیام را نخوانده است</p>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- ─── پنل اطلاعات گروه ─── -->
+  <div *ngIf="infoOpen() && activeConv() as conv" class="absolute inset-0 z-10 bg-surface flex flex-col"
+       (keydown)="onDialogKey($event, closeInfo.bind(this))">
+    <div role="dialog" aria-modal="true" aria-labelledby="group-info-title" data-testid="info-panel" class="flex flex-col h-full">
+      <div class="h-16 px-4 border-b border-line flex items-center justify-between shrink-0">
+        <h3 id="group-info-title" tabindex="-1" class="text-sm font-bold text-fg focus:outline-none">اطلاعات گروه</h3>
+        <button type="button" (click)="closeInfo()" title="بستن" aria-label="بستن"
+                class="min-w-[40px] min-h-[40px] rounded-xl text-fg-muted hover:bg-surface-muted flex items-center justify-center cursor-pointer tap-target">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="x"></svg>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-4 space-y-4">
+        <!-- نام گروه -->
+        <div>
+          <div *ngIf="!renaming()" class="flex items-center justify-between gap-2">
+            <p class="text-sm font-bold text-fg truncate" data-testid="info-title">{{ conv.title }}</p>
+            <button *ngIf="canManage()" type="button" (click)="startRename()" title="تغییر نام گروه" aria-label="تغییر نام گروه"
+                    class="min-w-[40px] min-h-[40px] rounded-xl text-fg-muted hover:bg-surface-muted flex items-center justify-center gap-1.5 cursor-pointer tap-target">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="edit"></svg>
+              <span class="hidden sm:inline text-[11px] font-bold">تغییر نام</span>
+            </button>
+          </div>
+          <div *ngIf="renaming()" class="flex items-center gap-2">
+            <input type="text" maxlength="120" [ngModel]="renameText()" (ngModelChange)="renameText.set($event)"
+                   (keydown.enter)="saveRename()" aria-label="نام گروه" data-testid="rename-input"
+                   class="flex-1 bg-surface-muted text-xs text-fg px-3 py-2 min-h-[40px] rounded-xl border border-line focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <button type="button" (click)="saveRename()" [disabled]="!renameText().trim()" title="ذخیره نام" aria-label="ذخیره نام"
+                    class="min-w-[40px] min-h-[40px] rounded-xl bg-indigo-600 text-white flex items-center justify-center disabled:opacity-50 cursor-pointer tap-target">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="check"></svg>
+            </button>
+            <button type="button" (click)="renaming.set(false)" title="انصراف" aria-label="انصراف"
+                    class="min-w-[40px] min-h-[40px] rounded-xl text-fg-muted hover:bg-surface-muted flex items-center justify-center cursor-pointer tap-target">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="x"></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- اعضا -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="text-xs font-bold text-fg-muted">اعضا ({{ members().length.toLocaleString('fa-IR') }})</h4>
+            <button *ngIf="canManage() && !addOpen()" type="button" (click)="openAdd()" data-testid="add-member-btn"
+                    title="افزودن عضو" aria-label="افزودن عضو"
+                    class="min-h-[40px] px-3 rounded-xl border border-line text-xs font-bold text-fg hover:bg-surface-muted flex items-center gap-1.5 cursor-pointer tap-target">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="user-plus"></svg>
+              <span class="hidden sm:inline">افزودن عضو</span>
+            </button>
+          </div>
+
+          <div *ngIf="addOpen()" class="mb-3 p-3 border border-line rounded-xl" data-testid="add-member-box">
+            <ng-container *ngTemplateOutlet="userPicker"></ng-container>
+            <div class="mt-3 flex items-center justify-end gap-2">
+              <button type="button" (click)="addOpen.set(false)"
+                      class="min-h-[40px] px-4 rounded-xl border border-line text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer">انصراف</button>
+              <button type="button" (click)="submitAddMembers()" [disabled]="pickedIds().length === 0 || groupBusy()" data-testid="add-member-submit"
+                      class="min-h-[40px] px-4 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 cursor-pointer">افزودن</button>
+            </div>
+          </div>
+
+          <p *ngIf="membersLoading()" class="text-[11px] text-fg-muted py-2">در حال دریافت...</p>
+          <div *ngIf="membersError() && !membersLoading()" role="alert" data-testid="members-error" class="flex items-center justify-between gap-2 py-2">
+            <p class="text-[11px] font-bold text-rose-600">دریافت فهرست اعضا انجام نشد</p>
+            <button type="button" (click)="loadMembers()"
+                    class="min-h-[40px] px-3 rounded-xl border border-line text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer">تلاش دوباره</button>
+          </div>
+          <ul class="divide-y divide-line-subtle border border-line rounded-xl" data-testid="member-list">
+            <li *ngFor="let m of members()" class="flex items-center justify-between gap-2 px-3 py-2" [attr.data-testid]="'member-' + m.id">
+              <div class="min-w-0">
+                <p class="text-xs font-bold text-fg truncate">{{ m.full_name || m.username }}</p>
+                <span class="text-[10px] font-bold text-fg-muted" data-testid="role-badge">{{ roleLabel(m.role) }}</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button *ngIf="isOwner() && m.role !== 'owner'" type="button" (click)="toggleRole(m)"
+                        [title]="m.role === 'admin' ? 'تبدیل به عضو عادی' : 'ارتقا به مدیر گروه'"
+                        [attr.aria-label]="m.role === 'admin' ? 'تبدیل به عضو عادی' : 'ارتقا به مدیر گروه'"
+                        class="min-w-[40px] min-h-[40px] px-2 rounded-xl text-fg-muted hover:bg-surface-muted flex items-center justify-center gap-1.5 cursor-pointer tap-target">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="shield"></svg>
+                  <span class="hidden sm:inline text-[11px] font-bold">{{ m.role === 'admin' ? 'عضو عادی' : 'مدیر کن' }}</span>
+                </button>
+                <button *ngIf="canRemove(m)" type="button" (click)="askRemove(m)" data-testid="remove-member"
+                        title="حذف از گروه" aria-label="حذف از گروه"
+                        class="min-w-[40px] min-h-[40px] rounded-xl text-rose-600 hover:bg-surface-muted flex items-center justify-center cursor-pointer tap-target">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="trash-2"></svg>
+                </button>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- رسانه و فایل‌ها -->
+        <div data-testid="media-tab" class="space-y-3">
+          <div>
+            <h4 class="text-xs font-bold text-fg-muted">رسانه و فایل‌ها</h4>
+            <p class="text-[10px] text-fg-subtle mt-0.5">فقط پیام‌های بارگذاری‌شده</p>
+          </div>
+
+          <!-- عکس‌ها -->
+          <div>
+            <h5 class="text-[11px] font-bold text-fg-muted mb-1.5">عکس‌ها</h5>
+            <p *ngIf="mediaImages().length === 0" data-testid="media-empty" class="text-[11px] text-fg-subtle py-1">عکسی در این گفتگو نیست</p>
+            <div *ngIf="mediaImages().length > 0" class="grid grid-cols-3 gap-1">
+              <button
+                *ngFor="let e of mediaImages()"
+                type="button"
+                (click)="openAttachment(e.msg, e.att)"
+                data-testid="media-image"
+                [attr.aria-label]="'نمایش ' + e.att.file_name"
+                [attr.title]="'نمایش ' + e.att.file_name"
+                class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 relative aspect-square w-full rounded-lg overflow-hidden border border-line hover:opacity-90 transition-opacity bg-surface-muted cursor-pointer">
+                <div *ngIf="!attachmentPreview(e.att)" class="animate-pulse bg-black/10 dark:bg-white/10 w-full h-full"></div>
+                <img
+                  *ngIf="attachmentPreview(e.att) as src"
+                  [src]="src"
+                  [alt]="e.att.file_name"
+                  loading="lazy"
+                  class="w-full h-full object-cover" />
+              </button>
+            </div>
+          </div>
+
+          <!-- فایل‌ها -->
+          <div>
+            <h5 class="text-[11px] font-bold text-fg-muted mb-1.5">فایل‌ها</h5>
+            <p *ngIf="mediaFiles().length === 0" data-testid="media-empty" class="text-[11px] text-fg-subtle py-1">فایلی در این گفتگو نیست</p>
+            <ul *ngIf="mediaFiles().length > 0" class="divide-y divide-line-subtle border border-line rounded-xl overflow-hidden">
+              <li *ngFor="let e of mediaFiles()">
+                <button
+                  type="button"
+                  (click)="openAttachment(e.msg, e.att)"
+                  data-testid="media-file"
+                  [attr.aria-label]="'باز کردن ' + e.att.file_name"
+                  [attr.title]="'باز کردن ' + e.att.file_name"
+                  class="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 w-full p-2.5 flex items-center justify-between gap-2 text-start hover:bg-surface-muted cursor-pointer transition-colors">
+                  <div class="flex items-center gap-2 min-w-0 flex-1">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-surface-muted text-fg-muted">
+                      <svg *ngIf="attachmentKind(e.att) === 'pdf'" class="w-4 h-4 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="file-pdf"></svg>
+                      <svg *ngIf="attachmentKind(e.att) === 'word'" class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="file-word"></svg>
+                      <svg *ngIf="attachmentKind(e.att) === 'excel'" class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="file-excel"></svg>
+                      <svg *ngIf="attachmentKind(e.att) === 'text'" class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
+                      <svg *ngIf="attachmentKind(e.att) === 'file'" class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="hero-paper-clip"></svg>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="truncate text-xs font-bold text-fg">{{ e.att.file_name }}</p>
+                      <p class="text-[10px] text-fg-muted font-bold mt-0.5">{{ fileMetaFa(e.att) }}</p>
+                    </div>
+                  </div>
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- صدا و ترک گروه -->
+        <div class="flex flex-wrap gap-2">
+          <button type="button" (click)="toggleGroupMute()" data-testid="group-mute-btn" [attr.aria-label]="conv.is_muted ? 'صدادار کردن' : 'بی‌صدا کردن'"
+                  class="min-h-[40px] px-3 rounded-xl border border-line text-xs font-bold text-fg hover:bg-surface-muted flex items-center gap-1.5 cursor-pointer tap-target">
+            <svg *ngIf="!conv.is_muted" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-volume-off"></svg>
+            <svg *ngIf="conv.is_muted" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-volume-up"></svg>
+            <span>{{ conv.is_muted ? 'صدادار کردن' : 'بی‌صدا کردن' }}</span>
+          </button>
+          <button type="button" (click)="askLeave()" data-testid="leave-btn"
+                  class="min-h-[40px] px-3 rounded-xl border border-line text-xs font-bold text-rose-600 hover:bg-surface-muted flex items-center gap-1.5 cursor-pointer tap-target">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="log-out"></svg>
+            <span>ترک گروه</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- مرحلهٔ تأیید -->
+      <div *ngIf="confirmAction() as ca" role="alertdialog" aria-modal="true" aria-labelledby="confirm-text" data-testid="confirm-box"
+           class="shrink-0 border-t border-line bg-surface-muted p-4">
+        <p id="confirm-text" class="text-xs font-bold text-fg mb-3">
+          {{ ca.kind === 'leave' ? 'از این گروه خارج می‌شوید؟' : 'این عضو از گروه حذف شود؟' }}
+        </p>
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" id="confirm-cancel" (click)="cancelConfirm()"
+                  class="min-h-[40px] px-4 rounded-xl border border-line text-xs font-bold text-fg hover:bg-surface cursor-pointer">انصراف</button>
+          <button type="button" (click)="runConfirm()" data-testid="confirm-yes"
+                  class="min-h-[40px] px-4 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 cursor-pointer">
+            {{ ca.kind === 'leave' ? 'ترک گروه' : 'حذف' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+    </ng-container>
+
+    <!-- حالت خالی (دسکتاپ وقتی گفتگویی انتخاب نشده است) -->
+    <div *ngIf="!activeConv()" data-testid="chat-empty-state"
+         class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-surface-canvas select-none">
+      <div class="w-20 h-20 rounded-3xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4 shadow-sm border border-indigo-100 dark:border-indigo-900/60">
+        <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="message-square"></svg>
+      </div>
+      <h3 class="text-base sm:text-lg font-black text-fg">یک گفتگو را برای شروع انتخاب کنید</h3>
+      <p class="text-xs sm:text-sm text-fg-muted mt-2 max-w-sm leading-relaxed">
+        یک گفتگو از فهرست سمت راست انتخاب کنید یا با کلیک روی دکمهٔ «همکاران»، گفتگوی تازه‌ای آغاز نمایید.
+      </p>
+    </div>
+  </main>
+</div>
+
 
 <!-- لایت‌باکس پیوست‌ها (گالری عکس و PDF گفتگو) -->
 <app-document-preview #docPreview (goToMessage)="onGalleryGoTo($event)"></app-document-preview>

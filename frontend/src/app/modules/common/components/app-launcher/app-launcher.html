@@ -209,6 +209,47 @@
         </div>
       }
 
+      <!-- ۳-ج. کاشی «گفتگوها» (چت سازمانی) -->
+      @if (showChatCard()) {
+        <div
+          class="relative rounded-3xl p-6 sm:p-8 border transition-all duration-300 flex flex-col justify-between group overflow-hidden bg-slate-900/80 hover:bg-slate-900 border-sky-500/40 hover:border-sky-400 hover:shadow-2xl cursor-pointer"
+          (click)="enterChat()"
+        >
+          <div class="absolute -right-20 -top-20 w-48 h-48 bg-sky-500/15 rounded-full blur-2xl group-hover:bg-sky-500/25 transition-all pointer-events-none"></div>
+          <div>
+            <div class="flex items-start justify-between mb-5">
+              <div class="w-14 h-14 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-300 shadow-inner">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="message-square" aria-hidden="true"></svg>
+              </div>
+              @if (commService.totalUnreadCount() > 0) {
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-rose-500/20 border border-rose-500/40 text-rose-300">
+                  {{ commService.totalUnreadCount() }} پیام خوانده‌نشده
+                </span>
+              } @else {
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-sky-500/15 border border-sky-500/30 text-sky-200">
+                  ارتباطات سازمانی
+                </span>
+              }
+            </div>
+            <h3 class="text-lg sm:text-xl font-black text-white group-hover:text-sky-300 transition-colors">گفتگوها و پیام‌رسان</h3>
+            <p class="text-xs text-sky-300/90 font-mono font-bold mt-1">/app/chat</p>
+            <p class="text-xs sm:text-sm text-slate-400 mt-3 leading-relaxed">
+              گفتگوهای متنی مستقیم و کانال‌های سازمانی با اعضای تیم و همکاران در بستر یکپارچهٔ پلتفرم.
+            </p>
+          </div>
+          <div class="mt-8 pt-5 border-t border-slate-800/80 flex items-center justify-end">
+            <button
+              type="button"
+              (click)="$event.stopPropagation(); enterChat()"
+              class="flex items-center gap-2 px-4 py-2 min-h-[40px] rounded-xl text-xs font-black transition-all shadow-md active:scale-95 bg-sky-600 hover:bg-sky-500 text-white cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+            >
+              <span>ورود به گفتگوها</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="rotate-180" appIcon="arrow-right" aria-hidden="true"></svg>
+            </button>
+          </div>
+        </div>
+      }
+
       <!-- ۴. کاشی‌های عمومی برای ماژول‌های نصب‌شده دیگر (بر پایه نقطه توسعه launcherTile) -->
       @for (card of extraCards(); track card.code) {
         <div

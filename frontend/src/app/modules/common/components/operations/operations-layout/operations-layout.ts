@@ -238,6 +238,9 @@ export class OperationsLayoutComponent implements OnInit, OnDestroy {
   }
 
   public toggleChatDrawer(): void {
+    if (this.router.url.startsWith('/app/chat')) {
+      return;
+    }
     this.commService.toggleChatDrawer();
   }
 

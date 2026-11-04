@@ -24,6 +24,10 @@ export class CustomRouteReuseStrategy implements RouteReuseStrategy {
   }
 
   shouldReuseRoute(future: ActivatedRouteSnapshot, curr: ActivatedRouteSnapshot): boolean {
+    const isChat = (p?: string) => p === 'app/chat' || p === 'app/chat/:id';
+    if (isChat(future.routeConfig?.path) && isChat(curr.routeConfig?.path)) {
+      return true;
+    }
     return future.routeConfig === curr.routeConfig && this.getRouteKey(future) === this.getRouteKey(curr);
   }
 
