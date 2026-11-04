@@ -14,6 +14,7 @@ import { ActionButtonComponent } from '../../../../../shared/components/action-b
 import { ChatEmojiPickerComponent } from '../chat-emoji-picker/chat-emoji-picker.component';
 import { ChatMessageMenuComponent } from '../chat-message-menu/chat-message-menu.component';
 import { ChatForwardModalComponent } from '../chat-forward-modal/chat-forward-modal.component';
+import { ChatPinnedBarComponent } from '../chat-pinned-bar/chat-pinned-bar.component';
 import { ApiService } from '../../../../../core/api/api.service';
 import { saveBlob, FileOutputService } from '../../../../../core/platform/file-output';
 import { ConfigApiService } from '../../../../../core/api/config-api.service';
@@ -59,7 +60,7 @@ export const CHAT_DEFAULT_MAX_FILE_MB = 100;
 @Component({
   selector: 'app-chat-drawer',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, DocumentPreviewComponent, ChatEmojiPickerComponent, ChatMessageMenuComponent, ChatForwardModalComponent],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, DocumentPreviewComponent, ChatEmojiPickerComponent, ChatMessageMenuComponent, ChatForwardModalComponent, ChatPinnedBarComponent],
   templateUrl: './chat-drawer.component.html',
   styleUrls: ['./chat-drawer.component.css']
 })
@@ -1904,13 +1905,27 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   public filteredConversations(): Conversation[] {
     const all = Array.isArray(this.conversations()) ? this.conversations() : [];
     const kind = this.convFilter();
-    const list = kind === 'all' ? all : all.filter(c => this.convKindOf(c) === kind);
+    let list = kind === 'all' ? all : all.filter(c => this.convKindOf(c) === kind);
     const q = this.searchQuery().toLowerCase().trim();
-    if (!q) return list;
-    return list.filter(c => {
-      const title = c.title?.toLowerCase() || '';
-      const otherNames = c.participants_details?.map(p => p.full_name?.toLowerCase() || '').join(' ') || '';
-      return title.includes(q) || otherNames.includes(q);
+    if (q) {
+      list = list.filter(c => {
+        const title = c.title?.toLowerCase() || '';
+        const otherNames = c.participants_details?.map(p => p.full_name?.toLowerCase() || '').join(' ') || '';
+        return title.includes(q) || otherNames.includes(q);
+      });
+    }
+    return [...list].sort((a, b) => {
+      const aPinned = a.is_pinned ? 1 : 0;
+      const bPinned = b.is_pinned ? 1 : 0;
+      if (aPinned !== bPinned) return bPinned - aPinned;
+      if (a.is_pinned && b.is_pinned) {
+        const aTime = a.pinned_at ? Date.parse(a.pinned_at) : 0;
+        const bTime = b.pinned_at ? Date.parse(b.pinned_at) : 0;
+        if (aTime !== bTime) return bTime - aTime;
+      }
+      const aUpdated = Date.parse(a.updated_at || a.created_at || '0');
+      const bUpdated = Date.parse(b.updated_at || b.created_at || '0');
+      return bUpdated - aUpdated;
     });
   }
 
@@ -2310,6 +2325,77 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     if (m.id === this.currentUserId()) return false;
     if (this.isOwner()) return m.role !== 'owner';
     return this.canManage() && m.role === 'member';
+  }
+
+  // ─── سنجاق گفتگو و پیام‌ها (فاز ۶) ───
+  public toggleConversationPin(conv: Conversation, ev?: MouseEvent): void {
+    if (ev) {
+      ev.stopPropagation();
+    }
+    if (!this.isOnline()) {
+      this.toast.warning('عملیات سنجاق در حالت آفلاین در دسترس نیست');
+      return;
+    }
+    const newPinned = !conv.is_pinned;
+    this.commService.togglePinConversation(conv.id, newPinned).subscribe({
+      next: () => {
+        const text = newPinned ? 'گفتگو سنجاق شد' : 'سنجاق گفتگو برداشته شد';
+        this.toast.success(text);
+      },
+      error: (err) => {
+        const detail = err?.error?.detail || err?.error?.error || 'خطا در سنجاق کردن گفتگو';
+        this.toast.error(detail);
+      }
+    });
+  }
+
+  public canPinMessage(msg?: ChatMessage | any): boolean {
+    const conv = this.activeConv();
+    if (!conv) return false;
+    if (conv.conv_type === 'direct') {
+      return true;
+    }
+    if (conv.conv_type === 'group') {
+      return this.canManage();
+    }
+    if (conv.conv_type === 'announcement') {
+      if (!msg) return !!conv.can_post;
+      const uid = this.currentUserId();
+      const senderId = 'sender' in msg ? msg.sender : (msg as any).pinned_by;
+      return !!conv.can_post || (uid !== null && senderId === uid);
+    }
+    return false;
+  }
+
+  public togglePinMessage(msg: ChatMessage | string | number, explicitPin?: boolean): void {
+    if (!this.isOnline()) {
+      this.toast.warning('عملیات سنجاق در حالت آفلاین در دسترس نیست');
+      return;
+    }
+    const msgId = typeof msg === 'object' ? msg.id : msg;
+    const currentPinned = typeof msg === 'object' ? !!msg.is_pinned : undefined;
+    const newPinned = explicitPin !== undefined ? explicitPin : (currentPinned !== undefined ? !currentPinned : undefined);
+
+    this.commService.togglePinMessage(msgId, newPinned).subscribe({
+      next: (res) => {
+        const isNowPinned = res?.is_pinned;
+        const text = isNowPinned ? 'پیام سنجاق شد' : 'سنجاق پیام برداشته شد';
+        this.toast.success(text);
+        this.closeMenu();
+      },
+      error: (err) => {
+        const detail = err?.error?.detail || err?.error?.error || 'خطا در سنجاق کردن پیام';
+        this.toast.error(detail);
+      }
+    });
+  }
+
+  public onPinnedBarMessageClick(msgId: string | number): void {
+    this.scrollToMessage(String(msgId));
+  }
+
+  public onPinnedBarUnpinClick(msgId: string | number): void {
+    this.togglePinMessage(msgId, false);
   }
 
   public async openInfo(): Promise<void> {

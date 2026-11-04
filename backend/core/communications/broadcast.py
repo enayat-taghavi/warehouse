@@ -290,3 +290,29 @@ def broadcast_message_reaction_ws(message):
         }
         _send_to_user_rooms(channel_layer, [p_id], "chat.message_reaction", payload)
 
+
+def broadcast_pinned_messages_ws(conversation, message_id, event="chat.message_pinned"):
+    """
+    برودکست بلادرنگ تغییر پیام‌های سنجاق‌شده (سنجاق یا برداشتن سنجاق) به اعضای گفتگو.
+    رویداد chat.message_pinned یا chat.message_unpinned با payload شامل
+    conversation_id, message_id و pinned_messages تجمیع‌شده.
+    """
+    from .access import effective_reader_ids
+    from .serializers import get_conversation_pinned_messages_data
+    channel_layer = get_channel_layer()
+    if not channel_layer:
+        return
+
+    recipient_ids = list(effective_reader_ids(conversation))
+    pinned_list = get_conversation_pinned_messages_data(conversation)
+    conv_id = str(conversation.id)
+    msg_id = str(message_id)
+
+    payload = {
+        'conversation_id': conv_id,
+        'message_id': msg_id,
+        'pinned_messages': pinned_list,
+    }
+    _send_to_user_rooms(channel_layer, recipient_ids, event, payload)
+
+

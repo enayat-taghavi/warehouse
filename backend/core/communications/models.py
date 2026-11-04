@@ -324,6 +324,7 @@ class ConversationParticipant(SyncModelMixin):
     )
     joined_at = models.DateTimeField(null=True, blank=True, verbose_name="زمان پیوستن")
     left_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name="زمان خروج")
+    pinned_at = models.DateTimeField(null=True, blank=True, verbose_name="زمان سنجاق گفتگو")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ عضویت")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ بروزرسانی")
 
@@ -340,6 +341,44 @@ class ConversationParticipant(SyncModelMixin):
 
     def __str__(self):
         return f"{self.user} in {self.conversation}"
+
+
+class PinnedMessage(models.Model):
+    conversation = models.ForeignKey(
+        Conversation,
+        on_delete=models.CASCADE,
+        related_name='pinned_messages',
+        verbose_name="گفتگو"
+    )
+    message = models.ForeignKey(
+        Message,
+        on_delete=models.CASCADE,
+        related_name='pin_records',
+        verbose_name="پیام"
+    )
+    pinned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='pinned_chat_messages',
+        verbose_name="سنجاق‌کننده"
+    )
+    pinned_at = models.DateTimeField(auto_now_add=True, verbose_name="زمان سنجاق پیام")
+
+    class Meta:
+        ordering = ['pinned_at', 'id']
+        verbose_name = "پیام سنجاق‌شده"
+        verbose_name_plural = "پیام‌های سنجاق‌شده"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['conversation', 'message'],
+                name='unique_conversation_pinned_message'
+            )
+        ]
+
+    def __str__(self):
+        return f"Pinned msg #{self.message_id} in conv #{self.conversation_id}"
 
 
 class GenericComment(SyncModelMixin):

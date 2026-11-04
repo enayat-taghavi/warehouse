@@ -83,7 +83,9 @@ describe('ChatDrawerComponent - Phase 1 (Page mode, expand button, URL sync)', (
       toggleMute: vi.fn(),
       reactToMessage: vi.fn().mockReturnValue(of({ message_id: 1, conversation_id: 'c101', reactions: [{ emoji: '❤️', count: 1, mine: true }] })),
       getMessageReactions: vi.fn().mockReturnValue(of([{ user_id: 1, full_name: 'من', emoji: '❤️', created_at: new Date().toISOString() }])),
-      forwardMessages: vi.fn().mockReturnValue(of({ status: 'forwarded', count: 1, conversation_ids: ['c101'] }))
+      forwardMessages: vi.fn().mockReturnValue(of({ status: 'forwarded', count: 1, conversation_ids: ['c101'] })),
+      togglePinConversation: vi.fn().mockReturnValue(of({ is_pinned: true, pinned_at: new Date().toISOString() })),
+      togglePinMessage: vi.fn().mockReturnValue(of({ is_pinned: true, pinned_at: new Date().toISOString() }))
     };
 
     mockRouter = {
@@ -512,7 +514,9 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
       editMessage: vi.fn().mockResolvedValue(undefined),
       reactToMessage: vi.fn().mockReturnValue(of({ message_id: 301, conversation_id: 'c101', reactions: [{ emoji: '❤️', count: 1, mine: true }] })),
       getMessageReactions: vi.fn().mockReturnValue(of([{ user_id: 1, full_name: 'من', emoji: '❤️', created_at: new Date().toISOString() }])),
-      forwardMessages: vi.fn().mockReturnValue(of({ status: 'forwarded', count: 1, conversation_ids: ['c101'] }))
+      forwardMessages: vi.fn().mockReturnValue(of({ status: 'forwarded', count: 1, conversation_ids: ['c101'] })),
+      togglePinConversation: vi.fn().mockReturnValue(of({ is_pinned: true, pinned_at: new Date().toISOString() })),
+      togglePinMessage: vi.fn().mockReturnValue(of({ is_pinned: true, pinned_at: new Date().toISOString() }))
     };
 
     await TestBed.configureTestingModule({
@@ -986,5 +990,155 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
     comp.openForwardModal([myMsg]);
     expect(mockToast.show).toHaveBeenCalledWith('info', 'بازارسال پیام نیاز به اتصال به اینترنت دارد');
     expect(comp.isForwardModalOpen()).toBe(false);
+  });
+
+  // ─── Phase 6: Conversation Pinning & Telegram Pinned Bar ───
+  it('sorts pinned conversations to the top in filteredConversations()', async () => {
+    await setupPhase3Component();
+
+    const c1: Conversation = {
+      id: 'c1',
+      title: 'گفتگو ۱ (عادی قدیمی)',
+      conv_type: 'direct',
+      participants: [1, 2],
+      is_active: true,
+      created_at: '2026-01-01T10:00:00Z',
+      updated_at: '2026-01-01T10:00:00Z',
+      is_pinned: false
+    };
+    const c2: Conversation = {
+      id: 'c2',
+      title: 'گفتگو ۲ (عادی جدیدتر)',
+      conv_type: 'direct',
+      participants: [1, 3],
+      is_active: true,
+      created_at: '2026-01-01T10:00:00Z',
+      updated_at: '2026-01-02T10:00:00Z',
+      is_pinned: false
+    };
+    const c3: Conversation = {
+      id: 'c3',
+      title: 'گفتگو ۳ (سنجاق‌شده قدیمی)',
+      conv_type: 'direct',
+      participants: [1, 4],
+      is_active: true,
+      created_at: '2026-01-01T10:00:00Z',
+      updated_at: '2026-01-01T10:00:00Z',
+      is_pinned: true,
+      pinned_at: '2026-01-01T12:00:00Z'
+    };
+    const c4: Conversation = {
+      id: 'c4',
+      title: 'گفتگو ۴ (سنجاق‌شده جدید)',
+      conv_type: 'direct',
+      participants: [1, 5],
+      is_active: true,
+      created_at: '2026-01-01T10:00:00Z',
+      updated_at: '2026-01-01T10:00:00Z',
+      is_pinned: true,
+      pinned_at: '2026-01-02T12:00:00Z'
+    };
+
+    comp.conversations.set([c1, c2, c3, c4]);
+    const filtered = comp.filteredConversations();
+
+    // Pinned ones come first, ordered by -pinned_at, then unpinned by -updated_at
+    expect(filtered.map(c => c.id)).toEqual(['c4', 'c3', 'c2', 'c1']);
+  });
+
+  it('toggles conversation pin with success toast', async () => {
+    await setupPhase3Component();
+
+    comp.toggleConversationPin(sampleConv);
+    expect(comm.togglePinConversation).toHaveBeenCalledWith('c300', true);
+    expect(mockToast.success).toHaveBeenCalledWith('گفتگو سنجاق شد');
+  });
+
+  it('renders pin icon inside message bubble when is_pinned is true', async () => {
+    await setupPhase3Component();
+
+    const pinnedMsg: ChatMessage = {
+      ...myMsg,
+      id: '305',
+      text: 'پیام سنجاق شده در گفتگو',
+      is_pinned: true
+    };
+    comp.messages.set([pinnedMsg]);
+    fixture.detectChanges();
+    await flush(fixture);
+
+    const pinIcon = fixture.nativeElement.querySelector('[data-testid="msg-pinned-icon"]');
+    expect(pinIcon).not.toBeNull();
+  });
+
+  it('renders telegram pinned bar when active conversation has pinned_messages', async () => {
+    await setupPhase3Component();
+
+    const convWithPins: Conversation = {
+      ...sampleConv,
+      pinned_messages: [
+        { id: 301, text: 'دستورالعمل مهم ۱', sender_name: 'مدیر', pinned_at: '2026-01-01T10:00:00Z' },
+        { id: 302, text: 'دستورالعمل مهم ۲', sender_name: 'معاون', pinned_at: '2026-01-01T11:00:00Z' }
+      ]
+    };
+    comp.activeConv.set(convWithPins);
+    fixture.detectChanges();
+    await flush(fixture);
+
+    const pinnedBar = fixture.nativeElement.querySelector('[data-testid="chat-pinned-bar"]');
+    expect(pinnedBar).not.toBeNull();
+    expect(pinnedBar.textContent).toContain('دستورالعمل مهم ۱');
+  });
+
+  it('clicking telegram pinned bar scrolls to message and cycles index', async () => {
+    await setupPhase3Component();
+
+    const convWithPins: Conversation = {
+      ...sampleConv,
+      pinned_messages: [
+        { id: 301, text: 'دستورالعمل اول', sender_name: 'مدیر', pinned_at: '2026-01-01T10:00:00Z' },
+        { id: 302, text: 'دستورالعمل دوم', sender_name: 'معاون', pinned_at: '2026-01-01T11:00:00Z' }
+      ]
+    };
+    comp.activeConv.set(convWithPins);
+    const scrollSpy = vi.spyOn(comp, 'scrollToMessage');
+    fixture.detectChanges();
+    await flush(fixture);
+
+    const pinnedBar = fixture.nativeElement.querySelector('[data-testid="chat-pinned-bar"]') as HTMLElement;
+    expect(pinnedBar).not.toBeNull();
+
+    // Click 1: emits message 301, cycles index to 1
+    pinnedBar.click();
+    expect(scrollSpy).toHaveBeenCalledWith('301');
+
+    fixture.detectChanges();
+    await flush(fixture);
+    expect(pinnedBar.textContent).toContain('دستورالعمل دوم');
+
+    // Click 2: emits message 302, cycles back to 0
+    pinnedBar.click();
+    expect(scrollSpy).toHaveBeenCalledWith('302');
+  });
+
+  it('unpin button inside telegram pinned bar calls togglePinMessage with explicit unpin', async () => {
+    await setupPhase3Component();
+
+    const convWithPins: Conversation = {
+      ...sampleConv,
+      my_role: 'owner',
+      pinned_messages: [
+        { id: 301, text: 'دستورالعمل اول', sender_name: 'مدیر', pinned_at: '2026-01-01T10:00:00Z' }
+      ]
+    };
+    comp.activeConv.set(convWithPins);
+    fixture.detectChanges();
+    await flush(fixture);
+
+    const unpinBtn = fixture.nativeElement.querySelector('[data-testid="unpin-button"]') as HTMLButtonElement;
+    expect(unpinBtn).not.toBeNull();
+
+    unpinBtn.click();
+    expect(comm.togglePinMessage).toHaveBeenCalledWith(301, false);
   });
 });

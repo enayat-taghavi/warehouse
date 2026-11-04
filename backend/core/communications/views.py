@@ -8,7 +8,10 @@ from urllib.parse import quote
 from django.conf import settings
 from django.http import FileResponse, Http404, HttpResponse
 from django.db import transaction
-from django.db.models import Q, Prefetch, Count, Subquery, OuterRef, Value, IntegerField, DateTimeField
+from django.db.models import (
+    Q, Prefetch, Count, Subquery, OuterRef, Value, IntegerField, DateTimeField,
+    F, Case, When, BooleanField, Exists
+)
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.contrib.auth import get_user_model
@@ -25,12 +28,14 @@ from accounts.models import AuditLog
 from notifications.models import Notification
 from .models import (
     Conversation, ConversationParticipant, Message,
-    MessageAttachment, MessageReaction, GenericComment, ConversationType, ParticipantRole
+    MessageAttachment, MessageReaction, GenericComment, ConversationType, ParticipantRole,
+    PinnedMessage
 )
 from .serializers import (
     ConversationSerializer, MessageSerializer, MessageReactorSerializer,
     MessageAttachmentSerializer, GenericCommentSerializer, UserShortSerializer,
     ChatUserPolicyWriteSerializer, ChatCompanyPolicyWriteSerializer,
+    get_conversation_pinned_messages_data,
 )
 from .contact_scope import (
     can_contact, contact_queryset, ids_outside_scope, chat_allowed, display_contact_scope,
@@ -49,7 +54,7 @@ from .access import (
 from .broadcast import (
     broadcast_message_ws, broadcast_comment_ws,
     broadcast_message_updated_ws, broadcast_message_deleted_ws, broadcast_read_receipt_ws, broadcast_message_reaction_ws,
-    broadcast_membership_ws
+    broadcast_membership_ws, broadcast_pinned_messages_ws
 )
 from .membership import (
     add_member, add_members, remove_member, leave_conversation, member_role, active_member_records,
@@ -152,7 +157,7 @@ class MessagePagination(LimitOffsetPagination):
 # اکشن‌های جزئی که شیء را مستقیم (نه از فهرست قابل مشاهده) می‌گیرند؛ دسترسی با object permission سنجیده می‌شود
 DETAIL_CONVERSATION_ACTIONS = (
     'retrieve', 'update', 'partial_update', 'destroy', 'members', 'member_detail', 'leave', 'mute',
-    'read_status'
+    'read_status', 'pin'
 )
 
 
@@ -162,8 +167,14 @@ class ConversationViewSet(viewsets.ModelViewSet):
     pagination_class = LimitOffsetPagination
 
     def get_queryset(self):
+        pinned_msg_prefetch = Prefetch(
+            'pinned_messages',
+            queryset=PinnedMessage.objects.filter(message__is_deleted=False).select_related('message__sender').prefetch_related('message__attachments').order_by('pinned_at', 'id'),
+            to_attr='prefetched_pinned_messages'
+        )
+
         if self.action in DETAIL_CONVERSATION_ACTIONS:
-            return Conversation.objects.all().select_related('created_by').prefetch_related('participants')
+            return Conversation.objects.all().select_related('created_by').prefetch_related('participants', pinned_msg_prefetch)
 
         user = self.request.user
         wh_id = self.request.query_params.get('warehouse_id')
@@ -209,15 +220,28 @@ class ConversationViewSet(viewsets.ModelViewSet):
                 conversation_id=OuterRef('pk'), user=user, left_at__isnull=True
             ).values('role')[:1]
         )
+        participant_pinned_at_subquery = Subquery(
+            ConversationParticipant.objects.filter(
+                conversation_id=OuterRef('pk'), user=user, left_at__isnull=True
+            ).values('pinned_at')[:1],
+            output_field=DateTimeField()
+        )
 
         qs = visible_conversations(user).select_related(
             'created_by'
         ).prefetch_related(
             'participants',
-            last_msg_prefetch
+            last_msg_prefetch,
+            pinned_msg_prefetch
         ).annotate(
             annotated_unread_count=Coalesce(unread_count_subquery, Value(0)),
             annotated_my_role=my_role_subquery,
+            annotated_pinned_at=participant_pinned_at_subquery,
+            annotated_is_pinned=Case(
+                When(annotated_pinned_at__isnull=False, then=Value(True)),
+                default=Value(False),
+                output_field=BooleanField()
+            ),
             annotated_is_muted=Coalesce(Subquery(
                 ConversationParticipant.objects.filter(
                     conversation_id=OuterRef('pk'), user=user, left_at__isnull=True
@@ -235,7 +259,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         # فیلتر کردن چت‌های دو‌نفره خالی که هیچ پیامی در آن‌ها ارسال نشده است
         qs = qs.exclude(conv_type=ConversationType.DIRECT, messages__isnull=True)
 
-        return qs.order_by('-updated_at')
+        return qs.order_by('-annotated_is_pinned', F('annotated_pinned_at').desc(nulls_last=True), '-updated_at')
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -468,6 +492,47 @@ class ConversationViewSet(viewsets.ModelViewSet):
             rec.save(update_fields=['is_muted', 'updated_at'])
         return Response({'conversation_id': str(conv.id), 'muted': muted})
 
+    @action(detail=True, methods=['post'], url_path='pin')
+    def pin(self, request, pk=None):
+        conv = self.get_object()
+        user = request.user
+
+        part = ConversationParticipant.objects.filter(
+            conversation=conv, user=user, left_at__isnull=True
+        ).first()
+        if not part:
+            raise PermissionDenied('شما عضو فعال این گفتگو نیستید')
+
+        with transaction.atomic():
+            locked_parts = list(ConversationParticipant.objects.select_for_update().filter(
+                user=user, left_at__isnull=True
+            ))
+            part_to_update = next((p for p in locked_parts if p.conversation_id == conv.id), None)
+            if not part_to_update:
+                raise PermissionDenied('شما عضو فعال این گفتگو نیستید')
+
+            want_pin = request.data.get('pinned')
+            if want_pin is None:
+                want_pin = part_to_update.pinned_at is None
+            else:
+                want_pin = bool(want_pin)
+
+            if want_pin:
+                pinned_count = sum(1 for p in locked_parts if p.pinned_at is not None and p.conversation_id != conv.id)
+                if pinned_count >= 5:
+                    return Response({'detail': 'حداکثر ۵ گفتگو را می‌توانید سنجاق کنید'}, status=status.HTTP_400_BAD_REQUEST)
+                part_to_update.pinned_at = timezone.now()
+                part_to_update.save(update_fields=['pinned_at', 'updated_at'])
+            else:
+                part_to_update.pinned_at = None
+                part_to_update.save(update_fields=['pinned_at', 'updated_at'])
+
+        return Response({
+            'id': str(conv.id),
+            'is_pinned': part_to_update.pinned_at is not None,
+            'pinned_at': part_to_update.pinned_at.isoformat() if part_to_update.pinned_at else None
+        }, status=status.HTTP_200_OK)
+
     def perform_destroy(self, instance):
         record_audit_log(
             user=self.request.user,
@@ -589,7 +654,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     throttle_scope = 'chat_message'
 
     def get_permissions(self):
-        if self.action in ['react', 'reactions', 'forward']:
+        if self.action in ['react', 'reactions', 'forward', 'pin']:
             return [permissions.IsAuthenticated(), IsChatEnabled()]
         return super().get_permissions()
 
@@ -602,7 +667,9 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
-            return Message.objects.all().select_related('sender', 'conversation').prefetch_related('attachments', Prefetch('reactions', queryset=MessageReaction.objects.only('id', 'message_id', 'user_id', 'emoji')))
+            return Message.objects.all().select_related('sender', 'conversation').prefetch_related('attachments', Prefetch('reactions', queryset=MessageReaction.objects.only('id', 'message_id', 'user_id', 'emoji'))).annotate(
+                annotated_is_pinned=Exists(PinnedMessage.objects.filter(message=OuterRef('pk')))
+            )
 
         conv_id = self.request.query_params.get('conversation_id')
         if not conv_id:
@@ -620,7 +687,8 @@ class MessageViewSet(viewsets.ModelViewSet):
         qs = Message.objects.filter(
             conversation=conversation
         ).select_related('sender', 'reply_to__sender').prefetch_related('attachments', Prefetch('reactions', queryset=MessageReaction.objects.only('id', 'message_id', 'user_id', 'emoji'))).annotate(
-            annotated_read_by_count=Count('read_by', distinct=True)
+            annotated_read_by_count=Count('read_by', distinct=True),
+            annotated_is_pinned=Exists(PinnedMessage.objects.filter(message=OuterRef('pk')))
         )
 
         since_id = self.request.query_params.get('since_id')
@@ -718,9 +786,14 @@ class MessageViewSet(viewsets.ModelViewSet):
             before_state={'id': str(instance.id), 'text': instance.text}
         )
         instance.soft_delete()
+        was_pinned = PinnedMessage.objects.filter(message=instance).exists()
+        if was_pinned:
+            PinnedMessage.objects.filter(message=instance).delete()
         # خبر زندهٔ حذف به همهٔ خوانندگان و دستگاه‌های خود حذف‌کننده (E12)
         conversation, message_id = instance.conversation, instance.id
         transaction.on_commit(lambda: broadcast_message_deleted_ws(conversation, message_id))
+        if was_pinned:
+            transaction.on_commit(lambda: broadcast_pinned_messages_ws(conversation, message_id, event="chat.message_unpinned"))
 
     @action(detail=False, methods=['post'], url_path='upload')
     def upload_attachment(self, request):
@@ -871,6 +944,86 @@ class MessageViewSet(viewsets.ModelViewSet):
 
         serializer = MessageReactorSerializer(reactions_qs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='pin')
+    def pin(self, request, pk=None):
+        try:
+            msg_id = int(pk)
+        except (ValueError, TypeError):
+            return Response({'error': 'شناسه پیام نامعتبر است'}, status=status.HTTP_404_NOT_FOUND)
+
+        msg = Message.objects.filter(id=msg_id, is_deleted=False).select_related('conversation').first()
+        if not msg:
+            return Response({'error': 'پیام یافت نشد'}, status=status.HTTP_404_NOT_FOUND)
+
+        if msg.is_system:
+            return Response({'error': 'پیام‌های سیستمی قابل سنجاق کردن نیستند'}, status=status.HTTP_400_BAD_REQUEST)
+
+        conv = msg.conversation
+        user = request.user
+
+        # بررسی دسترسی سنجاق پیام بر اساس Row 8 از Decision Table:
+        # 1. Direct chat: Either active participant (both users)
+        # 2. Group chat: ONLY group owner or admin (participant.role in ('owner', 'admin') with left_at__isnull=True). Regular member gets 403!
+        # 3. Announcement: ONLY the sender (message.sender_id == request.user.id or can_post_to_conversation)
+        if conv.conv_type == ConversationType.DIRECT:
+            is_active_member = ConversationParticipant.objects.filter(
+                conversation=conv, user=user, left_at__isnull=True
+            ).exists()
+            if not is_active_member:
+                raise PermissionDenied('تنها اعضای فعال گفتگو مجاز به سنجاق کردن پیام هستند')
+        elif conv.conv_type == ConversationType.GROUP:
+            part = ConversationParticipant.objects.filter(
+                conversation=conv, user=user, left_at__isnull=True
+            ).first()
+            if not part or part.role not in (ParticipantRole.OWNER, ParticipantRole.ADMIN):
+                raise PermissionDenied('تنها مدیران یا مالک گروه مجاز به سنجاق کردن پیام هستند')
+        elif conv.conv_type == ConversationType.ANNOUNCEMENT:
+            if msg.sender_id != user.id and not can_post_to_conversation(user, conv):
+                raise PermissionDenied('تنها فرستنده پیام یا مدیر کانال مجاز به سنجاق کردن پیام است')
+        else:
+            raise PermissionDenied('نوع گفتگو نامعتبر است')
+
+        with transaction.atomic():
+            locked_conv = Conversation.objects.select_for_update().get(id=conv.id)
+            existing_pin = PinnedMessage.objects.select_for_update().filter(
+                conversation=locked_conv, message=msg
+            ).first()
+
+            want_pin = request.data.get('pinned')
+            if want_pin is None:
+                want_pin = existing_pin is None
+            else:
+                want_pin = bool(want_pin)
+
+            if want_pin:
+                if not existing_pin:
+                    pinned_count = PinnedMessage.objects.select_for_update().filter(
+                        conversation=locked_conv, message__is_deleted=False
+                    ).count()
+                    if pinned_count >= 5:
+                        return Response({'detail': 'حداکثر ۵ پیام در هر گفتگو قابل سنجاق کردن است'}, status=status.HTTP_400_BAD_REQUEST)
+                    existing_pin = PinnedMessage.objects.create(
+                        conversation=locked_conv,
+                        message=msg,
+                        pinned_by=user
+                    )
+                event_name = "chat.message_pinned"
+            else:
+                if existing_pin:
+                    existing_pin.delete()
+                    existing_pin = None
+                event_name = "chat.message_unpinned"
+
+        transaction.on_commit(lambda: broadcast_pinned_messages_ws(conv, msg.id, event=event_name))
+
+        pinned_messages_data = get_conversation_pinned_messages_data(conv)
+        return Response({
+            'message_id': str(msg.id),
+            'conversation_id': str(conv.id),
+            'is_pinned': existing_pin is not None,
+            'pinned_messages': pinned_messages_data,
+        }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'], url_path='forward')
     def forward(self, request):

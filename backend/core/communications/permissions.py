@@ -16,7 +16,7 @@ from common.warehouse_scope import can_access_warehouse
 _NO_TARGET = object()
 
 # اکشن‌هایی از ConversationViewSet که دسترسی پایه‌شان «خواندن گفتگو» است و نقش را خود view می‌سنجد
-MEMBER_SCOPED_ACTIONS = ('mark_as_read', 'members', 'member_detail', 'leave', 'mute')
+MEMBER_SCOPED_ACTIONS = ('mark_as_read', 'members', 'member_detail', 'leave', 'mute', 'pin')
 
 
 class IsChatEnabled(permissions.BasePermission):

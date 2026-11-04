@@ -1,6 +1,6 @@
 import { Injectable, OnDestroy, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpParams, HttpContext, HttpEvent, HttpEventType } from '@angular/common/http';
-import { BehaviorSubject, Subject, Observable, firstValueFrom } from 'rxjs';
+import { BehaviorSubject, Subject, Observable, firstValueFrom, tap } from 'rxjs';
 import { ImageCompressorService } from './image-compressor.service';
 import { ConfigApiService } from '../api/config-api.service';
 import { SKIP_OFFLINE } from '../interceptors/offline.interceptor';
@@ -58,6 +58,16 @@ export interface ReactorItem {
   created_at: string;
 }
 
+export interface PinnedMessageItem {
+  id: string | number;
+  text?: string | null;
+  sender_name?: string;
+  created_at?: string;
+  pinned_at?: string;
+  pinned_by?: number | null;
+  has_attachment?: boolean;
+}
+
 export interface ChatMessage {
   id: string;
   client_temp_id?: string;
@@ -76,6 +86,7 @@ export interface ChatMessage {
   /** فرستنده تا این زمان می‌تواند متن را ویرایش کند */
   editable_until?: string | null;
   is_system?: boolean;
+  is_pinned?: boolean;
   created_at: string;
   updated_at?: string;
   attachments?: MessageAttachment[];
@@ -120,6 +131,9 @@ export interface Conversation {
   is_muted?: boolean;
   /** false = فقط مدیران می‌توانند پیام بفرستند (کانال اعلان) */
   can_post?: boolean;
+  is_pinned?: boolean;
+  pinned_at?: string | null;
+  pinned_messages?: PinnedMessageItem[];
 }
 
 export interface ReadStatusMember {
@@ -574,6 +588,9 @@ export class CommunicationService implements OnDestroy {
             if (mid !== undefined && mid !== null) this.handleDeletedMessage(String(mid), cid !== undefined && cid !== null ? String(cid) : null);
           } else if (payload.event === 'chat.message_reaction' || payload.event === 'message_reaction') {
             this.handleMessageReaction(payload.data);
+          } else if (payload.event === 'chat.message_pinned' || payload.event === 'message_pinned' ||
+                     payload.event === 'chat.message_unpinned' || payload.event === 'message_unpinned') {
+            this.handleMessagePinnedEvent(payload.data);
           } else if (payload.event === 'chat.conversation.removed') {
             const cid = payload.data?.conversation_id;
             if (cid !== undefined && cid !== null) this.handleConversationRemoved(String(cid));
@@ -1551,6 +1568,88 @@ export class CommunicationService implements OnDestroy {
         this.activeMessages$.next(updated);
       }
     }
+  }
+
+  /** سنجاق یا برداشتن سنجاق گفتگو برای کاربر جاری (فاز ۶) */
+  public togglePinConversation(conversationId: string | number, pinned?: boolean): Observable<any> {
+    const payload = pinned !== undefined ? { pinned } : {};
+    return this.http.post<any>(
+      `/api/communications/conversations/${conversationId}/pin/`,
+      payload,
+      { context: this.chatCtx() }
+    ).pipe(
+      tap((res) => {
+        const convId = String(conversationId);
+        const convs = this.conversations$.value.map(c => {
+          if (String(c.id) === convId) {
+            return {
+              ...c,
+              is_pinned: res.is_pinned,
+              pinned_at: res.pinned_at,
+            };
+          }
+          return c;
+        });
+        this.conversations$.next(convs);
+        const active = this.activeConversation$.value;
+        if (active && String(active.id) === convId) {
+          this.activeConversation$.next({
+            ...active,
+            is_pinned: res.is_pinned,
+            pinned_at: res.pinned_at,
+          });
+        }
+      })
+    );
+  }
+
+  /** سنجاق یا برداشتن سنجاق پیام در گفتگو (فاز ۶) */
+  public togglePinMessage(messageId: string | number, pinned?: boolean): Observable<any> {
+    const payload = pinned !== undefined ? { pinned } : {};
+    return this.http.post<any>(
+      `/api/communications/messages/${messageId}/pin/`,
+      payload,
+      { context: this.chatCtx() }
+    ).pipe(
+      tap((res) => {
+        this.handleMessagePinnedEvent(res);
+      })
+    );
+  }
+
+  /** به‌روزرسانی زنده پیام‌های سنجاق‌شده در نخ پیام و اطلاعات گفتگو */
+  public handleMessagePinnedEvent(data: any): void {
+    if (!data) return;
+    const convId = String(data.conversation_id);
+    const pinnedMessages: PinnedMessageItem[] = Array.isArray(data.pinned_messages) ? data.pinned_messages : [];
+    const pinnedIds = new Set(pinnedMessages.map(p => String(p.id)));
+
+    // بروزرسانی گفتگوی فعال و پرچم is_pinned پیام‌ها
+    const active = this.activeConversation$.value;
+    if (active && String(active.id) === convId) {
+      this.activeConversation$.next({
+        ...active,
+        pinned_messages: pinnedMessages,
+      });
+
+      const msgs = this.activeMessages$.value.map(m => ({
+        ...m,
+        is_pinned: pinnedIds.has(String(m.id)),
+      }));
+      this.activeMessages$.next(msgs);
+    }
+
+    // بروزرسانی در فهرست گفتگوها
+    const convs = this.conversations$.value.map(c => {
+      if (String(c.id) === convId) {
+        return {
+          ...c,
+          pinned_messages: pinnedMessages,
+        };
+      }
+      return c;
+    });
+    this.conversations$.next(convs);
   }
 
   /** حذف پیام از فهرست باز و تازه‌سازی پیش‌نمایش آخرین پیام گفتگو */

@@ -62,6 +62,18 @@ import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive
           <span>بازارسال</span>
         </button>
 
+        <button *ngIf="canPin()"
+                type="button"
+                data-testid="menu-pin"
+                (click)="pin.emit()"
+                [disabled]="!isOnline()"
+                [title]="isOnline() ? (msg().is_pinned ? 'برداشتن سنجاق' : 'سنجاق پیام') : 'در حالت آفلاین در دسترس نیست'"
+                [attr.aria-label]="isOnline() ? (msg().is_pinned ? 'برداشتن سنجاق' : 'سنجاق پیام') : 'در حالت آفلاین در دسترس نیست'"
+                class="w-full min-h-[40px] px-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-fg hover:bg-surface-muted disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 cursor-pointer tap-target">
+          <svg class="w-4 h-4 text-fg-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="pin" aria-hidden="true"></svg>
+          <span>{{ msg().is_pinned ? 'برداشتن سنجاق' : 'سنجاق پیام' }}</span>
+        </button>
+
         <button *ngIf="canEdit()"
                 type="button"
                 data-testid="menu-edit"
@@ -108,12 +120,14 @@ export class ChatMessageMenuComponent {
   public readonly canReply = input<boolean>(true);
   public readonly canEdit = input<boolean>(false);
   public readonly canDelete = input<boolean>(false);
+  public readonly canPin = input<boolean>(false);
   public readonly isOnline = input<boolean>(true);
   public readonly menuPlacement = input<{ up: boolean; flipX: boolean }>({ up: false, flipX: false });
 
   public readonly reaction = output<string>();
   public readonly reply = output<void>();
   public readonly forward = output<void>();
+  public readonly pin = output<void>();
   public readonly edit = output<void>();
   public readonly copy = output<void>();
   public readonly select = output<void>();

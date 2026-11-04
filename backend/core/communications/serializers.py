@@ -9,7 +9,10 @@ from rest_framework.exceptions import PermissionDenied
 from .access import (  # noqa: F401 (get_allowed_comment_models re-export)
     get_allowed_comment_models, resolve_comment_content_type, can_access_comment_target
 )
-from .models import Conversation, ConversationParticipant, Message, MessageAttachment, MessageReaction, GenericComment, ConversationType
+from .models import (
+    Conversation, ConversationParticipant, Message, MessageAttachment,
+    MessageReaction, GenericComment, ConversationType, PinnedMessage
+)
 from .reactions import format_reactions_summary
 from .membership import MAX_GROUP_MEMBERS_PER_REQUEST
 
@@ -93,6 +96,7 @@ class MessageSerializer(serializers.ModelSerializer):
     editable_until = serializers.SerializerMethodField()
     reply_to_details = serializers.SerializerMethodField()
     reactions = serializers.SerializerMethodField()
+    is_pinned = serializers.SerializerMethodField()
     forwarded_from_message = serializers.PrimaryKeyRelatedField(read_only=True, allow_null=True)
     forwarded_from_name = serializers.CharField(read_only=True, allow_null=True)
 
@@ -102,7 +106,7 @@ class MessageSerializer(serializers.ModelSerializer):
             'id', 'client_temp_id', 'conversation', 'sender', 'sender_details',
             'text', 'reply_to', 'reply_to_details', 'forwarded_from_message', 'forwarded_from_name',
             'is_system', 'created_at', 'updated_at',
-            'edited_at', 'editable_until', 'attachments', 'is_me', 'read_by_count', 'reactions'
+            'edited_at', 'editable_until', 'attachments', 'is_me', 'read_by_count', 'reactions', 'is_pinned'
         ]
         read_only_fields = [
             'id', 'sender', 'sender_details', 'created_at', 'updated_at', 'is_system',
@@ -119,6 +123,13 @@ class MessageSerializer(serializers.ModelSerializer):
         else:
             reactions_list = []
         return format_reactions_summary(reactions_list, current_user_id)
+
+    def get_is_pinned(self, obj):
+        if hasattr(obj, 'annotated_is_pinned'):
+            return bool(obj.annotated_is_pinned)
+        if hasattr(obj, '_prefetched_objects_cache') and 'pin_records' in obj._prefetched_objects_cache:
+            return len(obj._prefetched_objects_cache['pin_records']) > 0
+        return obj.pin_records.exists()
 
     def get_is_me(self, obj):
         request = self.context.get('request')
@@ -186,6 +197,34 @@ class MessageSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
+def get_conversation_pinned_messages_data(obj):
+    if hasattr(obj, 'prefetched_pinned_messages'):
+        pins = obj.prefetched_pinned_messages
+    else:
+        pins = obj.pinned_messages.filter(message__is_deleted=False).select_related('message__sender').prefetch_related('message__attachments').order_by('pinned_at', 'id')
+
+    result = []
+    for pin in pins:
+        m = getattr(pin, 'message', None)
+        if not m or getattr(m, 'is_deleted', False):
+            continue
+        sender = m.sender
+        sender_name = f"{sender.first_name} {sender.last_name}".strip() if sender else ""
+        if not sender_name and sender:
+            sender_name = sender.username
+        has_att = len(m.attachments.all()) > 0 if hasattr(m, '_prefetched_objects_cache') and 'attachments' in m._prefetched_objects_cache else m.attachments.exists()
+        result.append({
+            'id': str(m.id),
+            'text': m.text,
+            'sender_name': sender_name,
+            'created_at': m.created_at.isoformat() if m.created_at else None,
+            'pinned_at': pin.pinned_at.isoformat() if pin.pinned_at else None,
+            'pinned_by': pin.pinned_by_id,
+            'has_attachment': has_att,
+        })
+    return result
+
+
 class ConversationSerializer(serializers.ModelSerializer):
     participants = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
     participants_details = UserShortSerializer(source='participants', many=True, read_only=True)
@@ -205,13 +244,17 @@ class ConversationSerializer(serializers.ModelSerializer):
     is_muted = serializers.SerializerMethodField()
     # آیا کاربر جاری می‌تواند در این گفتگو پیام بفرستد (E14)؛ همان قاعدهٔ سرور (can_post_to_conversation)
     can_post = serializers.SerializerMethodField()
+    is_pinned = serializers.SerializerMethodField()
+    pinned_at = serializers.SerializerMethodField()
+    pinned_messages = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
         fields = [
             'id', 'title', 'conv_type', 'warehouse', 'participants', 'target_user_id',
             'participants_details', 'is_active', 'created_at', 'updated_at',
-            'last_message', 'unread_count', 'member_ids', 'my_role', 'member_count', 'is_muted', 'can_post'
+            'last_message', 'unread_count', 'member_ids', 'my_role', 'member_count', 'is_muted', 'can_post',
+            'is_pinned', 'pinned_at', 'pinned_messages'
         ]
         read_only_fields = ['id', 'participants', 'created_at', 'updated_at', 'is_active']
 
@@ -261,6 +304,30 @@ class ConversationSerializer(serializers.ModelSerializer):
         if obj.conv_type != ConversationType.GROUP:
             return None
         return len(obj.participants.all())
+
+    def get_pinned_messages(self, obj):
+        return get_conversation_pinned_messages_data(obj)
+
+    def get_is_pinned(self, obj):
+        if hasattr(obj, 'annotated_is_pinned'):
+            return bool(obj.annotated_is_pinned)
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return ConversationParticipant.objects.filter(
+            conversation=obj, user=request.user, left_at__isnull=True, pinned_at__isnull=False
+        ).exists()
+
+    def get_pinned_at(self, obj):
+        if hasattr(obj, 'annotated_pinned_at') and obj.annotated_pinned_at:
+            return obj.annotated_pinned_at.isoformat()
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+        part = ConversationParticipant.objects.filter(
+            conversation=obj, user=request.user, left_at__isnull=True
+        ).first()
+        return part.pinned_at.isoformat() if (part and part.pinned_at) else None
 
     def create(self, validated_data):
         validated_data.pop('member_ids', None)
