@@ -25,7 +25,7 @@ class AllowedActionsTests(SigningBase):
 
     def test_draft_actions_for_author_only(self):
         d = self.draft(signers=[self.signer])
-        self.assertEqual(self.actions(self.author, d), ['edit', 'submit', 'void'])
+        self.assertEqual(self.actions(self.author, d), ['edit', 'submit', 'void', 'attach'])
         self.assertEqual(self.actions(self.signer, d), [])
         self.assertEqual(self.actions(self.admin, d), [])
 
@@ -41,10 +41,10 @@ class AllowedActionsTests(SigningBase):
         self.post(self.author, d, 'submit')
         self.post(self.signer, d, 'sign')
         self.assertEqual(self.reload(d).status, Letter.STATUS_REGISTERED)
-        self.assertEqual(self.actions(self.author, d), ['archive', 'refer'])
-        self.assertEqual(self.actions(self.secretary, d), ['archive', 'void', 'refer'])
+        self.assertEqual(self.actions(self.author, d), ['archive', 'refer', 'print'])
+        self.assertEqual(self.actions(self.secretary, d), ['archive', 'void', 'refer', 'print', 'upload_scan'])
         self.post(self.secretary, d, 'archive')
-        self.assertEqual(self.actions(self.author, d), ['unarchive'])
+        self.assertEqual(self.actions(self.author, d), ['unarchive', 'print'])
 
     def test_incoming_register_for_secretariat(self):
         d = self.letter(kind=Letter.KIND_INCOMING, status=Letter.STATUS_RECEIVED, author=self.secretary)

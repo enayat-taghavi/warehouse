@@ -40,3 +40,17 @@ def letter_is_confidential(entity_id) -> bool:
     pk = _letter_id(entity_id)
     level = Letter.objects.filter(pk=pk).values_list('confidentiality', flat=True).first() if pk else None
     return level is None or level != Letter.CONF_NORMAL
+
+
+def secretariat_asset_company_id(entity_id):
+    """پیوست سربرگ و مهر (`letters_secretariat`) با شناسهٔ شرکت ثبت می‌شود؛ شرکت همان شناسه است."""
+    pk = _letter_id(entity_id)
+    if pk is None:
+        return None
+    from companies.models import Company
+    return Company.objects.filter(pk=pk).values_list('id', flat=True).first()
+
+
+def secretariat_asset_is_confidential(entity_id) -> bool:
+    """سربرگ و مهر همیشه فقط روی سرور (ن۱۲): نسخهٔ Drive از مهر شرکت ساخته نمی‌شود."""
+    return True

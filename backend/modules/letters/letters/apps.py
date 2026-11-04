@@ -14,8 +14,9 @@ class LettersConfig(AppConfig):
 
         from .hooks import (
             letter_company_id, letter_is_confidential, letter_is_locked, resolve_letter,
+            secretariat_asset_company_id, secretariat_asset_is_confidential,
         )
-        from .models import LETTER_ENTITY
+        from .models import LETTER_ENTITY, SECRETARIAT_ENTITY
         from .numbering import LETTER_NUMBER_SERIES
         from .settings_spec import LETTER_COMPANY_SETTINGS
 
@@ -48,3 +49,15 @@ class LettersConfig(AppConfig):
         from .referral import LETTER_REFERRAL_WORKFLOW_SPEC, can_refer_letter
         contribute('workflows', LETTER_REFERRAL_WORKFLOW_SPEC)
         contribute(f'can_refer:{LETTER_ENTITY}', can_refer_letter)
+
+        # ل-ح: چاپ و صحت‌سنجی (ن۱۷)؛ سربرگ و مهر دبیرخانه پیوست `letters_secretariat` با شناسهٔ شرکت (ن۱۲)
+        from .access import can_attach_letters_asset, can_view_letters_asset
+        from .printing import letter_verify_summary, printable_letter
+        contribute(f'printable:{LETTER_ENTITY}', printable_letter)
+        contribute(f'verify_summary:{LETTER_ENTITY}', letter_verify_summary)
+        contribute(f'can_view:{SECRETARIAT_ENTITY}', can_view_letters_asset)
+        contribute(f'can_attach:{SECRETARIAT_ENTITY}', can_attach_letters_asset)
+        contribute(f'company_of:{SECRETARIAT_ENTITY}', secretariat_asset_company_id)
+        contribute(f'is_confidential:{SECRETARIAT_ENTITY}', secretariat_asset_is_confidential)
+        # مدیر کل سربرگ و مهر را هم عوض نمی‌کند (ق۷، یافتهٔ بازبینی ل-ح)
+        contribute('superuser_view_only_kinds', SECRETARIAT_ENTITY)

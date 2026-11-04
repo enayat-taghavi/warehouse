@@ -15,6 +15,8 @@ urlpatterns = [
     path('<int:pk>/lock/', views.LetterLockView.as_view(), name='letter-lock'),
     path('<int:pk>/unlock/', views.LetterUnlockView.as_view(), name='letter-unlock'),
     path('<int:pk>/discard/', views.LetterDiscardView.as_view(), name='letter-discard'),
+    # پیوست پس از ثبت با برچسب اجباری (ل-ح)
+    path('<int:pk>/scan/', views.LetterScanView.as_view(), name='letter-scan'),
     # چرخهٔ نامه (ل-د)
     path('<int:pk>/submit/', views.LetterSubmitView.as_view(), name='letter-submit'),
     path('<int:pk>/sign/', views.LetterSignView.as_view(), name='letter-sign'),

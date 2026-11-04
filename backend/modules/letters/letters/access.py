@@ -9,6 +9,7 @@
 """
 from django.db.models import Q
 
+from .settings_spec import SETTINGS_PERM
 from .models import (
     LETTER_ENTITY, CircularAudience, Letter, LetterEditor, LetterRecipient, LetterSigner,
 )
@@ -158,20 +159,61 @@ def is_editor(user, letter) -> bool:
 
 def can_attach_letter(user, entity_id):
     """
-    قلاب can_attach:letters.letter (ن۹): پیش از ثبت نویسنده و هم‌نویسنده؛ بعد از ثبت دبیرخانه و امضاکننده‌ها.
-    محدودیت برچسب پس از ثبت (فقط signed_scan و after_register) با قلاب is_locked و ل-د/ل-ح است.
+    قلاب can_attach:letters.letter (ن۹): پیش از ثبت نویسنده و هم‌نویسنده.
+    بعد از ثبت API عمومی پیوست بسته است، چون قلاب هسته برچسب را نمی‌بیند: پیوست پس از ثبت فقط از مسیر ماژول
+    `POST /api/letters/<id>/scan/` با برچسب `signed_scan` یا `after_register` (ل-ح، `can_upload_scan`).
     نامهٔ باطل و نامهٔ ناموجود = منع صریح.
     """
     pk = _letter_pk(entity_id)
     if pk is None or not _live(user) or user.is_superuser:
         return False
     letter = Letter.objects.filter(pk=pk).only('id', 'company_id', 'author_id', 'kind', 'status', 'registered_at').first()
-    if letter is None or letter.status == Letter.STATUS_VOID:
+    if letter is None or letter.status == Letter.STATUS_VOID or letter.registered_at is not None:
         return False
     if letter.company_id not in member_company_ids(user):
         return False
-    if letter.registered_at is None:
-        return is_editor(user, letter)
+    return is_editor(user, letter)
+
+
+SCAN_LABELS = ('signed_scan', 'after_register')
+
+
+def can_upload_scan(user, letter) -> bool:
+    """پیوست پس از ثبت (ن۹، ل-ح): نامهٔ ثبت‌شدهٔ نا‌باطل؛ دبیرخانهٔ همان شرکت یا یکی از امضاکننده‌ها. دیدن را صدازننده می‌سنجد."""
+    if not _live(user) or user.is_superuser:
+        return False
+    if letter.registered_at is None or letter.status == Letter.STATUS_VOID:
+        return False
+    if letter.company_id not in member_company_ids(user):
+        return False
     if has_company_perm(user, letter.company_id, SECRETARIAT_PERM):
         return True
     return LetterSigner.objects.filter(letter_id=letter.pk, user_id=user.pk).exists()
+
+
+# ─── تصویرهای تنظیم نامه (سربرگ و مهر، ن۱۲): پیوست `letters_secretariat` با شناسهٔ شرکت ─────────────
+
+def _asset_company(user, entity_id):
+    company_id = _letter_pk(entity_id)
+    if company_id is None or not _live(user) or company_id not in member_company_ids(user):
+        return None
+    return company_id
+
+
+def can_view_letters_asset(user, entity_id):
+    """دیدن سربرگ و مهر: مجوز تنظیمات نامه یا دبیرخانه در همان شرکت (مهر را هر عضو نبیند). True یا False صریح."""
+    if is_live_superuser(user):
+        return True
+    company_id = _asset_company(user, entity_id)
+    if company_id is None:
+        return False
+    codes = company_codes(user, company_id)
+    return SETTINGS_PERM in codes or SECRETARIAT_PERM in codes
+
+
+def can_attach_letters_asset(user, entity_id):
+    """بارگذاری و جایگزینی سربرگ و مهر: فقط مجوز تنظیمات نامه در همان شرکت (همان مجوز نوشتن کلید تنظیم)."""
+    company_id = _asset_company(user, entity_id)
+    if company_id is None:
+        return False
+    return SETTINGS_PERM in company_codes(user, company_id)

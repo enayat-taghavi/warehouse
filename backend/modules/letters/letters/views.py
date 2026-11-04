@@ -19,6 +19,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.generics import ListAPIView
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -86,9 +87,12 @@ def allowed_actions(user, letter):
     کنش‌هایی که همین الان برای کاربر مجازند (ل-ز، فقط برای نمایش دکمه‌ها). همان قاعده‌های `lifecycle` و `referral`؛
     خود کنش‌ها همهٔ قاعده‌ها را دوباره در تراکنش می‌سنجند. مدیر کل فقط می‌خواند (بی‌کنش).
     """
+    from .printing import is_printable
     from .referral import REFERABLE_STATUSES, may_root_refer, referral_instance
-    if not access._live(user) or user.is_superuser:
+    if not access._live(user):
         return []
+    if user.is_superuser:
+        return ['print'] if is_printable(letter) else []  # چاپ فقط خواندن است (ل-ح)
     out = []
     st = letter.status
     editor = access.is_editor(user, letter)
@@ -129,6 +133,13 @@ def allowed_actions(user, letter):
             instance=instance, track=WorkflowTask.TRACK_REFERRAL, is_open=True, target_user_id=user.pk).exists()
         if mine or may_root_refer(user, letter.pk):
             out.append('refer')
+    # ل-ح: چاپ (ثبت‌شده، ارسال‌شده، بایگانی)؛ پیوست عمومی فقط پیش از ثبت؛ پس از ثبت بارگذاری نسخهٔ امضاشده
+    if is_printable(letter):
+        out.append('print')
+    if access.can_attach_letter(user, letter.pk):
+        out.append('attach')
+    if access.can_upload_scan(user, letter):
+        out.append('upload_scan')
     return out
 
 
@@ -504,6 +515,35 @@ class _LetterActionView(APIView):
         with transaction.atomic():
             letter = _visible_or_404(request.user, pk, for_update=True)
             return self.act(request, letter)
+
+
+class LetterScanView(APIView):
+    """
+    پیوست پس از ثبت (ن۹، ل-ح): `POST /api/letters/<id>/scan/` با `file` و `label` در {signed_scan, after_register}.
+    API عمومی پیوست پس از ثبت بسته است چون قلاب هسته برچسب را نمی‌بیند؛ این مسیر برچسب را خودش می‌گذارد.
+    نامهٔ نادیدنی 404؛ بی‌اجازه 403؛ فایل یا برچسب نادرست 400.
+    """
+    permission_classes = (IsAuthenticated, LettersPermission)
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request, pk):
+        from attachments.services import create_attachment, read_upload
+        label = str(request.data.get('label') or 'signed_scan').strip()
+        if label not in access.SCAN_LABELS:
+            raise ValidationError({'label': ['برچسب پیوست پس از ثبت فقط «نسخهٔ امضاشده» یا «پس از ثبت» است.']})
+        upload = request.FILES.get('file')
+        with transaction.atomic():
+            letter = _visible_or_404(request.user, pk, for_update=True)
+            if not access.can_upload_scan(request.user, letter):
+                raise PermissionDenied('بارگذاری پیوست پس از ثبت فقط با دبیرخانه یا امضاکنندهٔ نامه است.')
+            if not upload:
+                raise ValidationError({'file': ['فایل لازم است.']})
+            meta = read_upload(upload)
+            att = create_attachment(request.user, LETTER_ENTITY, letter.pk, upload, label=label,
+                                    description=str(request.data.get('description') or '')[:2000], meta=meta)
+            _audit(request.user, letter, 'scan_uploaded', label=label, attachment_id=att.pk)
+        return Response({'id': att.pk, 'label': att.label, 'original_name': att.original_name},
+                        status=status.HTTP_201_CREATED)
 
 
 class LetterLockView(_LetterActionView):

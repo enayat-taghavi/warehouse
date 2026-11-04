@@ -152,11 +152,15 @@ class CanAttachTests(LettersBase):
         self.assertFalse(can_attach(self.fresh(self.signer), LETTER_ENTITY, d.pk))
         self.assertFalse(can_attach(self.fresh(self.outsider), LETTER_ENTITY, d.pk))
         Letter.objects.filter(pk=d.pk).update(status=Letter.STATUS_REGISTERED, registered_at=timezone.now())
-        self.assertTrue(can_attach(self.fresh(self.signer), LETTER_ENTITY, d.pk))
-        self.assertTrue(can_attach(self.fresh(self.secretary), LETTER_ENTITY, d.pk))
+        # ل-ح: پس از ثبت API عمومی پیوست بسته است؛ فقط مسیر scan ماژول با برچسب اجباری
+        self.assertFalse(can_attach(self.fresh(self.signer), LETTER_ENTITY, d.pk))
+        self.assertFalse(can_attach(self.fresh(self.secretary), LETTER_ENTITY, d.pk))
         self.assertFalse(can_attach(self.fresh(self.author), LETTER_ENTITY, d.pk))
+        self.assertTrue(access.can_upload_scan(self.fresh(self.signer), Letter.objects.get(pk=d.pk)))
+        self.assertTrue(access.can_upload_scan(self.fresh(self.secretary), Letter.objects.get(pk=d.pk)))
         Letter.objects.filter(pk=d.pk).update(status=Letter.STATUS_VOID)
         self.assertFalse(can_attach(self.fresh(self.secretary), LETTER_ENTITY, d.pk))
+        self.assertFalse(access.can_upload_scan(self.fresh(self.secretary), Letter.objects.get(pk=d.pk)))
 
 
 class HiddenAttachmentsAndAuditTests(LettersBase):
