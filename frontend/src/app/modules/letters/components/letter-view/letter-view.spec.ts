@@ -7,11 +7,14 @@ import { WritableSignal, signal } from '@angular/core';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { By } from '@angular/platform-browser';
 import { NEVER, Subject, of, throwError } from 'rxjs';
 
 import { LetterViewPage } from './letter-view';
 import { LettersApiService } from '../../services/letters-api.service';
 import { LettersOfflineService } from '../../services/letters-offline';
+import { PrintService } from '../../../../core/services/print.service';
+import { AttachmentsComponent } from '../../../../shared/components/attachments/attachments.component';
 import { WebSocketService } from '../../../../core/http/websocket.service';
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { LetterViewDetail } from '../../letters.models';
@@ -34,6 +37,7 @@ const detail = (over: Partial<LetterViewDetail> = {}): LetterViewDetail => ({
 describe('LetterViewPage — نمایش نامه', () => {
   let fixture: ComponentFixture<LetterViewPage>;
   let api: any;
+  let printService: any;
   let online: WritableSignal<boolean>;
   let router: Router;
   const changes$ = new Subject<any>();
@@ -44,6 +48,10 @@ describe('LetterViewPage — نمایش نامه', () => {
       lifecycle: vi.fn().mockReturnValue(of({ ...letter, status: 'registered', actions: [] })),
       viewers: vi.fn().mockReturnValue(throwError(() => ({ status: 403 }))),
       referrals: vi.fn().mockReturnValue(of({ instance_id: null, referrals: [], can_refer: false })),
+      uploadSignedScan: vi.fn().mockReturnValue(of({ id: 10, label: 'signed_scan', original_name: 'scan.pdf' })),
+    };
+    printService = {
+      printPdf: vi.fn().mockResolvedValue(true),
     };
     online = signal(true);
     TestBed.resetTestingModule();
@@ -54,6 +62,7 @@ describe('LetterViewPage — نمایش نامه', () => {
         { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: '7' })), snapshot: { paramMap: convertToParamMap({ id: '7' }), queryParamMap: convertToParamMap({}) } } },
         { provide: LettersApiService, useValue: api },
         { provide: LettersOfflineService, useValue: { online } },
+        { provide: PrintService, useValue: printService },
         { provide: WebSocketService, useValue: { documentChanges$: () => changes$, liveRefresh$: () => NEVER } },
         { provide: ConfirmDialogService, useValue: { open: vi.fn().mockResolvedValue(true) } },
       ],
@@ -77,7 +86,7 @@ describe('LetterViewPage — نمایش نامه', () => {
   it('فقط کنش‌هایی که سرور اجازه داده دیده می‌شوند', () => {
     expect(q('[data-testid="act-sign"]')).not.toBeNull();
     expect(q('[data-testid="act-return"]')).not.toBeNull();
-    for (const a of ['edit', 'submit', 'register', 'send', 'archive', 'void', 'refer']) {
+    for (const a of ['edit', 'submit', 'register', 'send', 'archive', 'void', 'refer', 'print', 'upload-scan']) {
       expect(q(`[data-testid="act-${a}"]`)).toBeNull();
     }
   });
@@ -119,5 +128,76 @@ describe('LetterViewPage — نمایش نامه', () => {
     expect(api.get).toHaveBeenCalledTimes(1);
     changes$.next({ type: 'document_changed', doc_type: 'letters_letter', doc_id: 7, action: 'updated' });
     expect(api.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('دکمهٔ چاپ بدون مجوز print پنهان و با آن نمایش داده می‌شود', () => {
+    expect(q('[data-testid="act-print"]')).toBeNull();
+    setup(detail({ actions: ['print'] }));
+    const printBtn = q('[data-testid="act-print"]');
+    expect(printBtn).not.toBeNull();
+    expect(printBtn?.getAttribute('aria-label')).toBe('چاپ یا PDF نامه');
+    expect(printBtn?.textContent).toContain('چاپ');
+  });
+
+  it('کلیک روی چاپ پس از انتخاب A5 متد PrintService.printPdf را با letters_letter و A5 صدا می‌زند', async () => {
+    setup(detail({ actions: ['print'] }));
+    const select = q('[data-testid="print-paper-size"]') as HTMLSelectElement;
+    expect(select).not.toBeNull();
+    select.value = 'A5';
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    const printBtn = q('[data-testid="act-print"]') as HTMLButtonElement;
+    printBtn.click();
+    await fixture.whenStable();
+
+    expect(printService.printPdf).toHaveBeenCalledWith('letters_letter', 7, 'A5');
+  });
+
+  it('دکمهٔ بارگذاری نسخهٔ امضاشده بدون upload_scan پنهان و با آن نمایش داده می‌شود', () => {
+    expect(q('[data-testid="act-upload-scan"]')).toBeNull();
+    setup(detail({ actions: ['upload_scan'] }));
+    const uploadBtn = q('[data-testid="act-upload-scan"]');
+    expect(uploadBtn).not.toBeNull();
+    expect(uploadBtn?.getAttribute('aria-label')).toBe('بارگذاری نسخهٔ امضاشده (اسکن)');
+    expect(uploadBtn?.textContent).toContain('نسخهٔ امضاشده');
+  });
+
+  it('انتخاب فایل اسکن FormData را به مسیر scan با برچسب signed_scan می‌فرستد و پیام موفقیت می‌دهد', async () => {
+    setup(detail({ actions: ['upload_scan'] }));
+    const file = new File(['dummy-scan-content'], 'scan.pdf', { type: 'application/pdf' });
+    const input = q('[data-testid="scan-file-input"]') as HTMLInputElement;
+    expect(input).not.toBeNull();
+
+    Object.defineProperty(input, 'files', { value: [file], writable: true });
+    input.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+
+    expect(api.uploadSignedScan).toHaveBeenCalledWith(7, file, 'signed_scan');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const successEl = q('[data-testid="scan-success"]');
+    expect(successEl).not.toBeNull();
+    expect(successEl?.textContent).toContain('نسخهٔ امضاشده بارگذاری شد.');
+  });
+
+  it('کامپوننت app-attachments نوع letters_letter را می‌گیرد و canEdit فقط با attach و آنلاین بودن فعال است', () => {
+    // پیش‌فرض: بدون attach
+    setup(detail({ actions: ['sign'] }));
+    let attComp = fixture.debugElement.query(By.directive(AttachmentsComponent)).componentInstance as AttachmentsComponent;
+    expect(attComp.kind).toBe('letters_letter');
+    expect(attComp.canEdit).toBe(false);
+
+    // با attach در حالت آنلاین
+    setup(detail({ actions: ['attach'] }));
+    attComp = fixture.debugElement.query(By.directive(AttachmentsComponent)).componentInstance as AttachmentsComponent;
+    expect(attComp.kind).toBe('letters_letter');
+    expect(attComp.canEdit).toBe(true);
+
+    // با attach در حالت آفلاین
+    online.set(false);
+    fixture.detectChanges();
+    expect(attComp.canEdit).toBe(false);
   });
 });

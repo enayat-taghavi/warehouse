@@ -41,6 +41,19 @@ export const MODULE: WhFrontendModule = {
       queueLabelFa: 'نامه‌ها',
       queueOrder: 40
     },
+    companies: {
+      studioTabs: [
+        {
+          id: 'letters_settings',
+          labelFa: 'تنظیمات نامه',
+          shortLabelFa: 'نامه',
+          icon: 'file-text',
+          order: 70,
+          requiresSavedCompany: true,
+          loadComponent: () => import('./components/letters-settings-tab/letters-settings-tab').then(m => m.LettersSettingsTabComponent),
+        },
+      ],
+    },
     healthDashboard: {
       panelScopes: ['letters'],
       panel: {

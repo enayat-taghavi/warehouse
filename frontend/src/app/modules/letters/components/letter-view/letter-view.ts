@@ -10,6 +10,7 @@ import { StatusBadgeComponent } from '../../../../shared/components/status-badge
 import { AttachmentsComponent } from '../../../../shared/components/attachments/attachments.component';
 import { PersianDatePipe } from '../../../../shared/pipes/persian-date.pipe';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { PrintPaperSize, PrintService } from '../../../../core/services/print.service';
 import { WebSocketService } from '../../../../core/http/websocket.service';
 import { isServerUnreachable } from '../../../../core/services/server-reachability';
 import {
@@ -55,6 +56,9 @@ export class LetterViewPage implements OnInit {
   private readonly offline = inject(LettersOfflineService);
   private readonly ws = inject(WebSocketService);
   private readonly confirm = inject(ConfirmDialogService);
+  private readonly printService = inject(PrintService);
+  private readonly attachmentsComp = viewChild(AttachmentsComponent);
+  readonly docType = LETTER_DOC_TYPE;
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly actionField = viewChild<ElementRef<HTMLElement>>('actionField');
@@ -70,6 +74,10 @@ export class LetterViewPage implements OnInit {
   readonly loadError = signal<'offline' | 'gone' | 'error' | null>(null);
   readonly acting = signal(false);
   readonly actionError = signal('');
+  readonly paperSize = signal<PrintPaperSize>('A4');
+  readonly printing = signal(false);
+  readonly uploadingScan = signal(false);
+  readonly scanSuccess = signal('');
   readonly formAction = signal<FormAction | null>(null);
   readonly referOpen = signal(false);
   readonly referParent = signal<number | null>(null);
@@ -94,6 +102,7 @@ export class LetterViewPage implements OnInit {
         this.viewers.set(null);
         this.formAction.set(null);
         this.referOpen.set(false);
+        this.scanSuccess.set('');
       }
       this.id = id;
       this.load();
@@ -230,6 +239,61 @@ export class LetterViewPage implements OnInit {
           ? 'اتصال برقرار نیست؛ کنش انجام نشد.'
           : errorText(err?.error) || 'کنش انجام نشد.');
         if (status === 409 || status === 403) this.load(true);
+      },
+    });
+  }
+
+  async print(): Promise<void> {
+    const l = this.letter();
+    if (!l || !this.online() || this.printing() || this.acting()) return;
+    this.printing.set(true);
+    this.actionError.set('');
+    try {
+      const ok = await this.printService.printPdf(this.docType, l.id, this.paperSize());
+      if (!ok) {
+        this.actionError.set('چاپ انجام نشد؛ دوباره تلاش کنید.');
+      }
+    } catch {
+      this.actionError.set('چاپ انجام نشد؛ دوباره تلاش کنید.');
+    } finally {
+      this.printing.set(false);
+    }
+  }
+
+  onPaperSizeChange(ev: Event): void {
+    const val = (ev.target as HTMLSelectElement).value;
+    if (val === 'A4' || val === 'A5') {
+      this.paperSize.set(val);
+    }
+  }
+
+  onScanFileSelected(ev: Event): void {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !this.id || !this.online() || this.uploadingScan()) return;
+    this.uploadingScan.set(true);
+    this.actionError.set('');
+    this.scanSuccess.set('');
+    this.api.uploadSignedScan(this.id, file, 'signed_scan').subscribe({
+      next: () => {
+        this.uploadingScan.set(false);
+        input.value = '';
+        this.scanSuccess.set('نسخهٔ امضاشده بارگذاری شد.');
+        void this.attachmentsComp()?.load();
+      },
+      error: err => {
+        this.uploadingScan.set(false);
+        input.value = '';
+        const data = err?.error;
+        let msg = 'بارگذاری انجام نشد.';
+        if (data) {
+          if (typeof data.detail === 'string' && data.detail.trim()) msg = data.detail;
+          else if (Array.isArray(data.file) && data.file[0]) msg = String(data.file[0]);
+          else if (typeof data.file === 'string' && data.file.trim()) msg = data.file;
+          else if (Array.isArray(data.label) && data.label[0]) msg = String(data.label[0]);
+          else if (typeof data.label === 'string' && data.label.trim()) msg = data.label;
+        }
+        this.actionError.set(msg);
       },
     });
   }

@@ -5,7 +5,7 @@ import { environment } from '../../../../environments/environment';
 import { SKIP_OFFLINE } from '../../../core/interceptors/offline.interceptor';
 import { SKIP_GLOBAL_ERROR_TOAST } from '../../../core/error/error.interceptor';
 import {
-  AudienceEntry, CircularRow, LetterAction, LetterDetail, LetterFilters, LetterPage, LetterParty, LetterProject,
+  AudienceEntry, CircularRow, CompanySettingRow, LetterAction, LetterDetail, LetterFilters, LetterPage, LetterParty, LetterProject,
   LetterViewDetail, LetterWritePayload, ReferPayload, ReferralTree, RegisterRow, TAB_PARAMS, TAB_STATUS,
 } from '../letters.models';
 
@@ -103,6 +103,30 @@ export class LettersApiService {
 
   viewers(id: number): Observable<{ viewers: { user: { id: number; name: string } | null; first_viewed_at: string; times: number }[]; audience_count?: number }> {
     return this.http.get<any>(`${LETTERS_API}/${id}/viewers/`, { context: NO_CACHE() });
+  }
+
+  /** بارگذاری نسخهٔ امضاشده (اسکن) با برچسب پس از ثبت (ن۹، ل-ح) */
+  uploadSignedScan(letterId: number, file: File, label: 'signed_scan' | 'after_register' = 'signed_scan'): Observable<{ id: number; label: string; original_name: string }> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('label', label);
+    return this.http.post<{ id: number; label: string; original_name: string }>(
+      `${environment.apiUrl}/letters/${letterId}/scan/`, form, { context: NO_CACHE() }
+    );
+  }
+
+  companySettings(companyId: number): Observable<{ company_id: number; results: CompanySettingRow[] }> {
+    return this.http.get<{ company_id: number; results: CompanySettingRow[] }>(
+      `${environment.apiUrl}/settings/company/${companyId}/?module=letters`, { context: NO_CACHE() }
+    );
+  }
+
+  saveCompanySetting(companyId: number, key: string, value: number): Observable<CompanySettingRow> {
+    return this.http.patch<CompanySettingRow>(
+      `${environment.apiUrl}/settings/company/${companyId}/`,
+      { module: 'letters', key, value },
+      { context: NO_CACHE() }
+    );
   }
 
   /** پیوست اسکن وارده با API پیوست هسته (همان مسیر `app-attachments`). */

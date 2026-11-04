@@ -45,6 +45,60 @@
         @if (can('void')) {
           <button appAction="terminate" label="ابطال" data-testid="act-void" [disabled]="!online() || acting()" (click)="openForm('void')"></button>
         }
+        @if (can('print')) {
+          <div class="inline-flex items-center gap-1.5" data-testid="print-container">
+            <button
+              type="button"
+              class="min-h-[40px] px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-1.5 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 disabled:opacity-50 disabled:pointer-events-none active:scale-95 transition-all cursor-pointer"
+              [disabled]="!online() || printing() || acting()"
+              [attr.aria-busy]="printing() ? 'true' : null"
+              [attr.title]="!online() ? 'چاپ فقط با اتصال به اینترنت' : 'چاپ یا PDF نامه'"
+              aria-label="چاپ یا PDF نامه"
+              data-testid="act-print"
+              (click)="print()">
+              @if (printing()) {
+                <svg appIcon="loader" class="w-4 h-4 animate-spin text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+              } @else {
+                <svg appIcon="printer" class="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+              }
+              <span>چاپ</span>
+            </button>
+            <select
+              aria-label="اندازهٔ کاغذ"
+              data-testid="print-paper-size"
+              class="rounded-xl border border-line bg-surface px-2 py-1.5 text-xs text-fg h-[40px] focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              [value]="paperSize()"
+              (change)="onPaperSizeChange($event)">
+              <option value="A4">A4</option>
+              <option value="A5">A5</option>
+            </select>
+          </div>
+        }
+        @if (can('upload_scan')) {
+          <button
+            type="button"
+            class="min-h-[40px] px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs md:text-sm font-bold flex items-center justify-center gap-1.5 bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200 disabled:opacity-50 disabled:pointer-events-none active:scale-95 transition-all cursor-pointer"
+            [disabled]="!online() || uploadingScan() || acting()"
+            [attr.aria-busy]="uploadingScan() ? 'true' : null"
+            [attr.title]="!online() ? 'بارگذاری فقط با اتصال به اینترنت' : 'بارگذاری نسخهٔ امضاشده (اسکن)'"
+            aria-label="بارگذاری نسخهٔ امضاشده (اسکن)"
+            data-testid="act-upload-scan"
+            (click)="scanFileInput.click()">
+            @if (uploadingScan()) {
+              <svg appIcon="loader" class="w-4 h-4 animate-spin text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            } @else {
+              <svg appIcon="upload" class="w-4 h-4 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+            }
+            <span>نسخهٔ امضاشده</span>
+          </button>
+          <input
+            #scanFileInput
+            type="file"
+            accept="application/pdf,image/jpeg,image/png"
+            class="sr-only focus:not-sr-only focus:fixed focus:top-0 focus:start-0 focus:z-50 focus:p-2 focus:bg-white focus:ring-2 focus:ring-indigo-500"
+            (change)="onScanFileSelected($event)"
+            data-testid="scan-file-input">
+        }
       }
     </div>
   </app-command-center>
@@ -65,6 +119,9 @@
   } @else if (letter(); as l) {
     @if (!online() && (l.actions?.length || 0) > 0) {
       <p class="text-xs rounded-xl px-3 py-2 bg-amber-50 text-amber-900" role="status">کنش‌های نامه فقط با اتصال انجام می‌شوند.</p>
+    }
+    @if (scanSuccess()) {
+      <p class="text-xs rounded-xl px-3 py-2 bg-emerald-50 text-emerald-800" role="status" data-testid="scan-success">{{ scanSuccess() }}</p>
     }
     @if (actionError()) {
       <p class="text-xs rounded-xl px-3 py-2 bg-rose-50 text-rose-800" role="alert" data-testid="action-error">{{ actionError() }}</p>
@@ -195,7 +252,7 @@
 
     <section class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2" aria-label="پیوست‌ها" data-testid="letter-attachments">
       <h2 class="text-sm font-black text-fg">پیوست‌ها</h2>
-      <app-attachments kind="letters.letter" [entityId]="l.id" [canEdit]="online() && l.status !== 'void'" />
+      <app-attachments [kind]="docType" [entityId]="l.id" [canEdit]="online() && can('attach')" />
     </section>
 
     @if (l.registered_at) {

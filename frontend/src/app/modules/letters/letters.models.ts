@@ -193,7 +193,7 @@ export const TAB_PARAMS: Record<LetterTab, Record<string, string>> = {
 
 // ─── ل-ز: نمایش نامه، درخت ارجاع، دبیرخانه و بخشنامه ─────────────────────────────────────
 /** کنش‌هایی که سرور برای همین کاربر مجاز می‌داند (`actions` جزئیات نامه) */
-export type LetterAction = 'edit' | 'submit' | 'sign' | 'return' | 'register' | 'send' | 'archive' | 'unarchive' | 'void' | 'refer';
+export type LetterAction = 'edit' | 'submit' | 'sign' | 'return' | 'register' | 'send' | 'archive' | 'unarchive' | 'void' | 'refer' | 'print' | 'attach' | 'upload_scan';
 
 export interface LetterViewDetail extends LetterDetail {
   actions?: LetterAction[];
@@ -267,6 +267,17 @@ export interface CircularRow extends LetterRow { is_read: boolean }
 export interface AudienceEntry { scope: 'company' | 'section'; section_id?: number | null; section_name?: string }
 
 /** پیام خطای API (detail، message یا نخستین خطای فیلد) */
+export interface CompanySettingRow<T = unknown> {
+  module: string;
+  key: string;
+  type: string;
+  title_fa: string;
+  default: T;
+  value: T;
+  is_default: boolean;
+  can_edit: boolean;
+}
+
 export function errorText(body: any): string {
   if (!body) return '';
   if (typeof body === 'string') return body.length < 300 ? body : '';

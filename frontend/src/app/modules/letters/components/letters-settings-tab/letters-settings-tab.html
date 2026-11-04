@@ -1,0 +1,119 @@
+<div class="flex flex-col gap-4 min-w-0" dir="rtl">
+  @if (loading()) {
+    <div class="py-8 text-center text-sm font-bold text-fg flex flex-col items-center justify-center gap-2" role="status" aria-busy="true">
+      <svg appIcon="loader" class="w-6 h-6 animate-spin text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <span>در حال بارگذاری تنظیمات نامه…</span>
+    </div>
+  } @else if (loadError()) {
+    <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2 items-start" role="alert">
+      <p class="text-sm font-bold text-fg">بارگذاری تنظیمات انجام نشد.</p>
+      <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="load()"></button>
+    </div>
+  } @else {
+    @if (!online()) {
+      <p class="text-xs rounded-xl px-3 py-2 bg-amber-50 text-amber-900 border border-amber-200" role="status">برای تغییر تنظیمات نامه باید به اینترنت وصل باشید.</p>
+    }
+
+    @if (settings().length === 0) {
+      <div class="bg-surface rounded-2xl border border-dashed border-line p-6 text-center text-xs text-fg-muted" data-testid="settings-empty">
+        تنظیمی برای نامهها پیدا نشد.
+      </div>
+    } @else {
+      <!-- پیوند به شماره‌گذاری اسناد -->
+      <div class="flex justify-start">
+        <a [routerLink]="[]" [queryParams]="{ tab: 'numbering' }" queryParamsHandling="merge"
+           class="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800"
+           data-testid="link-numbering">
+          <svg appIcon="file-text" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          <span>شمارهگذاری اسناد</span>
+        </a>
+      </div>
+
+      <!-- تصاویر سربرگ و مهر -->
+      @if (canEditImages()) {
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-3" aria-label="تصاویر سربرگ و مهر" data-testid="images-section">
+          <!-- سربرگ A4 -->
+          <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2 min-w-0" data-testid="block-letterhead-a4">
+            <h3 class="text-xs font-black text-fg">سربرگ A4</h3>
+            <app-attachments
+              [kind]="assetKind"
+              [entityId]="companyId!"
+              label="letterhead_a4"
+              [single]="true"
+              [imagePreview]="true"
+              accept="image/png,image/jpeg"
+              [canEdit]="online() && canEdit('letterhead_a4')" />
+            <p class="text-[11px] text-fg-muted">تصویر کامل برگ، به نسبت کاغذ A4 یا A5</p>
+          </div>
+
+          <!-- سربرگ A5 -->
+          <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2 min-w-0" data-testid="block-letterhead-a5">
+            <h3 class="text-xs font-black text-fg">سربرگ A5</h3>
+            <app-attachments
+              [kind]="assetKind"
+              [entityId]="companyId!"
+              label="letterhead_a5"
+              [single]="true"
+              [imagePreview]="true"
+              accept="image/png,image/jpeg"
+              [canEdit]="online() && canEdit('letterhead_a5')" />
+            <p class="text-[11px] text-fg-muted">تصویر کامل برگ، به نسبت کاغذ A4 یا A5</p>
+          </div>
+
+          <!-- مهر دبیرخانه -->
+          <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2 min-w-0" data-testid="block-secretariat-stamp">
+            <h3 class="text-xs font-black text-fg">مهر دبیرخانه</h3>
+            <app-attachments
+              [kind]="assetKind"
+              [entityId]="companyId!"
+              label="secretariat_stamp"
+              [single]="true"
+              [imagePreview]="true"
+              accept="image/png,image/jpeg"
+              [canEdit]="online() && canEdit('secretariat_stamp')" />
+          </div>
+        </section>
+      } @else {
+        <div class="bg-surface rounded-2xl border border-line p-4 text-xs text-fg-muted" data-testid="images-forbidden">
+          تصویر سربرگ و مهر را فقط مسئول تنظیمات نامه میبیند.
+        </div>
+      }
+
+      <!-- مهلت پاسخ -->
+      <section class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-3 min-w-0" aria-label="مهلت پاسخ">
+        <form class="flex flex-col gap-3" (submit)="$event.preventDefault(); saveDueDays()">
+          <div class="flex flex-col gap-1 max-w-xs">
+            <label for="letters-due-days" class="text-xs font-bold text-fg">مهلت پاسخ (روز)</label>
+            <input
+              id="letters-due-days"
+              type="number"
+              min="0"
+              max="365"
+              step="1"
+              class="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-surface-muted"
+              [formControl]="dueDaysControl"
+              data-testid="input-due-days">
+            <span class="text-[11px] text-fg-muted">۰ یعنی بیمهلت</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button
+              type="submit"
+              appAction="save"
+              label="ذخیره"
+              data-testid="btn-save-due-days"
+              [busy]="saving()"
+              [disabled]="isSaveDisabled()"></button>
+          </div>
+
+          @if (saveSuccess()) {
+            <p class="text-xs rounded-xl px-3 py-2 bg-emerald-50 text-emerald-800" role="status" data-testid="save-success">ذخیره شد.</p>
+          }
+          @if (saveError()) {
+            <p class="text-xs rounded-xl px-3 py-2 bg-rose-50 text-rose-800" role="alert" data-testid="save-error">{{ saveError() }}</p>
+          }
+        </form>
+      </section>
+    }
+  }
+</div>
