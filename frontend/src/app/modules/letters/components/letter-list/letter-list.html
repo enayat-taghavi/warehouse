@@ -10,7 +10,7 @@
   </app-command-center>
 
   @if (filters().tab !== 'projects') {
-    <div class="bg-surface rounded-2xl border border-line shadow-xs p-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 min-w-0" role="search" aria-label="فیلتر نامه‌ها">
+    <div class="bg-surface rounded-2xl border border-line shadow-sm p-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 min-w-0" role="search" aria-label="فیلتر نامه‌ها">
       <div class="col-span-2 sm:col-span-3 lg:col-span-2 flex items-center gap-1 min-w-0">
         <label class="sr-only" for="letters-q">جست‌وجوی موضوع یا شماره</label>
         <input id="letters-q" type="search" class="flex-1 min-w-0 h-10 rounded-xl border border-line bg-surface px-3 text-sm"
@@ -78,7 +78,7 @@
   @if (loading()) {
     <app-loading-skeleton [type]="filters().tab === 'projects' ? 'card' : 'table'" />
   } @else if (error()) {
-    <div class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col items-start gap-2" role="alert">
+    <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col items-start gap-2" role="alert">
       @if (error() === 'offline') {
         <p class="text-sm font-bold text-fg flex items-center gap-1">
           <svg appIcon="wifi-off" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
@@ -97,7 +97,7 @@
       <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 min-w-0">
         @for (p of projects(); track p.id) {
           <li class="min-w-0">
-            <button type="button" class="w-full text-start bg-surface rounded-2xl border border-line shadow-xs p-3 min-h-[40px] min-w-0 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            <button type="button" class="w-full text-start bg-surface rounded-2xl border border-line shadow-sm p-3 min-h-[40px] min-w-0 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                     [attr.aria-label]="'نامه‌های پروژهٔ ' + p.name" (click)="setFilter({ tab: 'all', project: p.id })">
               <span class="block text-sm font-bold text-fg break-words">{{ p.name }}</span>
               <span class="text-[11px] text-fg-muted"><bdi dir="ltr">{{ p.code }}</bdi> · {{ faNumber(p.letter_count) }} نامه</span>
@@ -114,7 +114,7 @@
     </div>
   } @else {
     <!-- دسکتاپ: جدول -->
-    <div class="hidden md:block bg-surface rounded-2xl border border-line shadow-xs overflow-hidden" data-testid="letters-table">
+    <div class="hidden md:block bg-surface rounded-2xl border border-line shadow-sm overflow-hidden" data-testid="letters-table">
       <table class="w-full text-xs">
         <thead class="bg-surface-muted text-fg-muted">
           <tr>
@@ -146,7 +146,7 @@
     <ul class="md:hidden flex flex-col gap-2 min-w-0" data-testid="letters-cards">
       @for (r of rows(); track r.id) {
         <li class="min-w-0">
-          <a class="block bg-surface rounded-2xl border border-line shadow-xs p-3 min-w-0 break-words focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          <a class="block bg-surface rounded-2xl border border-line shadow-sm p-3 min-w-0 break-words focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
              [routerLink]="['/app/letters', r.id, 'edit']">
             <span class="flex items-center gap-2 min-w-0">
               <span class="text-sm font-bold text-fg flex-1 min-w-0 break-words">{{ r.subject || 'بی‌موضوع' }}</span>

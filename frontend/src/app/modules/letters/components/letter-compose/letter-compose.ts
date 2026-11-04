@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -120,6 +120,14 @@ export class LetterComposePage implements OnInit {
 
   hasUnsavedChanges(): boolean {
     return this.dirty();
+  }
+
+  /** بستن یا بارگذاری دوبارهٔ زبانه با متن ذخیره‌نشده هم هشدار می‌دهد (متن فقط در حافظهٔ صفحه است). */
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(ev: BeforeUnloadEvent): void {
+    if (!this.dirty()) return;
+    ev.preventDefault();
+    ev.returnValue = '';
   }
 
   load(id: number): void {

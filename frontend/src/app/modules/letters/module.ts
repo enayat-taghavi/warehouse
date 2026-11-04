@@ -41,27 +41,6 @@ export const MODULE: WhFrontendModule = {
       queueLabelFa: 'نامه‌ها',
       queueOrder: 40
     },
-    users: {
-      permissionGroup: {
-        key: 'LETTERS',
-        titleFa: 'نامه‌های شرکت',
-        order: 40,
-        codenames: [
-          'view_letters_hub',
-          'perm_letters_compose',
-          'perm_letters_circular',
-          'perm_letters_secretariat',
-          'perm_letters_settings',
-        ]
-      },
-      shortPermissionNames: {
-        view_letters_hub: 'ورود به نامه‌ها',
-        perm_letters_compose: 'نوشتن نامه',
-        perm_letters_circular: 'نوشتن بخشنامه',
-        perm_letters_secretariat: 'دبیرخانه',
-        perm_letters_settings: 'تنظیمات نامه',
-      }
-    },
     healthDashboard: {
       panelScopes: ['letters'],
       panel: {
