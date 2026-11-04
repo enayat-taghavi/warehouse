@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll, afterEach, vi } from 'vitest';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
+import { ɵresolveComponentResources } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import { PettyAccountManagerComponent } from './petty-account-manager';
 import { TreasuryOrgApiService } from '../../../../../api/treasury-org-api.service';
@@ -26,6 +29,17 @@ describe('PettyAccountManagerComponent DOM Specs', () => {
   let mockToast: any;
   let mockActiveCompany: any;
   let promptSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeAll(async () => {
+    await ɵresolveComponentResources(async (url) => {
+      const filename = path.basename(url);
+      const localPath = path.resolve(__dirname, filename);
+      if (fs.existsSync(localPath)) {
+        return fs.readFileSync(localPath, 'utf-8');
+      }
+      return '';
+    });
+  });
 
   beforeEach(async () => {
     promptSpy = vi.spyOn(window, 'prompt');

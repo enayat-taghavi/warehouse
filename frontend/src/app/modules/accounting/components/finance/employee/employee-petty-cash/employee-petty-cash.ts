@@ -6,7 +6,7 @@ import { fiscalPeriodClosedMessage } from '../../../../fiscal-period-error';
 import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   ProjectSection,
@@ -60,7 +60,7 @@ import { AmountInputComponent } from '../../../../../../shared/components/amount
 @Component({
   selector: 'app-employee-petty-cash-hub',
   standalone: true,
-  imports: [CommonModule, FormsModule, AttachmentsComponent, AmountInputComponent, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, ModalComponent, LoadingSkeletonComponent, OfflinePendingBadgeComponent, SvgIconDirective, NgPersianDatepickerModule, CounterpartyFormFieldsComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, AttachmentsComponent, AmountInputComponent, ActionButtonComponent, TabBarComponent, CommandCenterComponent, ServerUrlPipe, WorkflowHistoryComponent, ModalComponent, LoadingSkeletonComponent, OfflinePendingBadgeComponent, SvgIconDirective, NgPersianDatepickerModule, CounterpartyFormFieldsComponent],
   templateUrl: './employee-petty-cash.html',
   styleUrl: './employee-petty-cash.css'
 })
@@ -219,11 +219,28 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.docSub?.unsubscribe();
+    this.dateControlSubs.unsubscribe();
     if (this.searchTimer) clearTimeout(this.searchTimer);
   }
 
   ngOnInit(): void {
     this.initTodayShamsi();
+    this.dateControlSubs.add(
+      this.dateFromControl.valueChanges.subscribe(val => {
+        this.dateFrom = val || '';
+      })
+    );
+    this.dateControlSubs.add(
+      this.dateToControl.valueChanges.subscribe(val => {
+        this.dateTo = val || '';
+      })
+    );
+    this.dateControlSubs.add(
+      this.expenseDateControl.valueChanges.subscribe(val => {
+        this.newExpense.transaction_date_shamsi = val || '';
+        this.expenseDateError = '';
+      })
+    );
     // سند تنخواهی که جای دیگری عوض شد درجا به‌روز می‌شود، وگرنه فهرست بی‌صدا دوباره خوانده می‌شود
     this.docSub = this.ws?.documentChanges$?.(['petty_cash']).subscribe(ev => {
       if (patchDocumentRow(this.transactions, ev)) {
@@ -323,8 +340,13 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   loadError = '';
   dateFrom = '';
   dateTo = '';
+  readonly dateFromControl = new FormControl<string>('');
+  readonly dateToControl = new FormControl<string>('');
+  readonly expenseDateControl = new FormControl<string>('');
   isDateFromOpen = false;
   isDateToOpen = false;
+  isExpenseDatePickerOpen = false;
+  private readonly dateControlSubs = new Subscription();
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
   settlements: PettyCashDebtSettlement[] = [];
 
@@ -335,15 +357,33 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   onDateSelect(which: 'from' | 'to', event: any): void {
     const raw = typeof event === 'string' ? event : (event?.shamsi || '');
     const val = this.toAsciiDigits(raw).replace(/-/g, '/');
-    if (which === 'from') { this.dateFrom = val; this.isDateFromOpen = false; }
-    else { this.dateTo = val; this.isDateToOpen = false; }
+    if (which === 'from') {
+      this.dateFrom = val;
+      this.dateFromControl.setValue(val, { emitEvent: false });
+      this.isDateFromOpen = false;
+    } else {
+      this.dateTo = val;
+      this.dateToControl.setValue(val, { emitEvent: false });
+      this.isDateToOpen = false;
+    }
     this.onFilterChange();
   }
 
   clearDates(): void {
     this.dateFrom = '';
     this.dateTo = '';
+    this.dateFromControl.setValue('', { emitEvent: false });
+    this.dateToControl.setValue('', { emitEvent: false });
     this.onFilterChange();
+  }
+
+  onExpenseDateSelect(event: any): void {
+    const raw = typeof event === 'string' ? event : (event?.shamsi || '');
+    const val = this.toAsciiDigits(raw).replace(/-/g, '/');
+    this.newExpense.transaction_date_shamsi = val;
+    this.expenseDateControl.setValue(val, { emitEvent: false });
+    this.expenseDateError = '';
+    this.isExpenseDatePickerOpen = false;
   }
 
   onFilterChange(): void {
@@ -730,11 +770,14 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     };
     this.selectedExpenseAttachment = null;
     this.attachmentFileName = '';
+    this.expenseDateControl.setValue(this.todayShamsi, { emitEvent: false });
+    this.isExpenseDatePickerOpen = false;
     this.isNewExpenseModalOpen = true;
     this.cdr.detectChanges();
   }
 
   closeNewExpenseModal(): void {
+    this.isExpenseDatePickerOpen = false;
     this.isNewExpenseModalOpen = false;
     this.cdr.detectChanges();
   }

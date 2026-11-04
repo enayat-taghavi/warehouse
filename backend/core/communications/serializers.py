@@ -208,7 +208,12 @@ class MessageSerializer(serializers.ModelSerializer):
         return (obj.created_at + MESSAGE_EDIT_WINDOW).isoformat()
 
     def get_reply_to_details(self, obj):
-        target = obj.reply_to if obj.reply_to_id else None
+        if not obj.reply_to_id:
+            return None
+        if 'reply_to' in getattr(obj, '_state', None).fields_cache:
+            target = obj.reply_to
+        else:
+            target = Message.all_objects.select_related('sender').prefetch_related('attachments').filter(pk=obj.reply_to_id).first()
         if target is None:
             return None
         if target.is_deleted or target.conversation_id != obj.conversation_id:
@@ -338,16 +343,22 @@ class ConversationSerializer(serializers.ModelSerializer):
         - فقط در صورتی که طرف مقابل طبق contact_scope در حوزهٔ مخاطبان کاربر جاری باشد
         - در غیر این صورت مقدار None بازگردانده می‌شود.
         """
+        if hasattr(obj, '_cached_other_last_seen'):
+            return obj._cached_other_last_seen
+
         if obj.conv_type != ConversationType.DIRECT:
+            obj._cached_other_last_seen = None
             return None
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
+            obj._cached_other_last_seen = None
             return None
 
         from .contact_scope import chat_allowed, blocked_user_ids, visible_contact_ids
         if not hasattr(request, '_user_chat_allowed_cached'):
             request._user_chat_allowed_cached = chat_allowed(request.user)
         if not request._user_chat_allowed_cached:
+            obj._cached_other_last_seen = None
             return None
 
         participants = list(obj.participants.all())
@@ -355,26 +366,32 @@ class ConversationSerializer(serializers.ModelSerializer):
         if not other_user:
             other_user = participants[0] if participants else None
         if not other_user or not getattr(other_user, 'is_active', True):
-            return None
-
-        if not hasattr(request, '_blocked_user_ids_cached'):
-            request._blocked_user_ids_cached = blocked_user_ids()
-        if other_user.id in request._blocked_user_ids_cached:
+            obj._cached_other_last_seen = None
             return None
 
         if request.user.is_superuser:
-            can_see = True
+            if not hasattr(request, '_blocked_user_ids_cached'):
+                request._blocked_user_ids_cached = blocked_user_ids()
+            can_see = other_user.id not in request._blocked_user_ids_cached
         else:
             if not hasattr(request, '_visible_contact_ids_cached'):
                 request._visible_contact_ids_cached = visible_contact_ids(request.user)
             visible_ids = request._visible_contact_ids_cached
-            can_see = (visible_ids is None or other_user.id in visible_ids)
+            if visible_ids is None:
+                if not hasattr(request, '_blocked_user_ids_cached'):
+                    request._blocked_user_ids_cached = blocked_user_ids()
+                can_see = other_user.id not in request._blocked_user_ids_cached
+            else:
+                can_see = other_user.id in visible_ids
 
         if not can_see:
+            obj._cached_other_last_seen = None
             return None
 
         from .presence import get_user_last_seen_iso
-        return get_user_last_seen_iso(other_user)
+        result = get_user_last_seen_iso(other_user)
+        obj._cached_other_last_seen = result
+        return result
 
     def get_last_seen_at(self, obj):
         return self._get_other_user_last_seen(obj)

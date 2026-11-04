@@ -34,8 +34,10 @@ class IsChatEnabled(permissions.BasePermission):
         if not getattr(view, 'allow_chat_blocked', False):
             from .contact_scope import chat_allowed, BLOCKED_MESSAGE
             if not chat_allowed(request.user):
+                request._user_chat_allowed_cached = False
                 self.message = BLOCKED_MESSAGE
                 return False
+            request._user_chat_allowed_cached = True
 
         wh_id = request.query_params.get('warehouse_id')
         data = request.data if isinstance(getattr(request, 'data', None), dict) else {}

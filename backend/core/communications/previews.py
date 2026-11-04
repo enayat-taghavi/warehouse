@@ -230,7 +230,7 @@ def schedule_attachment_preview(attachment_id):
     def _run():
         # هر خطایی این‌جا فقط ثبت می‌شود: پاسخ آپلود (فایل ذخیره‌شده) نباید ۵۰۰ شود
         try:
-            from .models import MessageAttachment
+            from .models import MessageAttachment, PreviewStatus
             from .broadcast import broadcast_message_updated_ws
             att = MessageAttachment.objects.select_related('message__conversation').filter(pk=attachment_id).first()
             if att is None or not att.file:
@@ -239,6 +239,24 @@ def schedule_attachment_preview(attachment_id):
             msg = att.message
             if (att.thumbnail or att.page_count or att.width) and not msg.is_deleted:
                 broadcast_message_updated_ws(msg)
+            # اگر در حین تولید بندانگشتی، پیام بازارسال شده باشد، رکوردهای هم‌فایل در وضعیت pending نیز به‌روز می‌شوند
+            if att.preview_status != PreviewStatus.PENDING and att.file.name:
+                sibling_atts = list(
+                    MessageAttachment.objects.select_related('message__conversation')
+                    .exclude(pk=att.pk)
+                    .filter(file=att.file.name, preview_status=PreviewStatus.PENDING)
+                )
+                if sibling_atts:
+                    MessageAttachment.objects.filter(pk__in=[s.pk for s in sibling_atts]).update(
+                        thumbnail=att.thumbnail.name if att.thumbnail else None,
+                        width=att.width,
+                        height=att.height,
+                        page_count=att.page_count,
+                        preview_status=att.preview_status,
+                    )
+                    for s in sibling_atts:
+                        if (att.thumbnail or att.page_count or att.width) and s.message and not s.message.is_deleted:
+                            broadcast_message_updated_ws(s.message)
         except Exception as exc:
             logger.warning("[chat preview] attachment %s preview task failed: %s", attachment_id, exc)
     transaction.on_commit(_run)

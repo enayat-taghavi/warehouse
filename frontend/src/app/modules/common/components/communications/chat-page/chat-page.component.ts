@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CommunicationService } from '../../../../../core/services/communication.service';
 import { ChatDrawerComponent } from '../chat-drawer/chat-drawer.component';
@@ -21,11 +21,16 @@ import { ChatDrawerComponent } from '../chat-drawer/chat-drawer.component';
     }
   `]
 })
-export class ChatPageComponent implements OnInit {
+export class ChatPageComponent implements OnInit, OnDestroy {
   private commService = inject(CommunicationService);
 
   ngOnInit(): void {
-    // هنگام ورود به صفحهٔ کامل چت، کشوی شناور بسته می‌شود
+    // هنگام ورود به صفحهٔ کامل چت، کشوی شناور بسته می‌شود و وضعیت صفحهٔ کامل فعال می‌گردد
     this.commService.isChatDrawerOpen.set(false);
+    this.commService.isChatFullPageOpen.set(true);
+  }
+
+  ngOnDestroy(): void {
+    this.commService.isChatFullPageOpen.set(false);
   }
 }

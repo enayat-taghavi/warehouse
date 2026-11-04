@@ -187,3 +187,57 @@ class Phase8DeliveryAndBulkDeleteTestCase(BaseCommsTestCase):
                 self.assertTrue(MessageAttachment.all_objects.filter(id=att2.id).exists())
                 # فایل فیزیکی روی دیسک به دلیل وجود ارجاع دوم پاک نشده است!
                 self.assertTrue(os.path.exists(file_path))
+
+    def test_single_delete_cleans_attachments_with_refcount(self):
+        """
+        حذف تکی پیام (DELETE /messages/<id>/) نیز همانند حذف گروهی پیوست‌ها را با رعایت شمارش ارجاع پاک‌سازی می‌کند.
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with override_settings(MEDIA_ROOT=temp_dir):
+                file_content = b"Single delete shared test content"
+                uploaded = SimpleUploadedFile("single_del.png", file_content, content_type="image/png")
+
+                msg1 = Message.objects.create(conversation=self.direct_conv, sender=self.manager_wh1, text="پیام ۱")
+                att1 = MessageAttachment.objects.create(
+                    message=msg1, file=uploaded, file_name="single_del.png",
+                    file_size=len(file_content), content_type="image/png"
+                )
+                file_path = att1.file.path
+                self.assertTrue(os.path.exists(file_path))
+
+                msg2 = Message.objects.create(conversation=self.direct_conv, sender=self.manager_wh1, text="پیام ۲")
+                att2 = MessageAttachment.objects.create(
+                    message=msg2, file=att1.file.name, file_name="single_del.png",
+                    file_size=len(file_content), content_type="image/png"
+                )
+
+                self.client.force_authenticate(user=self.manager_wh1)
+                res1 = self.client.delete(f"/api/communications/messages/{msg1.id}/")
+                self.assertEqual(res1.status_code, status.HTTP_204_NO_CONTENT)
+                self.assertFalse(MessageAttachment.all_objects.filter(id=att1.id).exists())
+                self.assertTrue(os.path.exists(file_path))
+
+                res2 = self.client.delete(f"/api/communications/messages/{msg2.id}/")
+                self.assertEqual(res2.status_code, status.HTTP_204_NO_CONTENT)
+                self.assertFalse(MessageAttachment.all_objects.filter(id=att2.id).exists())
+                self.assertFalse(os.path.exists(file_path))
+
+    def test_edit_message_replying_to_soft_deleted_message_succeeds(self):
+        """
+        ویرایش پیامی که به یک پیام حذف‌شدهٔ نرم پاسخ داده است نباید خطای DoesNotExist بدهد.
+        """
+        parent = Message.objects.create(conversation=self.direct_conv, sender=self.staff_wh1, text="پیام والد")
+        reply = Message.objects.create(
+            conversation=self.direct_conv, sender=self.manager_wh1, text="پاسخ اولیه", reply_to=parent
+        )
+        parent.soft_delete()
+
+        self.client.force_authenticate(user=self.manager_wh1)
+        res = self.client.patch(
+            f"/api/communications/messages/{reply.id}/",
+            {'text': 'پاسخ ویرایش‌شده'},
+            format='json'
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['text'], 'پاسخ ویرایش‌شده')
+        self.assertEqual(res.data['reply_to_details'], {'id': parent.id, 'deleted': True})

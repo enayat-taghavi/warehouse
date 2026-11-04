@@ -184,9 +184,16 @@ class ConversationViewSet(viewsets.ModelViewSet):
         user = self.request.user
         wh_id = self.request.query_params.get('warehouse_id')
 
+        latest_msg_id_sq = Subquery(
+            Message.objects.filter(
+                conversation_id=OuterRef('conversation_id')
+            ).order_by('-created_at', '-id').values('id')[:1]
+        )
         last_msg_prefetch = Prefetch(
             'messages',
-            queryset=Message.objects.select_related('sender').prefetch_related('attachments').order_by('-created_at', '-id'),
+            queryset=Message.objects.filter(
+                id=latest_msg_id_sq
+            ).select_related('sender').prefetch_related('attachments').order_by('-created_at', '-id'),
             to_attr='prefetched_messages'
         )
 
@@ -733,7 +740,11 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
-            return Message.objects.all().select_related('sender', 'conversation').prefetch_related('attachments', Prefetch('reactions', queryset=MessageReaction.objects.only('id', 'message_id', 'user_id', 'emoji'))).annotate(
+            return Message.objects.all().select_related('sender', 'conversation', 'reply_to__sender').prefetch_related(
+                'attachments',
+                'reply_to__attachments',
+                Prefetch('reactions', queryset=MessageReaction.objects.only('id', 'message_id', 'user_id', 'emoji'))
+            ).annotate(
                 annotated_is_pinned=Exists(PinnedMessage.objects.filter(message=OuterRef('pk')))
             )
 
@@ -865,10 +876,13 @@ class MessageViewSet(viewsets.ModelViewSet):
             target_repr=f"حذف پیام #{instance.id} توسط {self.request.user}",
             before_state={'id': str(instance.id), 'text': instance.text}
         )
-        instance.soft_delete()
+        for att in instance.attachments.all():
+            att.delete()
         was_pinned = PinnedMessage.objects.filter(message=instance).exists()
         if was_pinned:
             PinnedMessage.objects.filter(message=instance).delete()
+        MessageReaction.objects.filter(message=instance).delete()
+        instance.soft_delete()
         # خبر زندهٔ حذف به همهٔ خوانندگان و دستگاه‌های خود حذف‌کننده (E12)
         conversation, message_id = instance.conversation, instance.id
         transaction.on_commit(lambda: broadcast_message_deleted_ws(conversation, message_id))

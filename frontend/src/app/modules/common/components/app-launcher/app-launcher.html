@@ -322,6 +322,9 @@
     <span class="font-mono text-[11px]">نسخه ماژولار ۵.۰ (Modular Enterprise Edition)</span>
   </footer>
 
+  <!-- کشوی پیام‌رسان سازمانی -->
+  <app-chat-drawer *ngIf="commService.isChatDrawerOpen() && commService.isChatAvailable()" />
+
   <!-- ویزارد راه‌اندازی اول در زمان دیتابیس خام یا عدم ثبت شرکت -->
   <app-first-boot-wizard></app-first-boot-wizard>
 </div>

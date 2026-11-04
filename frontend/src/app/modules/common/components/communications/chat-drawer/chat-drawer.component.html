@@ -7,6 +7,7 @@
 <!-- Slide Drawer Panel OR Full Page Container -->
 <div *ngIf="mode() === 'page' || (commService.isChatDrawerOpen() && !isOnChatPage())"
      [attr.data-testid]="mode() === 'page' ? 'chat-page-container' : null"
+     [attr.data-back-closes]="mode() === 'drawer' && commService.isChatDrawerOpen() ? '' : null"
      [ngClass]="mode() === 'page'
        ? 'chat-page-panel w-full h-[100dvh] bg-surface-canvas flex flex-col md:flex-row overflow-hidden relative'
        : 'chat-drawer-panel fixed top-0 start-0 bottom-0 pt-safe pb-safe w-full sm:w-[400px] bg-white dark:bg-slate-900 shadow-2xl z-[70] flex flex-col border-e border-slate-200 dark:border-slate-800 animate-slide-in'"
@@ -262,7 +263,7 @@
     <!-- وقتی گفتگو فعال است -->
     <ng-container *ngIf="activeConv()">
       <!-- هدر حالت انتخاب چندتایی (Multi-Select Action Bar) -->
-      <div *ngIf="isSelectionMode()" data-testid="selection-bar"
+      <div *ngIf="isSelectionMode()" data-testid="selection-bar" data-back-closes
            class="h-14 sm:h-16 px-2 sm:px-4 border-b border-indigo-100 dark:border-indigo-900/50 flex items-center justify-between bg-indigo-50/90 dark:bg-indigo-950/80 backdrop-blur shrink-0 z-10">
         <div class="flex items-center gap-2">
           <button type="button" (click)="clearSelection()" data-testid="selection-cancel-btn"
@@ -380,7 +381,7 @@
 
       <!-- محتوای پیام‌ها (اسکرول) -->
       <div #messagesScrollContainer (scroll)="onThreadScroll()" class="flex-1 overflow-y-auto chat-thread-bg relative custom-scrollbar">
-    <div *ngIf="activeTab() === 'chat'" class="p-4 min-h-full flex flex-col">
+    <div *ngIf="activeTab() === 'chat'" class="p-4 min-h-full flex flex-col w-full max-w-[760px] mx-auto">
       <!-- Load older messages button -->
       <div *ngIf="messages().length >= 30 && hasMoreMessages()" class="text-center pb-2 shrink-0">
         <button (click)="loadOlder()" 
@@ -414,6 +415,8 @@
       <div *ngIf="!msg.is_system"
            class="chat-msg-row flex flex-col shrink-0 group transition-all"
            [attr.data-msg-id]="msg.id"
+           [class.relative]="isMenuOpen(msg)"
+           [class.z-30]="isMenuOpen(msg)"
            [class.mt-2.5]="isFirstInGroup(items(), i)"
            [class.mt-0.5]="!isFirstInGroup(items(), i)"
            [class.items-start]="msg.is_me"
@@ -468,7 +471,7 @@
                (pointermove)="onBubblePointerMove($event, msg)"
                (pointerup)="onBubblePointerUp($event, msg)"
                (pointercancel)="onBubblePointerCancel($event, msg)"
-               (click)="isSelectionMode() ? toggleMessageSelection(msg) : null"
+               (click)="onBubbleClick($event, msg)"
                (dblclick)="!isSelectionMode() && replyToMessage(msg)"
                [class.order-1]="msg.is_me"
                [class.order-2]="!msg.is_me"
@@ -893,7 +896,7 @@
   </div>
 
   <!-- تأیید حذف پیام -->
-  <div *ngIf="deleteTarget() || isBulkDeleteOpen()" class="absolute inset-0 z-20 bg-surface-canvas/80 flex items-center justify-center p-4"
+  <div *ngIf="deleteTarget() || isBulkDeleteOpen()" data-back-closes class="absolute inset-0 z-[80] bg-surface-canvas/80 flex items-center justify-center p-4"
        (keydown)="onDialogKey($event, cancelRemoveMsg.bind(this))">
     <div role="alertdialog" aria-modal="true" aria-labelledby="msg-delete-title" data-testid="delete-dialog"
          class="w-full bg-surface border border-line rounded-2xl shadow-xl p-4">
@@ -923,6 +926,7 @@
     فقط مدیران می‌توانند در این کانال پیام بفرستند
   </div>
   <div *ngIf="activeTab() === 'chat' && activeConv()?.can_post !== false" class="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <div class="w-full max-w-[760px] mx-auto">
 
     <!-- نوار فایل‌های پیش از ارسال: عکس واقعی، صفحهٔ اول PDF یا کارت فایل؛ متن پیام توضیح آن‌هاست -->
     <div *ngIf="pickedFiles().length > 0" data-testid="picked-strip" class="mb-2">
@@ -960,7 +964,7 @@
     </div>
 
     <!-- نوار پاسخ / ویرایش -->
-    <div *ngIf="replyTo() as r" data-testid="reply-strip"
+    <div *ngIf="replyTo() as r" data-testid="reply-strip" data-back-closes
          class="flex items-center justify-between gap-2 p-2 mb-2 bg-surface-muted rounded-lg border-s-4 border-indigo-500 text-xs">
       <div class="min-w-0">
         <span class="block font-bold text-fg truncate">پاسخ به {{ r.is_me ? 'خودم' : (r.sender_details?.full_name || 'کاربر') }}</span>
@@ -972,7 +976,7 @@
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="x"></svg>
       </button>
     </div>
-    <div *ngIf="editing() as e" data-testid="edit-strip"
+    <div *ngIf="editing() as e" data-testid="edit-strip" data-back-closes
          class="flex items-center justify-between gap-2 p-2 mb-2 bg-surface-muted rounded-lg border-s-4 border-amber-500 text-xs">
       <div class="min-w-0">
         <span class="block font-bold text-fg">ویرایش پیام</span>
@@ -1026,6 +1030,7 @@
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="smile"></svg>
         </button>
         <div *ngIf="emojiPickerOpen()"
+             data-back-closes
              class="absolute bottom-full mb-2 start-0 z-30 shadow-2xl"
              (click)="$event.stopPropagation()">
           <app-chat-emoji-picker (emojiSelect)="onEmojiSelected($event)"
@@ -1063,6 +1068,7 @@
       </button>
       </ng-template>
     </div>
+    </div>
   </div>
 
   <!-- ─── انتخاب‌گر کاربران (مشترک بین ساخت گروه و افزودن عضو) ─── -->
@@ -1092,7 +1098,7 @@
   </ng-template>
 
   <!-- ─── گفتگوی ساخت گروه ─── -->
-  <div *ngIf="createOpen()" class="absolute inset-0 z-[80] bg-surface-canvas/80 flex items-end sm:items-center justify-center px-3 pt-safe-3 pb-safe-3"
+  <div *ngIf="createOpen()" data-back-closes class="absolute inset-0 z-[80] bg-surface-canvas/80 flex items-end sm:items-center justify-center px-3 pt-safe-3 pb-safe-3"
        (keydown)="onDialogKey($event, closeCreate.bind(this))">
     <div role="dialog" aria-modal="true" aria-labelledby="new-group-title" data-testid="create-dialog"
          class="w-full bg-surface border border-line rounded-2xl shadow-xl p-4 max-h-full overflow-y-auto">
@@ -1120,7 +1126,7 @@
   </div>
 
   <!-- ─── پنل «خوانده‌شده توسط» ─── -->
-  <div *ngIf="readByMsg()" class="absolute inset-0 z-[80] bg-surface-canvas/80 flex items-end sm:items-center justify-center px-3 pt-safe-3 pb-safe-3"
+  <div *ngIf="readByMsg()" data-back-closes class="absolute inset-0 z-[80] bg-surface-canvas/80 flex items-end sm:items-center justify-center px-3 pt-safe-3 pb-safe-3"
        (click)="$event.target === $event.currentTarget && closeReadBy()"
        (keydown)="onDialogKey($event, closeReadBy.bind(this))">
     <div role="dialog" aria-modal="true" aria-labelledby="read-by-title" data-testid="read-by-panel"
@@ -1148,7 +1154,7 @@
   </div>
 
   <!-- ─── پنل اطلاعات گروه ─── -->
-  <div *ngIf="infoOpen() && activeConv() as conv" class="absolute inset-0 z-[80] bg-surface flex flex-col"
+  <div *ngIf="infoOpen() && activeConv() as conv" data-back-closes class="absolute inset-0 z-[80] bg-surface flex flex-col"
        (keydown)="onDialogKey($event, closeInfo.bind(this))">
     <div role="dialog" aria-modal="true" aria-labelledby="group-info-title" data-testid="info-panel" class="flex flex-col h-full">
       <div class="h-16 px-4 border-b border-line flex items-center justify-between shrink-0">
@@ -1317,7 +1323,7 @@
       </div>
 
       <!-- مرحلهٔ تأیید -->
-      <div *ngIf="confirmAction() as ca" role="alertdialog" aria-modal="true" aria-labelledby="confirm-text" data-testid="confirm-box"
+      <div *ngIf="confirmAction() as ca" data-back-closes role="alertdialog" aria-modal="true" aria-labelledby="confirm-text" data-testid="confirm-box"
            class="shrink-0 border-t border-line bg-surface-muted p-4">
         <p id="confirm-text" class="text-xs font-bold text-fg mb-3">
           {{ ca.kind === 'leave' ? 'از این گروه خارج می‌شوید؟' : 'این عضو از گروه حذف شود؟' }}
@@ -1337,6 +1343,10 @@
 
 <!-- مودال لیست افراد واکنش‌دهنده (فاز ۴) -->
 <div *ngIf="reactorsModalMsg() as rMsg"
+     data-back-closes
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="reactors-modal-title"
      class="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm select-none"
      data-testid="reactors-modal"
      (click)="closeReactorsModal()">
@@ -1345,7 +1355,7 @@
     <!-- هدر مودال -->
     <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <span class="text-sm font-bold text-slate-800 dark:text-slate-100">واکنش‌ها</span>
+        <h3 id="reactors-modal-title" class="text-sm font-bold text-slate-800 dark:text-slate-100">واکنش‌ها</h3>
         <span class="text-xs text-slate-400 font-mono">({{ reactorsList().length }})</span>
       </div>
       <button type="button"

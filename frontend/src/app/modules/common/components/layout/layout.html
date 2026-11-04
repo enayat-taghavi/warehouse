@@ -475,7 +475,7 @@
 </div>
 
 <!-- کشوی پیام‌رسان سازمانی -->
-<app-chat-drawer *ngIf="commService.isChatAvailable()" />
+<app-chat-drawer *ngIf="commService.isChatDrawerOpen() && commService.isChatAvailable()" />
 
 <!-- مودال هوشمند انتخاب شرکت کاری هنگام ورود یا تغییر -->
 <app-company-selection-modal></app-company-selection-modal>

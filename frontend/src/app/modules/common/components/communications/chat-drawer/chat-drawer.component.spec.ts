@@ -673,6 +673,47 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
     expect(comp.swipingMsgId()).toBeNull();
   });
 
+  it('pointermove without pointerdown does not shift message (hover immunity)', async () => {
+    await setupPhase3Component();
+
+    // Plain mouse movement without pointerdown
+    comp.onBubblePointerMove({ clientX: 200, clientY: 100, pointerType: 'mouse', buttons: 0 } as any, otherMsg);
+    expect(comp.swipingMsgId()).toBeNull();
+    expect(comp.swipeDelta()).toBe(0);
+    expect(comp.getBubbleTransform(otherMsg)).toBe('none');
+  });
+
+  it('onBubbleClick copies full message text when no text is selected', async () => {
+    await setupPhase3Component();
+    const copySpy = vi.spyOn(comp, 'copyText').mockResolvedValue(undefined as any);
+
+    const ev = { target: { closest: () => null } } as any;
+    comp.onBubbleClick(ev, otherMsg);
+
+    expect(copySpy).toHaveBeenCalledWith(otherMsg);
+  });
+
+  it('onBubbleClick ignores copy if user was selecting/highlighting text', async () => {
+    await setupPhase3Component();
+    const copySpy = vi.spyOn(comp, 'copyText').mockResolvedValue(undefined as any);
+    vi.spyOn(window, 'getSelection').mockReturnValue({ toString: () => 'بخشی از متن' } as any);
+
+    const ev = { target: { closest: () => null } } as any;
+    comp.onBubbleClick(ev, otherMsg);
+
+    expect(copySpy).not.toHaveBeenCalled();
+  });
+
+  it('onBubbleClick ignores copy if clicking an interactive element (link or button)', async () => {
+    await setupPhase3Component();
+    const copySpy = vi.spyOn(comp, 'copyText').mockResolvedValue(undefined as any);
+
+    const ev = { target: { closest: (sel: string) => sel.includes('button') ? {} : null } } as any;
+    comp.onBubbleClick(ev, otherMsg);
+
+    expect(copySpy).not.toHaveBeenCalled();
+  });
+
   // ─── 3. Local Emoji Picker ───
   it('toggles emoji picker and inserts clicked emoji into composer', async () => {
     await setupPhase3Component();
@@ -777,6 +818,64 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
     comp.replyTo.set(myMsg);
     comp.onEscapeKey();
     expect(comp.replyTo()).toBeNull();
+  });
+
+  it('hierarchical back navigation via Escape peels layers in Telegram order', async () => {
+    await setupPhase3Component();
+
+    // 1. Reactors modal
+    comp.reactorsModalMsg.set(myMsg);
+    comp.onEscapeKey();
+    expect(comp.reactorsModalMsg()).toBeNull();
+
+    // 2. Forward modal
+    comp.isForwardModalOpen.set(true);
+    comp.onEscapeKey();
+    expect(comp.isForwardModalOpen()).toBe(false);
+
+    // 3. Confirm action inside group info
+    comp.infoOpen.set(true);
+    comp.confirmAction.set({ kind: 'leave' });
+    comp.onEscapeKey();
+    expect(comp.confirmAction()).toBeNull();
+    expect(comp.infoOpen()).toBe(true);
+
+    // 4. Group info panel
+    comp.onEscapeKey();
+    expect(comp.infoOpen()).toBe(false);
+
+    // 5. Group create dialog
+    comp.createOpen.set(true);
+    comp.onEscapeKey();
+    expect(comp.createOpen()).toBe(false);
+
+    // 6. Read-by panel
+    comp.readByMsg.set(myMsg);
+    comp.onEscapeKey();
+    expect(comp.readByMsg()).toBeNull();
+
+    // 7. Delete confirmation dialog
+    comp.deleteTarget.set(myMsg);
+    comp.onEscapeKey();
+    expect(comp.deleteTarget()).toBeNull();
+
+    // 8. In drawer mode with active conversation: Escape navigates back to conversation list
+    comp.activeConv.set(sampleConv);
+    comp.activeTab.set('chat');
+    comp.onEscapeKey();
+    expect(comp.activeConv()).toBeNull();
+    expect(comp.activeTab()).toBe('conversations');
+
+    // 9. When in contacts tab: Escape returns to conversations tab
+    comp.activeTab.set('contacts');
+    comp.onEscapeKey();
+    expect(comp.activeTab()).toBe('conversations');
+
+    // 10. When on conversations list in drawer mode: Escape closes drawer
+    comm.isChatDrawerOpen.set(true);
+    const closeSpy = vi.spyOn(comp, 'closeDrawer');
+    comp.onEscapeKey();
+    expect(closeSpy).toHaveBeenCalled();
   });
 
   it('ArrowUp on empty composer opens last own editable message for editing', async () => {
@@ -1568,5 +1667,70 @@ describe('ChatDrawerComponent - Phase 8 (Delivery Double Ticks, Bulk Delete, Per
     // Calling with unmuted conversation: sound SHOULD play
     CommunicationService.prototype.playNotificationSound.call(ctx, 'c802');
     expect(audioPlayed).toBe(true);
+  });
+
+  it('preserves activeConversation when handing off from page mode to drawer via exitFullPage(true)', async () => {
+    await setupPhase8Component();
+    fixture.componentRef.setInput('mode', 'page');
+    comp.activeConv.set(sampleConv);
+    comm.activeConversation$.next(sampleConv);
+    comm.chatReturnUrl.set('/app/inventory/dashboard');
+    fixture.detectChanges();
+
+    comp.exitFullPage(true);
+    expect(comm.isChatDrawerOpen()).toBe(true);
+
+    // Destroy page component (simulating router navigation away from /app/chat/:id)
+    fixture.destroy();
+    expect(comm.leaveConversation).not.toHaveBeenCalled();
+    expect(comm.activeConversation$.value?.id).toBe(sampleConv.id);
+  });
+
+  it('retains fallback blob URL while thumbnail is downloading and revokes fallback once thumbnail loads', async () => {
+    await setupPhase8Component();
+    const thumbSubject = new Subject<Blob>();
+    const downloadSpy = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('thumb=1')) {
+        return thumbSubject.asObservable();
+      }
+      const s = new BehaviorSubject<Blob>(new Blob(['orig'], { type: 'image/png' }));
+      return s.asObservable();
+    });
+    (comp as any).api = { download: downloadSpy };
+    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL');
+
+    const attPending = {
+      id: 'att-99',
+      download_url: '/api/communications/attachments/99/download/',
+      thumbnail_url: null,
+      content_type: 'image/png',
+      preview_status: 'pending'
+    };
+
+    // First call triggers download of fallback
+    expect(comp.attachmentPreview(attPending)).toBeNull();
+    await flush(fixture);
+
+    const origBlobUrl = comp.attachmentPreview(attPending);
+    expect(origBlobUrl).toBeTruthy();
+
+    // Now thumbnail_url arrives via WebSocket update
+    const attReady = {
+      ...attPending,
+      thumbnail_url: '/api/communications/attachments/99/download/?thumb=1',
+      preview_status: 'ready'
+    };
+
+    // While thumbnail is still downloading, attachmentPreview returns the existing fallback blob URL (no flicker)
+    expect(comp.attachmentPreview(attReady)).toBe(origBlobUrl);
+
+    // Resolve thumbnail download
+    thumbSubject.next(new Blob(['thumb'], { type: 'image/webp' }));
+    thumbSubject.complete();
+    await flush(fixture);
+
+    const thumbBlobUrl = comp.attachmentPreview(attReady);
+    expect(thumbBlobUrl).toBeTruthy();
+    expect(revokeSpy).toHaveBeenCalledWith(origBlobUrl!);
   });
 });

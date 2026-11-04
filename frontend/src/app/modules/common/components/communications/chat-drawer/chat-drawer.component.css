@@ -56,9 +56,10 @@
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
-/* Performance: content-visibility for smooth 60fps scrolling in long threads */
+/* Note: Do NOT apply content-visibility: auto to .chat-msg-row because CSS Containment
+   enforces contain: paint, which clips the absolute-positioned <app-chat-message-menu> popup. */
 .chat-msg-row {
-  content-visibility: auto;
-  contain-intrinsic-size: 0 56px;
+  overflow: visible;
 }
+
 

@@ -165,12 +165,13 @@ export interface RichLauncherCard {
 }
 
 import { FirstBootWizardComponent } from '../operations/first-boot-wizard/first-boot-wizard';
+import { ChatDrawerComponent } from '../communications/chat-drawer/chat-drawer.component';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 @Component({
   selector: 'app-launcher',
   standalone: true,
-  imports: [CommonModule, FirstBootWizardComponent, SvgIconDirective],
+  imports: [CommonModule, FirstBootWizardComponent, ChatDrawerComponent, SvgIconDirective],
   templateUrl: './app-launcher.html'
 })
 export class AppLauncherComponent implements OnInit {
@@ -186,6 +187,7 @@ export class AppLauncherComponent implements OnInit {
   public showChatCard = computed<boolean>(() => this.commService.isChatAvailable());
 
   enterChat(): void {
+    this.commService.chatReturnUrl.set('/app/launcher');
     this.router.navigate(['/app/chat']);
   }
 

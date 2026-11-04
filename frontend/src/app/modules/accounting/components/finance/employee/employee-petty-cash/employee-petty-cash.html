@@ -184,7 +184,7 @@
           <label for="expenseDateFrom" class="block text-[11px] font-bold text-slate-700 mb-1">از تاریخ</label>
           <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500 relative min-h-[40px]">
             <ng-persian-datepicker [(uiIsVisible)]="isDateFromOpen" [dateInitValue]="false" (dateOnSelect)="onDateSelect('from', $event)" class="block relative cursor-pointer">
-              <input id="expenseDateFrom" type="text" readonly [value]="dateFrom" (click)="isDateFromOpen = !isDateFromOpen" placeholder="۱۴۰۵/۰۱/۰۱"
+              <input id="expenseDateFrom" type="text" readonly [formControl]="dateFromControl" (click)="isDateFromOpen = !isDateFromOpen" placeholder="۱۴۰۵/۰۱/۰۱"
                 class="w-28 text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"/>
             </ng-persian-datepicker>
             <button type="button" (click)="isDateFromOpen = !isDateFromOpen; $event.stopPropagation()" title="انتخاب تاریخ شروع از تقویم" aria-label="انتخاب تاریخ شروع از تقویم"
@@ -196,8 +196,8 @@
         <div>
           <label for="expenseDateTo" class="block text-[11px] font-bold text-slate-700 mb-1">تا تاریخ</label>
           <div class="flex items-center border border-slate-200 rounded-xl ps-2.5 pe-0.5 py-0.5 bg-white focus-within:ring-2 focus-within:ring-indigo-500 relative min-h-[40px]">
-            <ng-persian-datepicker [(uiIsVisible)]="isDateToOpen" [dateInitValue]="false" (dateOnSelect)="onDateSelect('to', $event)" class="block relative cursor-pointer">
-              <input id="expenseDateTo" type="text" readonly [value]="dateTo" (click)="isDateToOpen = !isDateToOpen" placeholder="۱۴۰۵/۱۲/۲۹"
+            <ng-persian-datepicker [(uiIsVisible)]="isDateToOpen" [dateInitValue]="false" (dateOnSelect)="onDateSelect('to', $event)" class="block relative cursor-pointer to-datepicker">
+              <input id="expenseDateTo" type="text" readonly [formControl]="dateToControl" (click)="isDateToOpen = !isDateToOpen" placeholder="۱۴۰۵/۱۲/۲۹"
                 class="w-28 text-xs font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer"/>
             </ng-persian-datepicker>
             <button type="button" (click)="isDateToOpen = !isDateToOpen; $event.stopPropagation()" title="انتخاب تاریخ پایان از تقویم" aria-label="انتخاب تاریخ پایان از تقویم"
@@ -723,16 +723,21 @@
 
             <div>
               <label for="petty_expense_date" class="block text-xs font-bold text-slate-700 mb-1">تاریخ پرداخت (شمسی) <span class="text-rose-500">*</span></label>
-              <input
-                id="petty_expense_date"
-                type="text"
-                [(ngModel)]="newExpense.transaction_date_shamsi"
-                (ngModelChange)="expenseDateError = ''"
-                placeholder="1405/04/01"
-                [attr.aria-invalid]="!!expenseDateError"
-                [attr.aria-describedby]="expenseDateError ? 'expense_date_error' : null"
-                [class.border-rose-400]="!!expenseDateError"
-                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus:border-amber-500"/>
+              <div class="relative to-datepicker">
+                <ng-persian-datepicker [(uiIsVisible)]="isExpenseDatePickerOpen" [dateInitValue]="false" (dateOnSelect)="onExpenseDateSelect($event)" class="w-full block relative cursor-pointer to-datepicker">
+                  <input
+                    id="petty_expense_date"
+                    type="text"
+                    [formControl]="expenseDateControl"
+                    (click)="isExpenseDatePickerOpen = !isExpenseDatePickerOpen"
+                    placeholder="1405/04/01"
+                    autocomplete="off"
+                    [attr.aria-invalid]="!!expenseDateError"
+                    [attr.aria-describedby]="expenseDateError ? 'expense_date_error' : null"
+                    [class.border-rose-400]="!!expenseDateError"
+                    class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus:border-amber-500 cursor-pointer"/>
+                </ng-persian-datepicker>
+              </div>
               @if (expenseDateError) {
                 <p id="expense_date_error" class="mt-1 text-[11px] font-bold text-rose-700" role="alert">{{ expenseDateError }}</p>
               }

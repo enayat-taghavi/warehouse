@@ -11,6 +11,7 @@ import { ToastService } from '../../../../../shared/components/toast/toast.compo
   imports: [CommonModule, FormsModule, SvgIconDirective],
   template: `
     <div *ngIf="isOpen()"
+         data-back-closes
          class="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm select-none"
          role="dialog"
          aria-modal="true"

@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { AuthService } from '../../../../../../../core/auth/auth.service';
@@ -24,7 +24,15 @@ import {
   PettyCashTransaction,
   isMaskedValue
 } from '../../../../../models/personnel.model';
-import { ShebaValidationResult, extractShebaDigits, validateSheba } from '../../../../../../../core/utils/sheba-utils';
+import {
+  IRANIAN_BANKS,
+  IranianBankInfo,
+  ShebaValidationResult,
+  extractShebaDigits,
+  generateShebaFromAccount,
+  validateAccountNumber,
+  validateSheba
+} from '../../../../../../../core/utils/sheba-utils';
 
 type ModalKind = 'form' | 'settle' | 'reconcile' | 'close' | 'handover';
 
@@ -59,6 +67,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   imports: [
     CommonModule,
     FormsModule,
+    ReactiveFormsModule,
     NgPersianDatepickerModule,
     ModalComponent,
     ActionButtonComponent,
@@ -101,10 +110,17 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
 
   // فرم حساب
   custodianPick: PersonRoleValue[] = [];
-  form = { ceiling: null as string | number | null, opening: null as string | number | null, openingDate: '', reason: '', card: '', sheba: '', description: '' };
+  form = { ceiling: null as string | number | null, opening: null as string | number | null, openingDate: '', reason: '', card: '', bank_name: '', sheba: '', description: '' };
   isFormDatePickerOpen = false;
+  readonly openingDateControl = new FormControl<string>('');
   private original = { opening: 0, openingDate: '', card: '', sheba: '' };
-  // شبا مثل بقیهٔ برنامه: پیشوند ثابت IR، ۲۴ رقم گروه‌بندی‌شده، اعتبارسنجی زنده و نام بانک
+  // شبا و حساب بر مبنای معماری استاندارد ناوگان و پرسنل (تبدیل دوطرفه، جستجوی بانک، کپی و اعتبارسنجی زنده)
+  iranianBanks: IranianBankInfo[] = IRANIAN_BANKS;
+  isBankDropdownOpen = false;
+  bankSearchQuery = '';
+  isShebaCopied = false;
+  isAccountCopied = false;
+  private _isSyncingBank = false;
   shebaDigitsDisplay = '';
   shebaValidation: ShebaValidationResult | null = null;
 
@@ -116,6 +132,8 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
   // تطبیق
   recForm = { date: '', counted: null as string | number | null, note: '' };
   isRecDatePickerOpen = false;
+  readonly recDateControl = new FormControl<string>('');
+  private readonly dateControlSubs = new Subscription();
 
   // بستن و تحویل
   closeForm = { reference: '', note: '' };
@@ -142,11 +160,22 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
       this.isOnline = this.network.isOnline;
       this.cdr.markForCheck();
     });
+    this.dateControlSubs.add(
+      this.openingDateControl.valueChanges.subscribe(val => {
+        this.form.openingDate = val || '';
+      })
+    );
+    this.dateControlSubs.add(
+      this.recDateControl.valueChanges.subscribe(val => {
+        this.recForm.date = val || '';
+      })
+    );
     this.load();
   }
 
   ngOnDestroy(): void {
     this.netSub?.unsubscribe();
+    this.dateControlSubs.unsubscribe();
   }
 
   // ─── کمکی‌ها ───
@@ -168,7 +197,19 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
       return 'اتصال به سرور برقرار نیست؛ کمی بعد دوباره تلاش کنید.';
     }
     if (err?.status === 403 && !code) return 'اجازهٔ این کار را ندارید.';
-    return (typeof body?.error === 'string' && body.error) || (typeof body?.detail === 'string' && body.detail) || fallback;
+    if (typeof body?.error === 'string' && body.error) return body.error;
+    if (typeof body?.detail === 'string' && body.detail) return body.detail;
+    // استخراج اولین خطای فیلدی از پاسخ اعتبارسنجی جنگو
+    if (body && typeof body === 'object') {
+      for (const k of Object.keys(body)) {
+        if (k === 'code') continue;
+        const v = body[k];
+        if (typeof v === 'string' && v.trim()) return v;
+        if (Array.isArray(v) && v.length > 0 && typeof v[0] === 'string') return v[0];
+        if (v && typeof v === 'object' && typeof v.message === 'string') return v.message;
+      }
+    }
+    return fallback;
   }
 
   resultLabel(r?: string): string {
@@ -247,33 +288,48 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
     this.modalError = '';
     this.isFormDatePickerOpen = false;
     this.isRecDatePickerOpen = false;
+    this.isBankDropdownOpen = false;
+    this.bankSearchQuery = '';
+    this.openingDateControl.setValue('', { emitEvent: false });
+    this.recDateControl.setValue('', { emitEvent: false });
   }
 
   openCreate(): void {
     this.custodianPick = [];
-    this.form = { ceiling: null, opening: null, openingDate: '', reason: '', card: '', sheba: '', description: '' };
+    this.form = { ceiling: null, opening: null, openingDate: '', reason: '', card: '', bank_name: '', sheba: '', description: '' };
+    this.openingDateControl.setValue('', { emitEvent: false });
     this.original = { opening: 0, openingDate: '', card: '', sheba: '' };
+    this.isBankDropdownOpen = false;
+    this.bankSearchQuery = '';
     this.loadSheba('');
     this.open('form', null);
   }
 
   openEdit(acc: PettyCashAccount): void {
+    const openingDate = acc.opening_balance_date || '';
     this.form = {
       ceiling: acc.ceiling_amount ?? null,
       opening: acc.opening_balance ?? 0,
-      openingDate: acc.opening_balance_date || '',
+      openingDate,
       reason: '',
       card: acc.card_or_account_number || '',
+      bank_name: '',
       sheba: acc.sheba_number || '',
       description: acc.description || ''
     };
+    this.openingDateControl.setValue(openingDate, { emitEvent: false });
     this.original = {
       opening: Number(acc.opening_balance || 0),
-      openingDate: acc.opening_balance_date || '',
+      openingDate,
       card: acc.card_or_account_number || '',
       sheba: acc.sheba_number || ''
     };
+    this.isBankDropdownOpen = false;
+    this.bankSearchQuery = '';
     this.loadSheba(acc.sheba_number || '');
+    if (this.shebaValidation?.bank?.name) {
+      this.form.bank_name = this.shebaValidation.bank.name;
+    }
     // مقدار نرمال‌شده مبنای مقایسه است تا بازکردن و بستن بدون تغییر، شبا را دوباره نفرستد
     this.original.sheba = this.form.sheba;
     this.open('form', acc);
@@ -301,6 +357,7 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
 
   openReconcile(acc: PettyCashAccount): void {
     this.recForm = { date: '', counted: null, note: '' };
+    this.recDateControl.setValue('', { emitEvent: false });
     this.open('reconcile', acc);
     this.loadBalance(acc);
   }
@@ -317,7 +374,103 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
     this.open('handover', acc);
   }
 
-  // ─── شبا ───
+  // ─── بانک، حساب و شبا (تبدیل دوطرفه، جستجو و کپی) ───
+  get filteredBanks(): IranianBankInfo[] {
+    if (!this.bankSearchQuery || !this.bankSearchQuery.trim()) {
+      return this.iranianBanks;
+    }
+    const q = this.bankSearchQuery.trim().toLowerCase();
+    return this.iranianBanks.filter(b =>
+      b.name.toLowerCase().includes(q) ||
+      b.shortName.toLowerCase().includes(q) ||
+      b.code.includes(q)
+    );
+  }
+
+  openBankDropdown(): void {
+    if (!this.canManageAccounts) return;
+    this.bankSearchQuery = '';
+    this.isBankDropdownOpen = true;
+  }
+
+  selectBankFromDropdown(bank: IranianBankInfo, event?: MouseEvent): void {
+    if (event) event.stopPropagation();
+    this.onBankSelect(bank.name);
+    this.isBankDropdownOpen = false;
+    this.bankSearchQuery = '';
+  }
+
+  onBankSelect(bankName: string): void {
+    this.form.bank_name = bankName;
+    const cleanAcc = (this.form.card || '').trim();
+    const accValidation = validateAccountNumber(cleanAcc);
+    if (accValidation.isValid && bankName) {
+      const generated = generateShebaFromAccount(bankName, cleanAcc);
+      if (generated) {
+        this._isSyncingBank = true;
+        try {
+          const res = validateSheba(generated);
+          this.shebaValidation = res;
+          this.shebaDigitsDisplay = res.formattedDigits;
+          this.form.sheba = res.rawSheba;
+        } finally {
+          this._isSyncingBank = false;
+        }
+      }
+    }
+    this.cdr.markForCheck();
+  }
+
+  onAccountNumberInput(event: any): void {
+    if (this._isSyncingBank) return;
+    const rawVal = typeof event === 'string' ? event : (event?.target?.value || '');
+    const cleanAcc = rawVal.replace(/[۰-۹]/g, (d: string) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString())
+                           .replace(/[٠-٩]/g, (d: string) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString())
+                           .replace(/\D/g, '')
+                           .substring(0, 18);
+    this.form.card = cleanAcc;
+    if (event?.target) {
+      event.target.value = cleanAcc;
+    }
+
+    const accValidation = validateAccountNumber(cleanAcc);
+    if (accValidation.isValid && this.form.bank_name) {
+      const generated = generateShebaFromAccount(this.form.bank_name, cleanAcc);
+      if (generated) {
+        this._isSyncingBank = true;
+        try {
+          const res = validateSheba(generated);
+          this.shebaValidation = res;
+          this.shebaDigitsDisplay = res.formattedDigits;
+          this.form.sheba = res.rawSheba;
+        } finally {
+          this._isSyncingBank = false;
+        }
+      }
+    }
+    this.cdr.markForCheck();
+  }
+
+  onAccountNumberPaste(event: ClipboardEvent): void {
+    event.preventDefault();
+    const pasted = event.clipboardData?.getData('text') || '';
+    this.onAccountNumberInput(pasted);
+  }
+
+  copyAccountNumberToClipboard(): void {
+    const acc = this.form.card || this.shebaValidation?.accountNumber;
+    if (acc) {
+      navigator.clipboard.writeText(acc).then(() => {
+        this.isAccountCopied = true;
+        this.toast.success(`شماره حساب (${acc}) کپی شد.`);
+        setTimeout(() => { this.isAccountCopied = false; this.cdr.markForCheck(); }, 2500);
+        this.cdr.markForCheck();
+      }).catch(() => {
+        this.toast.error('عدم دسترسی به حافظهٔ موقت.');
+      });
+    }
+  }
+
   get isShebaMasked(): boolean {
     return isMaskedValue(this.form.sheba);
   }
@@ -336,19 +489,73 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
   }
 
   onShebaInput(event: any): void {
-    const raw = typeof event === 'string' ? event : (event?.target?.value || '');
-    const digits = extractShebaDigits(raw);
-    if (!digits) {
-      this.shebaValidation = null;
-      this.shebaDigitsDisplay = '';
-      this.form.sheba = '';
-    } else {
-      const res = validateSheba(digits);
-      this.shebaValidation = res;
-      this.shebaDigitsDisplay = res.formattedDigits || digits;
-      this.form.sheba = `IR${digits}`;
+    if (this._isSyncingBank) return;
+    this._isSyncingBank = true;
+    try {
+      const raw = typeof event === 'string' ? event : (event?.target?.value || '');
+      const digits = extractShebaDigits(raw);
+      if (!digits) {
+        this.shebaValidation = null;
+        this.shebaDigitsDisplay = '';
+        this.form.sheba = '';
+      } else {
+        const res = validateSheba(digits);
+        this.shebaValidation = res;
+        this.shebaDigitsDisplay = res.formattedDigits || digits;
+        this.form.sheba = res.rawSheba || `IR${digits}`;
+        if (res.bank?.name) {
+          this.form.bank_name = res.bank.name;
+        }
+        if (res.accountNumber && !this.form.card) {
+          this.form.card = res.accountNumber;
+        }
+      }
+      if (event?.target) event.target.value = this.shebaDigitsDisplay;
+    } finally {
+      this._isSyncingBank = false;
     }
-    if (event?.target) event.target.value = this.shebaDigitsDisplay;
+    this.cdr.markForCheck();
+  }
+
+  onShebaPaste(event: ClipboardEvent): void {
+    event.preventDefault();
+    const pasted = event.clipboardData?.getData('text') || '';
+    this.onShebaInput(pasted);
+  }
+
+  copyShebaToClipboard(): void {
+    const rawSheba = this.form.sheba;
+    const sheba = rawSheba ? rawSheba.toString().trim().toUpperCase().replace(/^IR/i, '') : '';
+    if (sheba) {
+      navigator.clipboard.writeText(sheba).then(() => {
+        this.isShebaCopied = true;
+        this.toast.success('شماره شبا (بدون IR) کپی شد: ' + sheba);
+        setTimeout(() => { this.isShebaCopied = false; this.cdr.markForCheck(); }, 2500);
+        this.cdr.markForCheck();
+      }).catch(() => {
+        this.toast.error('عدم دسترسی به حافظهٔ موقت.');
+      });
+    }
+  }
+
+  convertAccountToShebaNow(): void {
+    if (!this.form.bank_name) {
+      this.toast.warning('لطفاً ابتدا بانک عامل را انتخاب نمایید.');
+      return;
+    }
+    const cleanAcc = (this.form.card || '').trim();
+    const accValidation = validateAccountNumber(cleanAcc);
+    if (!accValidation.isValid) {
+      this.toast.warning(accValidation.errorMessage || 'شماره حساب معتبر نیست.');
+      return;
+    }
+    const generated = generateShebaFromAccount(this.form.bank_name, cleanAcc);
+    if (generated) {
+      this.onShebaInput(generated);
+      this.toast.success(`شماره شبا با موفقیت بر اساس بانک ${this.form.bank_name} تولید شد.`);
+    } else {
+      this.toast.error('امکان تولید شبا برای این ساختار شماره حساب وجود ندارد.');
+    }
   }
 
   // ─── ذخیرهٔ حساب ───
@@ -357,12 +564,16 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
   }
 
   onFormDateSelect(event: any): void {
-    this.form.openingDate = typeof event === 'string' ? event : (event?.shamsi || '');
+    const val = typeof event === 'string' ? event : (event?.shamsi || '');
+    this.form.openingDate = val;
+    this.openingDateControl.setValue(val, { emitEvent: false });
     this.isFormDatePickerOpen = false;
   }
 
   onRecDateSelect(event: any): void {
-    this.recForm.date = typeof event === 'string' ? event : (event?.shamsi || '');
+    const val = typeof event === 'string' ? event : (event?.shamsi || '');
+    this.recForm.date = val;
+    this.recDateControl.setValue(val, { emitEvent: false });
     this.isRecDatePickerOpen = false;
   }
 
@@ -392,7 +603,10 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
       req = this.api.updatePettyCashAccount(this.current.id, body);
     } else {
       body.custodian = Number(this.custodianPick[0].id);
-      if (this.companyId) body.company = this.companyId;
+      if (this.companyId) {
+        body.company = this.companyId;
+        (body as any).company_id = this.companyId;
+      }
       if (!this.isManager) body.ceiling_amount = 0;
       req = this.api.createPettyCashAccount(body);
     }

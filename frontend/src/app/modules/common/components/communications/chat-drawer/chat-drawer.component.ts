@@ -285,6 +285,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   private pointerStartX = 0;
   private pointerStartY = 0;
+  private pointerActive = false;
   private pointerDirectionLocked = false;
   private pointerIsHorizontalSwipe = false;
   private pointerCancelled = false;
@@ -369,27 +370,6 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       );
     }
 
-    // هماهنگی شناسهٔ گفتگوی فعال با نشانی اینترنتی در حالت صفحه
-    if (this.mode() === 'page') {
-      this.commService.isChatDrawerOpen.set(false);
-      this.sub.add(
-        this.route.paramMap.subscribe(params => {
-          const id = params.get('id');
-          if (id) {
-            void this.handleRouteConversationId(id);
-          } else {
-            const cur = this.activeConv();
-            if (cur) {
-              this.commService.leaveConversation(cur.id);
-              this.commService.activeConversation$.next(null);
-              this.activeConv.set(null);
-              this.activeTab.set('conversations');
-            }
-          }
-        })
-      );
-    }
-
     // اشتراک در مکالمات
     this.sub.add(
       this.commService.conversations$.subscribe(convs => {
@@ -398,7 +378,8 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
           const found = convs.find(c => String(c.id) === String(this.pendingRouteConvId));
           if (found) {
             this.pendingRouteConvId = null;
-            this.selectConversation(found);
+            this.hasMoreMessages.set(true);
+            void this.commService.openConversation(found);
           }
         }
       })
@@ -428,6 +409,28 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
         }
       })
     );
+
+    // هماهنگی شناسهٔ گفتگوی فعال با نشانی اینترنتی در حالت صفحه
+    if (this.mode() === 'page') {
+      this.commService.isChatDrawerOpen.set(false);
+      this.sub.add(
+        this.route.paramMap.subscribe(params => {
+          const id = params.get('id');
+          if (id) {
+            void this.handleRouteConversationId(id);
+          } else {
+            this.pendingRouteConvId = null;
+            const cur = this.activeConv() || this.commService.activeConversation$.value;
+            if (cur) {
+              this.commService.leaveConversation(cur.id);
+              this.commService.activeConversation$.next(null);
+              this.activeConv.set(null);
+              this.activeTab.set('conversations');
+            }
+          }
+        })
+      );
+    }
 
     // اشتراک در پیام‌های پیام‌رسان
     this.sub.add(
@@ -537,15 +540,22 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     }
   }
 
+  private isExpandingToPage = false;
+
   ngOnDestroy(): void {
-    this.commService.hasActiveConversation.set(false);
-    const cur = this.activeConv();
-    if (cur) {
-      this.commService.leaveConversation(cur.id);
-      this.commService.activeConversation$.next(null);
+    this.stashDraft();
+    const preserveActiveConv =
+      this.isExpandingToPage ||
+      (this.mode() === 'page' && this.commService.isChatDrawerOpen());
+    if (!preserveActiveConv) {
+      this.commService.hasActiveConversation.set(false);
+      const cur = this.activeConv();
+      if (cur) {
+        this.commService.leaveConversation(cur.id);
+        this.commService.activeConversation$.next(null);
+      }
     }
     this.sub.unsubscribe();
-    this.stashDraft();
     this.attachmentPreviews.forEach((u) => { if (u) URL.revokeObjectURL(u); });
     this.attachmentPreviews.clear();
     this.fullBlobUrls.forEach((u) => URL.revokeObjectURL(u));
@@ -748,7 +758,8 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   }
 
   public canDelete(msg: ChatMessage): boolean {
-    if (msg.is_me) return true;
+    const uid = this.currentUserId();
+    if (msg.is_me || (uid !== null && msg.sender !== undefined && Number(msg.sender) === uid)) return true;
     return this.auth.user()?.is_superuser === true && this.activeConv()?.conv_type !== 'direct';
   }
 
@@ -804,12 +815,42 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.menuFor.set(null);
   }
 
-  /** Escape لغو حالت انتخاب، بستن منو، بستن ایموجی یا لغو پاسخ/ویرایش */
+  /** Escape و دکمهٔ بازگشت گوشی: لایه‌بندی بسته شدن مدال‌ها، منوها، حالت انتخاب و ناوبری چت */
   @HostListener('document:keydown.escape', ['$event'])
   onEscapeKey(ev?: Event): void {
+    if (this.reactorsModalMsg()) {
+      ev?.preventDefault();
+      this.closeReactorsModal();
+      return;
+    }
     if (this.isForwardModalOpen()) {
       ev?.preventDefault();
       this.isForwardModalOpen.set(false);
+      return;
+    }
+    if (this.confirmAction()) {
+      ev?.preventDefault();
+      this.cancelConfirm();
+      return;
+    }
+    if (this.infoOpen()) {
+      ev?.preventDefault();
+      this.closeInfo();
+      return;
+    }
+    if (this.createOpen()) {
+      ev?.preventDefault();
+      this.closeCreate();
+      return;
+    }
+    if (this.readByMsg()) {
+      ev?.preventDefault();
+      this.closeReadBy();
+      return;
+    }
+    if (this.deleteTarget() || this.isBulkDeleteOpen()) {
+      ev?.preventDefault();
+      this.cancelRemoveMsg();
       return;
     }
     if (this.isSelectionMode()) {
@@ -833,6 +874,23 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     if (this.replyTo() || this.editing()) {
       ev?.preventDefault();
       this.cancelCompose();
+      return;
+    }
+    if (this.activeTab() === 'chat' && this.activeConv()) {
+      if (this.mode() === 'drawer' || (typeof window !== 'undefined' && window.innerWidth < 768)) {
+        ev?.preventDefault();
+        this.backToList();
+        return;
+      }
+    }
+    if (this.activeTab() === 'contacts') {
+      ev?.preventDefault();
+      this.activeTab.set('conversations');
+      return;
+    }
+    if (this.mode() === 'drawer' && this.commService.isChatDrawerOpen()) {
+      ev?.preventDefault();
+      this.closeDrawer();
       return;
     }
   }
@@ -1095,6 +1153,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       this.toggleMessageSelection(msg);
       return;
     }
+    this.pointerActive = true;
     this.pointerStartX = ev.clientX;
     this.pointerStartY = ev.clientY;
     this.pointerDirectionLocked = false;
@@ -1112,7 +1171,14 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   }
 
   public onBubblePointerMove(ev: PointerEvent, msg: ChatMessage): void {
-    if (this.pointerCancelled || this.longPressTriggered || this.isSelectionMode()) return;
+    if (!this.pointerActive || this.pointerCancelled || this.longPressTriggered || this.isSelectionMode()) return;
+    if (ev.pointerType === 'mouse' && ev.buttons === 0) {
+      this.pointerActive = false;
+      this.pointerCancelled = true;
+      this.swipingMsgId.set(null);
+      this.swipeDelta.set(0);
+      return;
+    }
     const dx = ev.clientX - this.pointerStartX;
     const dy = ev.clientY - this.pointerStartY;
     const dist = Math.hypot(dx, dy);
@@ -1147,6 +1213,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   public onBubblePointerUp(ev: PointerEvent, msg: ChatMessage): void {
     clearTimeout(this.longPressTimer);
+    this.pointerActive = false;
     if (this.pointerIsHorizontalSwipe && this.swipeDelta() >= 60 && !this.longPressTriggered) {
       this.startReply(msg);
     }
@@ -1157,9 +1224,39 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   public onBubblePointerCancel(ev: PointerEvent, msg: ChatMessage): void {
     clearTimeout(this.longPressTimer);
+    this.pointerActive = false;
     this.swipingMsgId.set(null);
     this.swipeDelta.set(0);
     this.pointerIsHorizontalSwipe = false;
+  }
+
+  public onBubbleClick(ev: MouseEvent, msg: ChatMessage): void {
+    if (this.isSelectionMode()) {
+      this.toggleMessageSelection(msg);
+      return;
+    }
+
+    // اگر کلیک روی دکمه، لینک، ورودی یا نوار صوت بود، مانع کپی شود
+    const target = ev.target as HTMLElement | null;
+    if (target?.closest('button, a, input, [data-prevent-swipe], .accent-current')) {
+      return;
+    }
+
+    // اگر کاربر متنی را هایلایت و انتخاب کرده باشد، کپی کل پیام لغو می‌شود
+    const selection = typeof window !== 'undefined' ? window.getSelection()?.toString() : null;
+    if (selection && selection.trim().length > 0) {
+      return;
+    }
+
+    // اگر کشیدن برای پاسخ فعال بوده، کپی نشود
+    if (this.pointerIsHorizontalSwipe && this.swipeDelta() > 10) {
+      return;
+    }
+
+    // کپی متن پیام در کلیپ‌بورد همراه با توست
+    if (msg.text && msg.text.trim()) {
+      void this.copyText(msg);
+    }
   }
 
   public onBubbleContextMenu(ev: MouseEvent, msg: ChatMessage): void {
@@ -1985,13 +2082,16 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     if (!this.router.url.startsWith('/app/chat')) {
       this.commService.chatReturnUrl.set(this.router.url);
     }
+    this.stashDraft();
     const cur = this.activeConv();
     const targetUrl = cur ? `/app/chat/${cur.id}` : '/app/chat';
+    this.isExpandingToPage = true;
     this.commService.isChatDrawerOpen.set(false);
     this.router.navigateByUrl(targetUrl);
   }
 
   public exitFullPage(reopenDrawer = false): void {
+    this.stashDraft();
     const rawTarget = this.commService.chatReturnUrl();
     const target = (rawTarget && !rawTarget.startsWith('/app/chat')) ? rawTarget : '/app/launcher';
     if (reopenDrawer) {
@@ -2005,9 +2105,12 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   }
 
   private async handleRouteConversationId(id: string): Promise<void> {
-    const cur = this.activeConv();
-    if (cur && String(cur.id) === String(id)) return;
-    const list = this.conversations();
+    const cur = this.activeConv() || this.commService.activeConversation$.value;
+    if (cur && String(cur.id) === String(id)) {
+      this.pendingRouteConvId = null;
+      return;
+    }
+    const list = this.conversations().length ? this.conversations() : this.commService.conversations$.value;
     const found = list.find(c => String(c.id) === String(id));
     if (found) {
       this.pendingRouteConvId = null;
@@ -2194,7 +2297,12 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     const url = att.thumbnail_url || fallback;
     if (!url) return null;
     const key = `${att.id}|${url}`;
-    if (this.attachmentPreviews.has(key)) return this.attachmentPreviews.get(key) ?? null;
+    const fallbackKey = fallback && fallback !== url ? `${att.id}|${fallback}` : null;
+    if (this.attachmentPreviews.has(key)) {
+      const current = this.attachmentPreviews.get(key);
+      if (current) return current;
+      return (fallbackKey ? this.attachmentPreviews.get(fallbackKey) : null) ?? null;
+    }
     this.attachmentPreviews.set(key, null);
     const isThumb = !!att.thumbnail_url && url === att.thumbnail_url;
     const attId = String(att.id);
@@ -2203,6 +2311,11 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     firstValueFrom(this.api.download(this.apiPath(url), undefined, { context }))
       .then((blob) => {
         this.attachmentPreviews.set(key, URL.createObjectURL(blob));
+        if (fallbackKey && this.attachmentPreviews.has(fallbackKey)) {
+          const oldFallbackUrl = this.attachmentPreviews.get(fallbackKey);
+          if (oldFallbackUrl) URL.revokeObjectURL(oldFallbackUrl);
+          this.attachmentPreviews.delete(fallbackKey);
+        }
         if (isThumb) void putChatThumb(uid, attId, blob);
         this.previewVersion.update(v => v + 1);
       })
@@ -2212,10 +2325,15 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
         const cached = await getChatThumb(uid, attId);
         if (cached) {
           this.attachmentPreviews.set(key, URL.createObjectURL(cached));
+          if (fallbackKey && this.attachmentPreviews.has(fallbackKey)) {
+            const oldFallbackUrl = this.attachmentPreviews.get(fallbackKey);
+            if (oldFallbackUrl) URL.revokeObjectURL(oldFallbackUrl);
+            this.attachmentPreviews.delete(fallbackKey);
+          }
           this.previewVersion.update(v => v + 1);
         }
       });
-    return null;
+    return (fallbackKey ? this.attachmentPreviews.get(fallbackKey) : null) ?? null;
   }
 
   /** نوع نمایشی پیوست از نوع تشخیص‌داده‌شده در سرور و پسوند */

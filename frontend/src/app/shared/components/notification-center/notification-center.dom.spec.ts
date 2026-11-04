@@ -704,6 +704,9 @@ describe('NotificationCenterComponent DOM & Browser Unit Test (Type 1 Vitest + J
     expect(panel.classList.contains('inset-x-2')).toBe(true);
     expect(panel.classList.contains('sm:w-96')).toBe(true);
     expect(panel.classList.contains('w-80')).toBe(false);
+    expect(panel.classList.contains('sm:right-0')).toBe(true);
+    expect(panel.classList.contains('sm:left-auto')).toBe(true);
+    expect(panel.classList.contains('sm:left-0')).toBe(false);
 
     const markReadBtn = fixture.nativeElement.querySelector('.notification-item button') as HTMLButtonElement;
     expect(markReadBtn).toBeTruthy();

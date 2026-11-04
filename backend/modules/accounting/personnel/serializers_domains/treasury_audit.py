@@ -628,14 +628,14 @@ class PettyCashAccountSerializer(serializers.ModelSerializer):
         return cleaned
 
     def validate_card_or_account_number(self, value):
-        """د۱۱: کارت ۱۶ رقمی (ارقام فارسی و عربی به لاتین، فاصله و خط تیره حذف)؛ اختیاری."""
+        """د۱۱: شماره کارت (۱۶ رقمی) یا شماره حساب بانکی (۸ تا ۱۸ رقم)؛ اختیاری."""
         if value is None or not str(value).strip():
             return None
         if is_masked(value) or str(value).strip() == (getattr(self.instance, 'card_or_account_number', None) or ''):
             return getattr(self.instance, 'card_or_account_number', None)  # unchanged (masked echo or legacy value)
         digits = normalize_digits(str(value)).replace(' ', '').replace('-', '')
-        if not digits.isdigit() or len(digits) != 16:
-            raise serializers.ValidationError("شماره کارت باید ۱۶ رقم باشد.")
+        if not digits.isdigit() or not (8 <= len(digits) <= 18):
+            raise serializers.ValidationError("شماره کارت یا حساب باید بین ۸ تا ۱۸ رقم باشد.")
         return digits
 
     def _full_bank_view(self, obj):

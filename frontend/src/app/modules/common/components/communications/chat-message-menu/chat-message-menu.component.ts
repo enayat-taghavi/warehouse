@@ -7,15 +7,17 @@ import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive
   selector: 'app-chat-message-menu',
   standalone: true,
   imports: [CommonModule, SvgIconDirective],
+  styles: [':host { display: block; position: absolute; inset: 0; pointer-events: none; }'],
   template: `
     <div data-testid="msg-menu"
+         data-back-closes
          [class.top-full]="!menuPlacement().up"
          [class.mt-1]="!menuPlacement().up"
          [class.bottom-full]="menuPlacement().up"
          [class.mb-1]="menuPlacement().up"
          [class.end-0]="!menuPlacement().flipX"
          [class.start-0]="menuPlacement().flipX"
-         class="absolute z-30 w-48 bg-surface border border-line rounded-2xl shadow-xl p-1.5 select-none"
+         class="pointer-events-auto absolute z-30 w-48 max-h-[min(380px,70vh)] overflow-y-auto bg-surface border border-line rounded-2xl shadow-xl p-1.5 select-none"
          (click)="$event.stopPropagation()">
       <!-- ردیف واکنش‌های سریع (۶ ایموجی ثابت تلگرام) -->
       <div class="flex items-center justify-between px-1 py-1 bg-surface-muted/60 rounded-xl mb-1 border border-line/40"

@@ -15,7 +15,8 @@ import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive
          (click)="onBarClick()"
          (keydown.enter)="onBarClick()"
          (keydown.space)="onBarClick(); $event.preventDefault()"
-         class="flex items-center justify-between px-3 py-1.5 bg-surface/95 backdrop-blur border-b border-line cursor-pointer select-none hover:bg-surface-muted/50 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+         class="px-3 py-1.5 bg-surface/95 backdrop-blur border-b border-line cursor-pointer select-none hover:bg-surface-muted/50 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+      <div class="w-full max-w-[760px] mx-auto flex items-center justify-between">
       
       <!-- Right side (RTL start): Segmented vertical indicator + Pinned Text Preview -->
       <div class="flex items-center gap-2.5 min-w-0 flex-1">
@@ -59,6 +60,7 @@ import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive
         <div class="w-8 h-8 flex items-center justify-center text-indigo-600 pointer-events-none">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="pin" aria-hidden="true"></svg>
         </div>
+      </div>
       </div>
     </div>
   `

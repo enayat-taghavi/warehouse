@@ -208,10 +208,17 @@ export class CommunicationService implements OnDestroy {
 
   // وضعیت‌ها و سیگنال‌ها
   public isChatDrawerOpen = signal<boolean>(false);
+  /** آیا نمای تمام‌صفحهٔ چت (/app/chat یا /app/chat/:id) هم‌اکنون باز است */
+  public isChatFullPageOpen = signal<boolean>(false);
   /** آدرس صفحه‌ای که کاربر از آن وارد صفحهٔ تمام‌صفحه چت (/app/chat) شده است */
   public chatReturnUrl = signal<string | null>(null);
   /** کاربر داخل یک گفت‌وگوی کشوی چت است (نه فهرست)؛ نوار تب‌های پایین موبایل آن وقت پنهان می‌شود */
   public hasActiveConversation = signal<boolean>(false);
+
+  /** آیا سطح نمایش چت (کشو یا صفحهٔ کامل) باز است */
+  public isChatViewOpen(): boolean {
+    return this.isChatDrawerOpen() || this.isChatFullPageOpen() || this.hasActiveConversation();
+  }
   public isMuted = signal<boolean>(typeof localStorage !== 'undefined' ? localStorage.getItem('wh_chat_muted') === 'true' : false);
   public isChatEnabled = signal<boolean>(true);
   /** دسترسی کاربر فعلی به پیام‌رسان (طرح دسترسی به چت، ت۲)؛ تا پاسخ سرور باز فرض می‌شود */
@@ -317,8 +324,8 @@ export class CommunicationService implements OnDestroy {
           const active = this.activeConversation$.value;
           if (active) {
             this.loadMessages(active.id);
-            // کاربر دوباره صفحه را می‌بیند؛ اگر کشوی چت همین گفتگو را نشان می‌دهد، خوانده‌شده ثبت شود
-            if (this.isChatDrawerOpen()) {
+            // کاربر دوباره صفحه را می‌بیند؛ اگر کشوی چت یا صفحهٔ کامل چت همین گفتگو را نشان می‌دهد، خوانده‌شده ثبت شود
+            if (this.isChatViewOpen()) {
               this.markAsRead(active.id);
             }
           }
@@ -1471,7 +1478,7 @@ export class CommunicationService implements OnDestroy {
               const serverPart = current.filter(m => !this.isLocalOutgoing(m));
               const localPart = current.filter(m => this.isLocalOutgoing(m));
               this.activeMessages$.next([...serverPart, ...fresh, ...localPart]);
-              if (this.isChatDrawerOpen() && this.isPageVisible()) {
+              if (this.isChatViewOpen() && this.isPageVisible()) {
                 this.markAsRead(conversationId);
               }
             }
@@ -1759,13 +1766,15 @@ export class CommunicationService implements OnDestroy {
     const currentConv = convs.find(c => String(c.id) === String(conversationId));
     if (currentConv) {
       const otherConvs = convs.filter(c => String(c.id) !== String(conversationId));
+      const nowIso = optimisticMsg.created_at || new Date().toISOString();
       const updatedConv: Conversation = {
         ...currentConv,
+        updated_at: nowIso,
         last_message: {
           id: tempId,
           text: text || '',
           sender_name: 'شما',
-          created_at: new Date().toISOString(),
+          created_at: nowIso,
           has_attachment: !!file
         }
       };
@@ -2131,9 +2140,14 @@ export class CommunicationService implements OnDestroy {
 
   public async bulkDeleteMessages(messageIds: (string | number)[]): Promise<any> {
     const ids = messageIds.map(id => Number(id)).filter(id => !isNaN(id));
-    return firstValueFrom(
+    const convId = this.activeConversation$.value ? String(this.activeConversation$.value.id) : null;
+    const res = await firstValueFrom(
       this.http.post<any>('/api/communications/messages/bulk-delete/', { message_ids: ids })
     );
+    for (const id of ids) {
+      this.handleDeletedMessage(String(id), convId);
+    }
+    return res;
   }
 
   private handleNewMessage(rawMsg: ChatMessage): void {
@@ -2161,8 +2175,8 @@ export class CommunicationService implements OnDestroy {
     }
 
     const msgConvId = String(msg.conversation);
-    // فقط وقتی کشو باز است و صفحه واقعاً دیده می‌شود (تب پنهان یا گوشی قفل نیست) پیام خوانده‌شده حساب می‌شود
-    const isCurrentlyViewing = this.isChatDrawerOpen() && this.isPageVisible() && active && String(active.id) === msgConvId;
+    // فقط وقتی کشو یا صفحهٔ کامل چت باز است و صفحه واقعاً دیده می‌شود (تب پنهان یا گوشی قفل نیست) پیام خوانده‌شده حساب می‌شود
+    const isCurrentlyViewing = this.isChatViewOpen() && this.isPageVisible() && active && String(active.id) === msgConvId;
 
     if (isCurrentlyViewing) {
       const current = this.activeMessages$.value;
@@ -2192,6 +2206,7 @@ export class CommunicationService implements OnDestroy {
         convFound = true;
         targetConv = {
           ...c,
+          updated_at: msg.created_at || new Date().toISOString(),
           last_message: {
             id: msg.id,
             text: msg.text || '',
