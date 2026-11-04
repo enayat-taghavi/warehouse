@@ -115,20 +115,22 @@ export class LettersOfflineService {
 
   async saveDraft(req: DraftSaveRequest): Promise<DraftSaveOutcome> {
     if (!this.network.isBrowserOnline) return this.queue(req, false);
-    /** درخواست واقعی در حال ارسال؛ پس از duplicate همان PATCH روی نامهٔ موجود است، نه POST اولیه */
     let target = req;
-    let duplicateOf: LetterDetail | null = null;
+    let newTempId: string | undefined;
+    // بی IndexedDB ردیف صفی هم نیست
+    if (!req.letterId && (await this.hasQueued(draftSyncId(req)).catch(() => false))) {
+      // POST همین پیش‌نویس هنوز در صف است: با همان شناسهٔ موقت، پخش کهنهٔ صف متن تازه را بازنویسی می‌کرد؛
+      // پیش‌نویس تازه با شناسهٔ موقت تازه ساخته می‌شود و هر دو متن می‌مانند (ل-ط)
+      newTempId = newClientTempId();
+      target = { letterId: null, payload: { ...req.payload, client_temp_id: newTempId } };
+    }
     try {
-      let letter = await firstValueFrom(
-        req.letterId ? this.api.update(req.letterId, req.payload) : this.api.create(req.payload));
-      if (!req.letterId && letter.duplicate) {
-        // همان client_temp_id پیش‌تر به سرور رسیده بود؛ سرور تکرار را بی‌اعمال برمی‌گرداند، پس متن تازه را با PATCH می‌فرستیم
-        const { kind: _k, company: _c, client_temp_id: _t, ...rest } = req.payload;
-        duplicateOf = letter;
-        target = { letterId: letter.id, payload: { ...rest, revision: letter.revision } };
-        letter = await firstValueFrom(this.api.update(letter.id, target.payload));
-      }
-      return letter.conflict ? { kind: 'conflict', letter } : { kind: 'saved', letter };
+      // تکرار همان client_temp_id را سرور مثل PATCH بر پایهٔ نسخهٔ ساخت اعمال می‌کند و اگر نامه از آن پس عوض شده،
+      // متن رسیده را نسخهٔ ناهمگام نگه می‌دارد؛ PATCH دوم لازم نیست و متن تازه‌ترِ دیگری را بی‌نسخه بازنویسی می‌کرد (ل-ط)
+      const letter = await firstValueFrom(
+        target.letterId ? this.api.update(target.letterId, target.payload) : this.api.create(target.payload));
+      if (letter.conflict) return { kind: 'conflict', letter };
+      return { kind: 'saved', letter };
     } catch (err: any) {
       const status = typeof err?.status === 'number' ? err.status : 0;
       if (isExplicitRejection(status)) {
@@ -139,12 +141,8 @@ export class LettersOfflineService {
         return { kind: 'rejected', status, message, fieldErrors };
       }
       // قطعی سرور، 5xx، 401، 408 و 429: درخواست شاید رسیده باشد؛ متن در صف می‌ماند و ردیف درجا عوض نمی‌شود.
-      // پس از duplicate، PATCH در صف می‌رود (POST تکراری در بازپخش بی‌اعمال می‌ماند و متن تازه گم می‌شد).
       const out = await this.queue(target, true);
-      if (duplicateOf && out.kind === 'queued') {
-        return { ...out, letterId: duplicateOf.id, revision: duplicateOf.revision };
-      }
-      return out;
+      return newTempId && out.kind === 'queued' && !out.newTempId ? { ...out, newTempId } : out;
     }
   }
 

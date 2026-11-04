@@ -250,9 +250,14 @@ export class LetterComposePage implements OnInit {
       signers: v.signers.filter(u => u.type === 'user').map(u => ({ user: Number(u.id) })),
     };
     const id = this.letterId();
-    if (id) return { ...base, revision: this.revision() ?? undefined };
+    if (id) {
+      return { ...base, revision: this.revision() ?? undefined, ...(this.keepServerCopy ? { keep_server_copy: true } : {}) };
+    }
     return { ...base, kind: v.kind, client_temp_id: this.clientTempId, ...(this.company() ? { company: this.company()! } : {}) };
   }
+
+  /** فقط برای ذخیرهٔ بعدِ «جایگزین کن» */
+  private keepServerCopy = false;
 
   async save(): Promise<void> {
     if (this.saving() || this.readOnly()) return;
@@ -268,7 +273,9 @@ export class LetterComposePage implements OnInit {
       if (this.changeSeq === seq) this.dirty.set(false);
     };
     try {
-      const out = await this.offline.saveDraft({ letterId: this.letterId(), payload: this.buildPayload() });
+      const payload = this.buildPayload();
+      this.keepServerCopy = false;
+      const out = await this.offline.saveDraft({ letterId: this.letterId(), payload });
       switch (out.kind) {
         case 'saved': {
           const wasNew = !this.letterId();
@@ -284,6 +291,11 @@ export class LetterComposePage implements OnInit {
           break;
         }
         case 'conflict':
+          if (!this.letterId()) {
+            // تکرار ساخت روی نامه‌ای که دیگری عوض کرده بود: فرم به ویرایش همان نامه می‌رود تا «جایگزین کن» PATCH بفرستد
+            this.letterId.set(out.letter.id);
+            this.location.replaceState(`/app/letters/${out.letter.id}/edit`);
+          }
           this.conflict.set({ revision: out.letter.revision });
           this.copies.set(out.letter.draft_copies || []);
           this.status.set(out.letter.status);
@@ -345,6 +357,8 @@ export class LetterComposePage implements OnInit {
     if (!c) return;
     this.revision.set(c.revision);
     this.conflict.set(null);
+    // متن فعلی سرور پیش از بازنویسی روی سرور نسخهٔ ناهمگام می‌شود (ل-ط)
+    this.keepServerCopy = true;
     await this.save();
   }
 

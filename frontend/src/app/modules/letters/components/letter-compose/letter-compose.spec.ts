@@ -182,6 +182,22 @@ describe('LetterComposePage — نوشتن و پیش‌نویس آفلاین', (
     expect(page.buildPayload().client_temp_id).toBeUndefined();
   });
 
+  it('ناهمگامی روی ساخت تکراری: فرم به ویرایش همان نامه می‌رود و «جایگزین کن» keep_server_copy می‌فرستد', async () => {
+    setup(true, {});
+    offline.saveDraft.mockResolvedValueOnce({ kind: 'conflict', letter: { id: 11, revision: 4, status: 'draft', draft_copies: [] } });
+    page.form.controls.subject.setValue('نامهٔ تازه');
+    await page.save();
+    expect(page.letterId()).toBe(11);
+    expect(location.replaceState).toHaveBeenCalledWith('/app/letters/11/edit');
+
+    offline.saveDraft.mockResolvedValueOnce({ kind: 'saved', letter: { id: 11, revision: 5, status: 'draft', draft_copies: [] } });
+    await page.replaceServer();
+    const req = offline.saveDraft.mock.calls[1][0];
+    expect(req.letterId).toBe(11);
+    expect(req.payload).toMatchObject({ revision: 4, keep_server_copy: true });
+    expect(page.buildPayload().keep_server_copy).toBeUndefined();
+  });
+
   it('خطای فیلد: نشانگر به نخستین فیلد نادرست می‌رود و aria-describedby فقط با خطا', async () => {
     setup(true);
     const subject = () => fixture.nativeElement.querySelector('#letter-subject') as HTMLInputElement;

@@ -142,31 +142,32 @@ describe('LettersOfflineService — پیش‌نویس آفلاین بی‌از�
     expect(sync.enqueue).not.toHaveBeenCalled();
   });
 
-  it('ساخت تکراری (duplicate) متن تازه را با PATCH می‌فرستد', async () => {
-    api.create.mockReturnValue(of({ id: 11, revision: 4, duplicate: true }));
-    api.update.mockReturnValue(of({ id: 11, revision: 5 }));
+  it('ساخت تکراری (duplicate) بی PATCH دوم ذخیره‌شده است (سرور خودش متن را اعمال کرده)', async () => {
+    api.create.mockReturnValue(of({ id: 11, revision: 2, duplicate: true }));
     const out = await service.saveDraft({ letterId: null, payload: payload() });
-    expect(out.kind).toBe('saved');
-    expect(api.update).toHaveBeenCalledWith(11, expect.objectContaining({ revision: 4, subject: 'موضوع آزمایشی' }));
-    expect(api.update.mock.calls[0][1].client_temp_id).toBeUndefined();
+    expect(out).toMatchObject({ kind: 'saved', letter: { id: 11 } });
+    expect(api.update).not.toHaveBeenCalled();
   });
 
-  it('duplicate و سپس 503 روی PATCH: ردیف PATCH با revision نامهٔ موجود در صف می‌رود، نه POST', async () => {
-    vi.spyOn(resolveOfflineDbStrict(LETTERS_SCOPE)!.syncQueue, 'toArray').mockResolvedValue([]);
-    api.create.mockReturnValue(of({ id: 11, revision: 4, duplicate: true }));
-    api.update.mockReturnValue(throwError(() => ({ status: 503 })));
-
+  it('duplicate با conflict: نسخهٔ ناهمگام است و متن تازه‌ترِ سرور با PATCH دوم بازنویسی نمی‌شود', async () => {
+    api.create.mockReturnValue(of({ id: 11, revision: 4, duplicate: true, conflict: true, conflict_reason: 'stale_revision' }));
     const out = await service.saveDraft({ letterId: null, payload: payload({ subject: 'متن تازه' }) });
+    expect(out.kind).toBe('conflict');
+    expect(api.update).not.toHaveBeenCalled();
+    expect(sync.enqueue).not.toHaveBeenCalled();
+  });
 
-    expect(out).toMatchObject({ kind: 'queued', merged: false, letterId: 11, revision: 4 });
-    expect(sync.enqueue).toHaveBeenCalledTimes(1);
-    const [method, url, body, meta] = sync.enqueue.mock.calls[0];
-    expect(method).toBe('PATCH');
-    expect(url).toMatch(/\/letters\/11\/$/);
-    expect(body).toMatchObject({ subject: 'متن تازه', revision: 4 });
-    expect(body.client_temp_id).toBeUndefined();
-    expect(body.kind).toBeUndefined();
-    expect(meta.entitySyncId).toBe('letter-11~attempted');
+  it('POST همین پیش‌نویس در صف است: ذخیرهٔ آنلاین با شناسهٔ موقت تازه ساخته می‌شود تا پخش صف آن را بازنویسی نکند', async () => {
+    const p = payload();
+    vi.spyOn(resolveOfflineDbStrict(LETTERS_SCOPE)!.syncQueue, 'toArray').mockResolvedValue([
+      { id: 1, entitySyncId: `new-${p.client_temp_id}`, body: p } as any,
+    ]);
+    api.create.mockReturnValue(of({ id: 12, revision: 1 }));
+    const out = await service.saveDraft({ letterId: null, payload: p });
+    expect(out.kind).toBe('saved');
+    const sent = api.create.mock.calls[0][0];
+    expect(sent.client_temp_id).toBeTruthy();
+    expect(sent.client_temp_id).not.toBe(p.client_temp_id);
   });
 
   it('نامهٔ محرمانه در آفلاین روی دستگاه ذخیره نمی‌شود', async () => {

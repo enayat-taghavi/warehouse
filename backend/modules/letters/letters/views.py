@@ -47,7 +47,8 @@ LOCKED_FIELDS = ('kind', 'subject', 'body', 'confidentiality', 'sign_mode', 'rec
 SCALAR_FIELDS = ('subject', 'body', 'confidentiality', 'sign_mode', 'external_number', 'external_date',
                  'response_due_at')
 FK_FIELDS = ('sender_party', 'follow_up_of', 'reply_to', 'project')
-MAX_COPY_JSON = 400_000
+# بالاتر از سقف بدنهٔ درخواست Django (۲٫۵ مگابایت): هر بدنهٔ پذیرفتنی کامل نگه داشته می‌شود (ل-ط)
+MAX_COPY_JSON = 3_000_000
 
 
 def _audit(user, letter, action, **details):
@@ -476,6 +477,10 @@ class LetterDetailView(APIView):
         if revision != letter.revision:
             return _conflict(letter, user, raw, 'stale_revision')
         links = _check_refs(user, letter.company_id, data)
+        if raw.get('keep_server_copy') and any(f in data for f in TEXT_FIELDS):
+            # «جایگزین کن» پس از ناهمگامی: متن فعلی سرور پیش از بازنویسی نسخهٔ ناهمگام می‌شود (ل-ط)
+            LetterDraftCopy.objects.create(letter=letter, subject=letter.subject or '', body=letter.body or [],
+                                           created_by=user, reason='replaced')
         _apply(letter, data, user, links)
         letter.revision += 1
         fields = ['revision', 'updated_at']

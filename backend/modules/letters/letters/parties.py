@@ -7,7 +7,7 @@ from django.db.models import Q
 from contacts.models import ExternalParty
 from contacts.services import create_party, find_party, national_id_error, normalize_party_data
 
-from .access import COMPOSE_PERM, SECRETARIAT_PERM, has_company_perm, member_company_ids
+from .access import COMPOSE_PERM, HUB_PERM, SECRETARIAT_PERM, has_company_perm, member_company_ids
 
 MAX_RESULTS = 50
 
@@ -18,6 +18,9 @@ def parties_for(user, company_id, query=''):
     جست‌وجو با کد ملی شخص حقیقی فقط برای کسی که آن را می‌بیند؛ وگرنه با پیشوند حرف‌به‌حرف لو می‌رفت (ق۱۶).
     """
     if not company_id or company_id not in member_company_ids(user) and not getattr(user, 'is_superuser', False):
+        return ExternalParty.objects.none()
+    # همان طرف‌های حسابداری‌اند: فقط کاربر نامه‌های همان شرکت فهرست را می‌بیند (ل-ط)
+    if not any(has_company_perm(user, company_id, code) for code in (HUB_PERM, COMPOSE_PERM, SECRETARIAT_PERM)):
         return ExternalParty.objects.none()
     qs = ExternalParty.objects.filter(company_id=company_id, is_active=True)
     query = str(query or '').strip()
@@ -30,13 +33,16 @@ def parties_for(user, company_id, query=''):
 
 
 def party_payload(user, party) -> dict:
-    show_id = (party.kind == ExternalParty.KIND_LEGAL
-               or has_company_perm(user, party.company_id, SECRETARIAT_PERM))
+    secretariat = has_company_perm(user, party.company_id, SECRETARIAT_PERM)
+    show_id = party.kind == ExternalParty.KIND_LEGAL or secretariat
+    # تلفن، رایانامه و نشانی فقط برای نگارنده و دبیرخانه (ل-ط)
+    show_contact = secretariat or has_company_perm(user, party.company_id, COMPOSE_PERM)
     return {
         'id': party.pk, 'company': party.company_id, 'kind': party.kind, 'name': party.name,
         'national_id': party.national_id if show_id else ('••••' if party.national_id else None),
-        'economic_code': party.economic_code, 'phone': party.phone, 'email': party.email,
-        'address': party.address,
+        'economic_code': party.economic_code,
+        'phone': party.phone if show_contact else '', 'email': party.email if show_contact else '',
+        'address': party.address if show_contact else '',
     }
 
 

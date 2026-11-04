@@ -143,6 +143,8 @@ export interface LetterSignerInput { user: number; title_text?: string }
 
 /** بدنهٔ ساخت و ویرایش پیش‌نویس (`LetterWriteSerializer`) */
 export interface LetterWritePayload {
+  /** «جایگزین کن»: سرور متن فعلی خود را پیش از بازنویسی نسخهٔ ناهمگام می‌کند (ل-ط) */
+  keep_server_copy?: boolean;
   kind?: LetterKind;
   company?: number;
   client_temp_id?: string;

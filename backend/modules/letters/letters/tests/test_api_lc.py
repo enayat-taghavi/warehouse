@@ -290,3 +290,60 @@ class ReviewFixesTests(ApiBase):
         params = {'company': self.co_a.pk, 'q': '00123'}
         self.assertEqual(self.api(self.author).get('/api/letters/parties/', params).json(), [])
         self.assertEqual(len(self.api(self.secretary).get('/api/letters/parties/', params).json()), 1)
+
+
+class StageEndReviewTests(ApiBase):
+    """یافته‌های بازبین‌های پایانی ل-ط."""
+
+    def revoke(self, user, company, codename):
+        from django.contrib.auth.models import Permission
+        from accounts.models import UserPermissionOverride
+        perm = Permission.objects.get(content_type__app_label='accounts', codename=codename)
+        UserPermissionOverride.objects.create(user=user, permission=perm, company=company, mode='remove')
+
+    def test_secretariat_cannot_attach_to_hidden_confidential_incoming(self):
+        from platform_core.registry import can_attach
+        other_sec = self.member('l_secretary2', self.co_a)
+        self.grant(other_sec, self.co_a, 'perm_letters_secretariat')
+        d = self.letter(kind=Letter.KIND_INCOMING, author=self.secretary, status=Letter.STATUS_RECEIVED,
+                        confidentiality=Letter.CONF_CONFIDENTIAL)
+        self.assertTrue(can_attach(self.fresh(self.secretary), LETTER_ENTITY, d.pk))
+        self.assertFalse(can_attach(self.fresh(other_sec), LETTER_ENTITY, d.pk))
+        normal = self.letter(kind=Letter.KIND_INCOMING, author=self.secretary, status=Letter.STATUS_RECEIVED)
+        self.assertTrue(can_attach(self.fresh(other_sec), LETTER_ENTITY, normal.pk))
+
+    def test_parties_need_letters_access_and_contact_needs_compose(self):
+        ExternalParty.objects.create(company=self.co_a, kind=ExternalParty.KIND_LEGAL, name='acme',
+                                     phone='0211234', email='a@example.com', address='addr', is_active=True)
+        params = {'company': self.co_a.pk}
+        row = self.api(self.author).get('/api/letters/parties/', params).json()[0]
+        self.assertEqual((row['phone'], row['email'], row['address']), ('0211234', 'a@example.com', 'addr'))
+        reader_only = self.member('l_reader_only', self.co_a)
+        self.revoke(reader_only, self.co_a, 'perm_letters_compose')
+        row = self.api(reader_only).get('/api/letters/parties/', params).json()[0]
+        self.assertEqual((row['name'], row['phone'], row['email'], row['address']), ('acme', '', '', ''))
+        no_letters = self.member('l_no_letters', self.co_a)
+        for code in ('view_letters_hub', 'perm_letters_compose'):
+            self.revoke(no_letters, self.co_a, code)
+        self.assertEqual(self.api(no_letters).get('/api/letters/parties/', params).json(), [])
+
+    def test_replace_keeps_server_text_as_copy(self):
+        d = self.letter(revision=3, subject='server', body=BODY)
+        res = self.api(self.author).patch(f'/api/letters/{d.pk}/', {'subject': 'mine', 'revision': 3,
+                                                                    'keep_server_copy': True}, format='json')
+        self.assertEqual((res.status_code, res.json()['revision']), (200, 4))
+        copy = LetterDraftCopy.objects.get(letter=d)
+        self.assertEqual((copy.subject, copy.body, copy.reason), ('server', BODY, 'replaced'))
+        # بی پرچم، ویرایش عادی نسخه نمی‌سازد
+        self.api(self.author).patch(f'/api/letters/{d.pk}/', {'subject': 'again', 'revision': 4}, format='json')
+        self.assertEqual(LetterDraftCopy.objects.filter(letter=d).count(), 1)
+
+    def test_large_valid_body_is_kept_whole_in_conflict_copy(self):
+        runs = [{'text': 'xx', 'bold': True} for _ in range(200)]
+        body = [{'type': 'paragraph', 'align': 'right', 'runs': runs} for _ in range(100)]
+        validate_body(body)
+        d = self.letter(revision=3, subject='server')
+        res = self.api(self.author).patch(f'/api/letters/{d.pk}/', {'subject': 'big', 'body': body, 'revision': 2},
+                                          format='json')
+        self.assertTrue(res.json()['conflict'])
+        self.assertEqual(len(LetterDraftCopy.objects.get(letter=d).body), 100)

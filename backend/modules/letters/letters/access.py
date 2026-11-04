@@ -172,6 +172,9 @@ def can_attach_letter(user, entity_id):
         return False
     if letter.company_id not in member_company_ids(user):
         return False
+    # دبیرخانه برای هر واردهٔ شرکت ویراستار است؛ وارده‌ای که نمی‌بیند (محرمانه/سری) پیوست نمی‌گیرد (ل-ط)
+    if not visible_letters(user).filter(pk=pk).exists():
+        return False
     return is_editor(user, letter)
 
 
