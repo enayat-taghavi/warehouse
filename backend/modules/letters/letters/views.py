@@ -287,7 +287,8 @@ class LetterDetailView(APIView):
 
     def get(self, request, pk):
         letter = _visible_or_404(request.user, pk)
-        if letter.is_confidential:
+        # «چه کسی دید»: نامهٔ محرمانه (ن۹) و بخشنامه برای خوانده/نخوانده (ن۱۸)
+        if letter.is_confidential or (letter.kind == Letter.KIND_CIRCULAR and letter.registered_at):
             record_entity_view(request.user, LETTER_ENTITY, letter.pk, letter.company_id)
         return Response(_detail(letter, request.user))
 
@@ -578,3 +579,120 @@ class LetterUnarchiveView(_LifecycleView):
 class LetterVoidView(_LifecycleView):
     def act(self, user, letter, raw):
         return lifecycle.void(user, letter, raw.get('reason'))
+
+
+# ─── ل-ه: ارجاع، بخشنامه و «چه کسی دید» ───────────────────────────────────────────────────────────
+
+class LetterReferView(APIView):
+    """
+    POST /api/letters/<id>/refer/ {targets, kind=refer|inform, instruction, due_at, parent_task} (ن۷).
+    نامهٔ نادیدنی 404؛ بی‌اجازهٔ ارجاع 403 (نامه را می‌بیند، پس وجودش لو نمی‌رود). ارجاع ریشه مهلت پیش‌فرض ن۸ دارد.
+    """
+    permission_classes = (IsAuthenticated, LettersPermission)
+
+    def post(self, request, pk):
+        from workflow.errors import WorkflowError
+        from workflow.views import _parse_due_at
+
+        from .referral import refer_letter
+        raw = request.data if isinstance(request.data, dict) else {}
+        targets = raw.get('targets')
+        if not isinstance(targets, (list, tuple)):
+            raise ValidationError({'targets': 'گیرندگان ارجاع نامعتبرند.'})
+        instruction = raw.get('instruction') or ''
+        if not isinstance(instruction, str):
+            raise ValidationError({'instruction': 'دستور ارجاع نامعتبر است.'})
+        parent = raw.get('parent_task')
+        if parent not in (None, '') and _int(parent) is None:
+            raise ValidationError({'parent_task': 'کار والد نامعتبر است.'})
+        try:
+            due_at = _parse_due_at(raw.get('due_at'))
+            with transaction.atomic():
+                letter = _visible_or_404(request.user, pk, for_update=True)
+                created = refer_letter(request.user, letter, targets, kind=str(raw.get('kind') or 'refer'),
+                                       instruction=instruction, due_at=due_at, parent_task=_int(parent))
+        except WorkflowError as exc:
+            return Response(exc.as_dict(), status=exc.status)
+        return Response({'created': [t.pk for t in created], **_referral_tree(letter, request.user)},
+                        status=status.HTTP_201_CREATED)
+
+
+def _referral_tree(letter, user):
+    """درخت ارجاع (فهرست تخت با والد)، با قاعدهٔ متن هسته: دستور و پاسخ فقط برای طرف‌های شاخه، نویسنده و مدیر کل."""
+    from workflow import serializers as wser
+    from workflow.models import WorkflowTask
+
+    from .referral import can_refer_letter, referral_instance
+    instance = referral_instance(letter)
+    can_root = can_refer_letter(user, letter.pk)
+    if instance is None:
+        return {'instance_id': None, 'referrals': [], 'can_refer': can_root}
+    tasks = list(WorkflowTask.objects.filter(instance=instance, track=WorkflowTask.TRACK_REFERRAL)
+                 .select_related('target_user', 'referred_by', 'closed_by').order_by('opened_at', 'id'))
+    full = access.is_live_superuser(user) or user.pk in (instance.created_by_id, letter.author_id)
+    nodes = [wser.referral_node(t, with_text=full or user.pk in (t.target_user_id, t.referred_by_id)) for t in tasks]
+    mine = any(t.is_open and t.target_user_id == user.pk for t in tasks)
+    return {'instance_id': instance.pk, 'referrals': nodes, 'can_refer': can_root or mine}
+
+
+class LetterReferralsView(APIView):
+    """GET /api/letters/<id>/referrals/ — درخت ارجاع نامه (ن۷؛ جزء referral-tree در ل-ز)."""
+    permission_classes = (IsAuthenticated, LettersPermission)
+
+    def get(self, request, pk):
+        letter = _visible_or_404(request.user, pk)
+        return Response(_referral_tree(letter, request.user))
+
+
+class LetterAudienceView(APIView):
+    """GET/PUT /api/letters/<id>/audience/ — مخاطب بخشنامه (ن۱۸، س۴)."""
+    permission_classes = (IsAuthenticated, LettersPermission)
+
+    def get(self, request, pk):
+        from .circulars import audience_payload
+        letter = _visible_or_404(request.user, pk)
+        return Response({'audience': audience_payload(letter)})
+
+    def put(self, request, pk):
+        from .circulars import audience_payload, set_audience
+        raw = request.data if isinstance(request.data, dict) else {}
+        with transaction.atomic():
+            letter = _visible_or_404(request.user, pk, for_update=True)
+            set_audience(request.user, letter, raw.get('audience'))
+            _audit(request.user, letter, 'UPDATE', event='audience')
+        return Response({'audience': audience_payload(letter), 'revision': letter.revision})
+
+
+class LetterViewersView(APIView):
+    """GET /api/letters/<id>/viewers/ — «چه کسی دید» (ن۹، ن۱۸): فقط نویسنده و دبیرخانهٔ همان شرکت."""
+    permission_classes = (IsAuthenticated, LettersPermission)
+
+    def get(self, request, pk):
+        from .circulars import audience_user_ids, viewers
+        user = request.user
+        letter = _visible_or_404(user, pk)
+        if not (access.is_live_superuser(user) or letter.author_id == user.pk
+                or lifecycle._is_secretariat(user, letter)):
+            raise PermissionDenied('گزارش دیدن نامه فقط برای نویسنده و دبیرخانه است.')
+        data = {'viewers': viewers(letter)}
+        if letter.kind == Letter.KIND_CIRCULAR:
+            data['audience_count'] = len(audience_user_ids(letter))
+        return Response(data)
+
+
+class CircularListView(APIView):
+    """GET /api/letters/circulars/?company=&unread=1 — بخشنامه‌هایی که کاربر می‌بیند، با خوانده/نخوانده (ن۱۸)."""
+    permission_classes = (IsAuthenticated, LettersPermission)
+    MAX_ROWS = 200
+
+    def get(self, request):
+        from .circulars import circulars_for
+        qs = (circulars_for(request.user, _company_param(request, required=False))
+              .select_related('author', 'project', 'edit_locked_by').order_by('-registered_at', '-id'))
+        if request.query_params.get('unread') in ('1', 'true'):
+            qs = qs.filter(is_read=False)
+        rows = list(qs[:self.MAX_ROWS])
+        data = LetterListSerializer(rows, many=True, context={'request': request}).data
+        for item, row in zip(data, rows):
+            item['is_read'] = bool(row.is_read)
+        return Response(data)
