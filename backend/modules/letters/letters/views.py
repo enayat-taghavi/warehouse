@@ -47,8 +47,8 @@ LOCKED_FIELDS = ('kind', 'subject', 'body', 'confidentiality', 'sign_mode', 'rec
 SCALAR_FIELDS = ('subject', 'body', 'confidentiality', 'sign_mode', 'external_number', 'external_date',
                  'response_due_at')
 FK_FIELDS = ('sender_party', 'follow_up_of', 'reply_to', 'project')
-# بالاتر از سقف بدنهٔ درخواست Django (۲٫۵ مگابایت): هر بدنهٔ پذیرفتنی کامل نگه داشته می‌شود (ل-ط)
-MAX_COPY_JSON = 3_000_000
+# سقف فقط برای بدنهٔ نامعتبر؛ بدنهٔ معتبر (با سقف‌های validate_body) همیشه کامل نگه داشته می‌شود (ل-ط)
+MAX_COPY_JSON = 400_000
 
 
 def _audit(user, letter, action, **details):
@@ -246,10 +246,13 @@ def _keep_copy(letter, user, raw, reason):
     subject = raw.get('subject', letter.subject)
     body = raw.get('body', letter.body)
     try:
-        if len(json.dumps(body, ensure_ascii=False)) > MAX_COPY_JSON:
+        body = validate_body(body)
+    except ValidationError:
+        try:
+            if len(json.dumps(body, ensure_ascii=False)) > MAX_COPY_JSON:
+                body = []
+        except (TypeError, ValueError):
             body = []
-    except (TypeError, ValueError):
-        body = []
     copy = LetterDraftCopy.objects.create(letter=letter, subject=str(subject or '')[:500], body=body,
                                           created_by=user, reason=reason[:64])
     return copy.pk
