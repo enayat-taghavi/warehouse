@@ -22,10 +22,11 @@ import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive
            data-testid="menu-reactions">
         <button *ngFor="let emo of reactionEmojis"
                 type="button"
+                [disabled]="!isOnline()"
                 (click)="onReactionClick(emo, $event)"
-                [title]="'واکنش ' + emo"
-                [attr.aria-label]="'واکنش ' + emo"
-                class="w-7 h-7 text-base rounded-full hover:bg-surface hover:scale-125 active:scale-110 transition-all flex items-center justify-center cursor-pointer">
+                [title]="isOnline() ? 'واکنش ' + emo : 'در حالت آفلاین در دسترس نیست'"
+                [attr.aria-label]="isOnline() ? 'واکنش ' + emo : 'در حالت آفلاین در دسترس نیست'"
+                class="w-7 h-7 text-base rounded-full hover:bg-surface hover:scale-125 active:scale-110 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-transparent transition-all flex items-center justify-center cursor-pointer">
           {{ emo }}
         </button>
       </div>

@@ -207,6 +207,7 @@ export const EMOJI_CATEGORIES: EmojiCategory[] = [
           <input type="text"
                  [(ngModel)]="searchQuery"
                  data-testid="emoji-search-input"
+                 aria-label="جستجوی ایموجی"
                  placeholder="جستجوی ایموجی..."
                  class="w-full text-xs bg-surface border border-line rounded-lg px-2.5 py-1.5 pe-7 text-fg focus:outline-none focus:ring-1 focus:ring-indigo-500" />
           <button *ngIf="searchQuery"
@@ -235,9 +236,7 @@ export const EMOJI_CATEGORIES: EmojiCategory[] = [
                 (click)="activeCategory.set(cat.id)"
                 [attr.aria-selected]="activeCategory() === cat.id"
                 [class.bg-indigo-50]="activeCategory() === cat.id"
-                [class.dark:bg-indigo-950/50]="activeCategory() === cat.id"
                 [class.text-indigo-600]="activeCategory() === cat.id"
-                [class.dark:text-indigo-400]="activeCategory() === cat.id"
                 [class.text-fg-muted]="activeCategory() !== cat.id"
                 [title]="cat.name"
                 [attr.aria-label]="cat.name"
