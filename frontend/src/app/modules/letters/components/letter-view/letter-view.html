@@ -6,10 +6,7 @@
         <app-status-badge [label]="statusLabels[l.status]" [color]="statusColor()" />
       }
       @if (!online()) {
-        <span class="text-[11px] rounded-full bg-amber-50 text-amber-800 px-2 py-0.5 flex items-center gap-1 shrink-0" role="status">
-          <svg appIcon="wifi-off" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
-          آفلاین
-        </span>
+        <app-letters-offline-chip />
       }
     </div>
     <div cc-actions class="flex flex-wrap items-center gap-2" data-testid="letter-actions">
@@ -24,9 +21,6 @@
         @if (can('sign')) {
           <button appAction="approve" label="امضا" data-testid="act-sign" [disabled]="!online() || acting()" (click)="sign()"></button>
         }
-        @if (can('return')) {
-          <button appAction="return" label="عودت" data-testid="act-return" [disabled]="!online() || acting()" (click)="openForm('return')"></button>
-        }
         @if (can('register')) {
           <button appAction="confirm" label="ثبت" data-testid="act-register" [disabled]="!online() || acting()" (click)="simple('register')"></button>
         }
@@ -36,36 +30,45 @@
         @if (can('refer')) {
           <button appAction="forward" label="ارجاع" data-testid="act-refer" [disabled]="!online() || acting()" (click)="openRefer()"></button>
         }
-        @if (can('archive')) {
-          <button appAction="lock" label="بایگانی" data-testid="act-archive" [disabled]="!online() || acting()" (click)="simple('archive')"></button>
-        }
-        @if (can('unarchive')) {
-          <button appAction="restore" label="بازگردانی" data-testid="act-unarchive" [disabled]="!online() || acting()" (click)="simple('unarchive')"></button>
-        }
-        @if (can('void')) {
-          <button appAction="terminate" label="ابطال" data-testid="act-void" [disabled]="!online() || acting()" (click)="openForm('void')"></button>
-        }
-        @if (can('print')) {
-          <div class="inline-flex items-center gap-1.5" data-testid="print-container">
-            <button appAction="print" label="چاپ" data-testid="act-print"
-              [hint]="online() ? 'چاپ یا PDF نامه' : 'چاپ فقط با اتصال'"
-              [busy]="printing()" [disabled]="!online() || acting()" (click)="print()"></button>
-            <select
-              aria-label="اندازهٔ کاغذ"
-              title="اندازهٔ کاغذ"
-              data-testid="print-paper-size"
-              class="rounded-xl border border-line bg-surface px-2 text-xs text-fg h-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-              [value]="paperSize()"
-              (change)="onPaperSizeChange($event)">
-              <option value="A4">A4</option>
-              <option value="A5">A5</option>
-            </select>
-          </div>
+        @if (can('return') || can('archive') || can('unarchive') || can('void') || can('print') || can('upload_scan')) {
+          <app-overflow-menu>
+            @if (can('return')) {
+              <button appAction="return" label="عودت" data-testid="act-return" [disabled]="!online() || acting()" (click)="openForm('return')"></button>
+            }
+            @if (can('archive')) {
+              <button appAction="lock" label="بایگانی" data-testid="act-archive" [disabled]="!online() || acting()" (click)="simple('archive')"></button>
+            }
+            @if (can('unarchive')) {
+              <button appAction="restore" label="بازگردانی" data-testid="act-unarchive" [disabled]="!online() || acting()" (click)="simple('unarchive')"></button>
+            }
+            @if (can('void')) {
+              <button appAction="terminate" label="ابطال" data-testid="act-void" [disabled]="!online() || acting()" (click)="openForm('void')"></button>
+            }
+            @if (can('print')) {
+              <div class="inline-flex items-center gap-1.5" data-testid="print-container">
+                <button appAction="print" label="چاپ" data-testid="act-print"
+                  [hint]="online() ? 'چاپ یا PDF نامه' : 'چاپ فقط با اتصال'"
+                  [busy]="printing()" [disabled]="!online() || acting()" (click)="print()"></button>
+                <select
+                  aria-label="اندازهٔ کاغذ"
+                  title="اندازهٔ کاغذ"
+                  data-testid="print-paper-size"
+                  class="rounded-xl border border-line bg-surface px-2 text-xs text-fg h-10 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  [value]="paperSize()"
+                  (change)="onPaperSizeChange($event)">
+                  <option value="A4">A4</option>
+                  <option value="A5">A5</option>
+                </select>
+              </div>
+            }
+            @if (can('upload_scan')) {
+              <button appAction="upload" label="نسخهٔ امضاشده" data-testid="act-upload-scan"
+                [hint]="online() ? 'بارگذاری نسخهٔ امضاشده (اسکن)' : 'بارگذاری فقط با اتصال'"
+                [busy]="uploadingScan()" [disabled]="!online() || acting()" (click)="pickScan()"></button>
+            }
+          </app-overflow-menu>
         }
         @if (can('upload_scan')) {
-          <button appAction="upload" label="نسخهٔ امضاشده" data-testid="act-upload-scan"
-            [hint]="online() ? 'بارگذاری نسخهٔ امضاشده (اسکن)' : 'بارگذاری فقط با اتصال'"
-            [busy]="uploadingScan()" [disabled]="!online() || acting()" (click)="scanFileInput.click()"></button>
           <input
             #scanFileInput
             type="file"

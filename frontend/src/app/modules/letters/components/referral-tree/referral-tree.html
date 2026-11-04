@@ -12,10 +12,7 @@
     </div>
   } @else {
     @if (stale()) {
-      <p class="text-[11px] rounded-full bg-amber-50 text-amber-800 px-2 py-0.5 self-start flex items-center gap-1" role="status">
-        <svg appIcon="wifi-off" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
-        آفلاین؛ ممکن است قدیمی باشد
-      </p>
+      <app-letters-offline-chip text="آفلاین؛ ممکن است قدیمی باشد" />
     }
     <ul class="flex flex-col gap-1">
       @for (n of roots(); track n.node.task_id) {

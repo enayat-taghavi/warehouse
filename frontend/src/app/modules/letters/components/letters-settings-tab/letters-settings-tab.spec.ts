@@ -150,6 +150,26 @@ describe('LettersSettingsTabComponent — تنظیمات نامه در استو�
     expect(q('[data-testid="save-success"]')).toBeNull();
   });
 
+  it('رقم فارسی در مهلت به لاتین برمی‌گردد و ذخیره با عدد درست می‌رود', () => {
+    fixture.componentRef.setInput('companyId', 3);
+    fixture.detectChanges();
+
+    const input = q('[data-testid="input-due-days"]') as HTMLInputElement;
+    expect(input.type).toBe('text');
+    expect(input.getAttribute('inputmode')).toBe('numeric');
+    input.value = '۱۲';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.dueDaysControl.value).toBe('12');
+    expect(fixture.componentInstance.dueDaysControl.valid).toBe(true);
+    (q('[data-testid="btn-save-due-days"]') as HTMLButtonElement).click();
+    expect(api.saveCompanySetting).toHaveBeenCalledWith(3, 'default_due_days', 12);
+
+    input.value = '٣٧٠';
+    input.dispatchEvent(new Event('input'));
+    expect(fixture.componentInstance.dueDaysControl.invalid).toBe(true);
+  });
+
   it('مقدار نامعتبرِ دست‌خورده پیام خطای کنار فیلد و aria-invalid می‌گیرد', () => {
     fixture.componentRef.setInput('companyId', 3);
     fixture.detectChanges();

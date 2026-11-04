@@ -18,6 +18,7 @@ import {
 import { LettersApiService } from '../../services/letters-api.service';
 import { LettersOfflineService, newClientTempId, serverErrorText } from '../../services/letters-offline';
 import { LetterEditorComponent } from '../letter-editor/letter-editor';
+import { LettersOfflineChipComponent } from '../letters-offline-chip/letters-offline-chip';
 import { PartyPickerComponent } from '../party-picker/party-picker';
 
 interface PartyRecipient { id: number; name: string; role: 'to' | 'cc' }
@@ -49,7 +50,7 @@ const partyValues = (rows: LetterRecipientRow[] | undefined): PartyRecipient[] =
   standalone: true,
   imports: [
     ReactiveFormsModule, ActionButtonComponent, CommandCenterComponent, LoadingSkeletonComponent, PersonRolePickerComponent,
-    SvgIconDirective, LetterEditorComponent, PartyPickerComponent,
+    SvgIconDirective, LetterEditorComponent, PartyPickerComponent, LettersOfflineChipComponent,
   ],
   templateUrl: './letter-compose.html',
 })

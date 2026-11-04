@@ -4,20 +4,23 @@
       <h1 class="text-sm font-black text-fg truncate">{{ letterId() ? 'ویرایش نامه' : 'نامهٔ تازه' }}</h1>
       <span class="text-[11px] rounded-full bg-surface-muted border border-line px-2 py-0.5 text-fg-muted shrink-0">{{ statusLabels[status()] }}</span>
       @if (!online()) {
-        <span class="text-[11px] rounded-full bg-amber-50 text-amber-800 px-2 py-0.5 flex items-center gap-1 shrink-0" role="status">
-          <svg appIcon="wifi-off" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
-          آفلاین
-        </span>
+        <app-letters-offline-chip />
       }
     </div>
     <div cc-actions class="flex items-center gap-2">
       <button appAction="back" label="فهرست" (click)="back()"></button>
-      <button appAction="send" label="ارسال برای امضا" data-testid="letter-submit"
-              [disabled]="!!submitBlocked() || acting()" [hint]="submitBlocked() || ''" (click)="act('submit')"></button>
-      <button appAction="confirm" label="ثبت وارده" data-testid="letter-register"
-              [disabled]="!!registerBlocked() || acting()" [hint]="registerBlocked() || ''" (click)="act('register')"></button>
+      @if (form.controls.kind.value === 'incoming') {
+        <button appAction="confirm" label="ثبت" data-testid="letter-register"
+                [disabled]="!!registerBlocked() || acting()" [hint]="registerBlocked() || ''" (click)="act('register')"></button>
+      } @else {
+        <button appAction="send" label="ارسال برای امضا" data-testid="letter-submit"
+                [disabled]="!!submitBlocked() || acting()" [hint]="submitBlocked() || ''" (click)="act('submit')"></button>
+      }
     </div>
   </app-command-center>
+  @if (form.controls.kind.value === 'incoming' ? registerBlocked() : submitBlocked(); as why) {
+    <p role="status" class="text-xs text-fg-muted" data-testid="letter-action-block">{{ why }}</p>
+  }
 
   @if (loading()) {
     <app-loading-skeleton type="form" />
@@ -51,19 +54,17 @@
         @if (conflict()) {
           <p class="text-[11px] text-amber-900">نامه روی سرور عوض شده بود؛ متن شما در فرم مانده است.</p>
           <div class="flex flex-wrap gap-2">
-            <button type="button" class="tap-target min-h-[40px] rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs px-3"
-                    [disabled]="saving() || readOnly()" title="متن فرم جای نسخهٔ سرور بنشیند" (click)="replaceServer()">جایگزین کن</button>
-            <button type="button" class="tap-target min-h-[40px] rounded-xl border border-amber-300 bg-surface text-xs px-3"
-                    title="متن فرم پیش‌نویس تازه‌ای شود" (click)="asNewLetter()">نامهٔ تازه از آن بساز</button>
+            <button type="button" appAction="confirm" label="جایگزین" hint="متن فرم جای نسخهٔ سرور بنشیند"
+                    [disabled]="saving() || readOnly()" (click)="replaceServer()"></button>
+            <button type="button" appAction="create" label="نامهٔ تازه" hint="متن فرم پیش‌نویس تازه‌ای شود" (click)="asNewLetter()"></button>
           </div>
         }
         @for (c of copies(); track c.id) {
           <div class="flex flex-wrap items-center gap-2 border-t border-amber-200 pt-2 min-w-0">
             <span class="text-[11px] text-amber-900 break-words min-w-0 flex-1">{{ c.subject || 'بی‌موضوع' }}</span>
-            <button type="button" class="tap-target min-h-[40px] rounded-xl border border-amber-300 bg-surface text-xs px-2"
-                    [disabled]="readOnly()" title="متن این نسخه در فرم بیاید" (click)="useCopy(c, false)">جایگزین کن</button>
-            <button type="button" class="tap-target min-h-[40px] rounded-xl border border-amber-300 bg-surface text-xs px-2"
-                    title="از این نسخه پیش‌نویس تازه بساز" (click)="useCopy(c, true)">نامهٔ تازه</button>
+            <button type="button" appAction="confirm" label="جایگزین" hint="متن این نسخه در فرم بیاید"
+                    [disabled]="readOnly()" (click)="useCopy(c, false)"></button>
+            <button type="button" appAction="create" label="نامهٔ تازه" hint="از این نسخه پیش‌نویس تازه بساز" (click)="useCopy(c, true)"></button>
           </div>
         }
       </section>
@@ -72,7 +73,7 @@
     @if (gone()) {
       <div class="bg-rose-50 border border-rose-200 rounded-2xl p-3 flex flex-wrap items-center gap-2" role="alert">
         <p class="text-xs text-rose-800 flex-1 min-w-0">این نامه دیگر برای شما دیده نمی‌شود؛ متن در فرم مانده است.</p>
-        <button type="button" class="tap-target min-h-[40px] rounded-xl border border-rose-300 bg-surface text-xs px-3" (click)="asNewLetter()">نامهٔ تازه از آن بساز</button>
+        <button type="button" appAction="create" label="نامهٔ تازه" hint="از این متن پیش‌نویس تازه بساز" (click)="asNewLetter()"></button>
       </div>
     }
 

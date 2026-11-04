@@ -5,12 +5,14 @@ import { ActionButtonComponent } from '../../../../shared/components/action-butt
 import { CommandCenterComponent } from '../../../../shared/components/command-center/command-center.component';
 import { LoadingSkeletonComponent } from '../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { TabBarComponent, TabDef } from '../../../../shared/components/tab-bar/tab-bar.component';
+import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
+import { PersianDatePipe } from '../../../../shared/pipes/persian-date.pipe';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { WebSocketService, patchDocumentRow } from '../../../../core/http/websocket.service';
 import { ActiveCompanyService } from '../../../../core/services/active-company.service';
 import { isServerUnreachable } from '../../../../core/services/server-reachability';
 import {
-  EMPTY_LETTER_FILTERS, LETTER_CONFIDENTIALITY_LABELS, LETTER_DOC_TYPE, LETTER_KIND_LABELS, LETTER_STATUS_LABELS,
+  EMPTY_LETTER_FILTERS, LETTER_CONFIDENTIALITY_LABELS, LETTER_DOC_TYPE, LETTER_KIND_LABELS, LETTER_STATUS_LABELS, LETTER_STATUS_COLOR,
   LETTER_TABS, CircularRow, LetterConfidentiality, LetterFilters, LetterKind, LetterProject, LetterRow, LetterStatus, LetterTab,
 } from '../../letters.models';
 import { LettersApiService } from '../../services/letters-api.service';
@@ -56,7 +58,7 @@ export function letterFiltersToQuery(f: LetterFilters): Record<string, string | 
 @Component({
   selector: 'app-letter-list',
   standalone: true,
-  imports: [RouterLink, ActionButtonComponent, CommandCenterComponent, LoadingSkeletonComponent, TabBarComponent, SvgIconDirective],
+  imports: [RouterLink, ActionButtonComponent, CommandCenterComponent, LoadingSkeletonComponent, TabBarComponent, SvgIconDirective, StatusBadgeComponent, PersianDatePipe],
   templateUrl: './letter-list.html',
 })
 export class LetterListPage implements OnInit {
@@ -78,6 +80,7 @@ export class LetterListPage implements OnInit {
   ];
   readonly kindLabels = LETTER_KIND_LABELS;
   readonly statusLabels = LETTER_STATUS_LABELS;
+  readonly statusColors = LETTER_STATUS_COLOR;
   readonly confLabels = LETTER_CONFIDENTIALITY_LABELS;
   readonly kinds = Object.keys(LETTER_KIND_LABELS) as LetterKind[];
   readonly statuses = Object.keys(LETTER_STATUS_LABELS) as LetterStatus[];
@@ -177,12 +180,6 @@ export class LetterListPage implements OnInit {
 
   faNumber(n: number): string {
     return new Intl.NumberFormat('fa-IR').format(n);
-  }
-
-  faDate(iso: string | null): string {
-    if (!iso) return '—';
-    const d = new Date(iso);
-    return isNaN(d.getTime()) ? '—' : new Intl.DateTimeFormat('fa-IR-u-ca-persian', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
   }
 
   value(ev: Event): string {

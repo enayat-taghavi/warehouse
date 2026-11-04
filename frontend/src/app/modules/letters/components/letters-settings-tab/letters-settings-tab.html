@@ -34,7 +34,7 @@
         <section class="grid grid-cols-1 md:grid-cols-3 gap-3" aria-label="تصاویر سربرگ و مهر" data-testid="images-section">
           <!-- سربرگ A4 -->
           <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2 min-w-0" data-testid="block-letterhead-a4">
-            <h3 class="text-xs font-black text-fg">سربرگ A4</h3>
+            <h2 class="text-xs font-black text-fg">سربرگ A4</h2>
             <app-attachments
               [kind]="assetKind"
               [entityId]="companyId!"
@@ -48,7 +48,7 @@
 
           <!-- سربرگ A5 -->
           <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2 min-w-0" data-testid="block-letterhead-a5">
-            <h3 class="text-xs font-black text-fg">سربرگ A5</h3>
+            <h2 class="text-xs font-black text-fg">سربرگ A5</h2>
             <app-attachments
               [kind]="assetKind"
               [entityId]="companyId!"
@@ -62,7 +62,7 @@
 
           <!-- مهر دبیرخانه -->
           <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2 min-w-0" data-testid="block-secretariat-stamp">
-            <h3 class="text-xs font-black text-fg">مهر دبیرخانه</h3>
+            <h2 class="text-xs font-black text-fg">مهر دبیرخانه</h2>
             <app-attachments
               [kind]="assetKind"
               [entityId]="companyId!"
@@ -86,10 +86,11 @@
             <label for="letters-due-days" class="text-xs font-bold text-fg">مهلت پاسخ (روز)</label>
             <input
               id="letters-due-days"
-              type="number"
-              min="0"
-              max="365"
-              step="1"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              dir="ltr"
+              (input)="onDueDaysInput()"
               class="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50 disabled:bg-surface-muted"
               aria-describedby="letters-due-days-hint letters-due-days-error"
               [attr.aria-invalid]="dueDaysControl.invalid ? 'true' : null"

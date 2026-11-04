@@ -2,11 +2,12 @@ import { Component, DestroyRef, inject, input, output, signal } from '@angular/c
 import { FormsModule } from '@angular/forms';
 import { Subject, debounceTime, switchMap, of, catchError, map } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { isServerUnreachable } from '../../../../core/services/server-reachability';
 import { LetterParty } from '../../letters.models';
 import { LettersApiService } from '../../services/letters-api.service';
 import { LettersOfflineService, serverErrorText } from '../../services/letters-offline';
+import { LettersOfflineChipComponent } from '../letters-offline-chip/letters-offline-chip';
 
 /**
  * انتخابگر طرف بیرونی (ن۱۶): جست‌وجو و «طرف تازه» از API خود ماژول (`/api/letters/parties/`).
@@ -15,7 +16,7 @@ import { LettersOfflineService, serverErrorText } from '../../services/letters-o
 @Component({
   selector: 'app-letter-party-picker',
   standalone: true,
-  imports: [FormsModule, SvgIconDirective],
+  imports: [FormsModule, ActionButtonComponent, LettersOfflineChipComponent],
   templateUrl: './party-picker.html',
 })
 export class PartyPickerComponent {

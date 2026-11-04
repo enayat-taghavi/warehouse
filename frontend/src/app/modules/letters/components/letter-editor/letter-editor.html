@@ -109,7 +109,7 @@
                   <tr>
                     @for (cell of row; track $index; let c = $index) {
                       <td class="border border-line p-0.5">
-                        <input type="text" class="w-24 sm:w-32 rounded-lg px-1.5 h-9 bg-surface text-xs"
+                        <input type="text" class="w-24 sm:w-32 rounded-lg px-1.5 h-10 bg-surface text-xs"
                                [class.font-bold]="asTable(block).header && r === 0"
                                [disabled]="disabled()" [value]="cell"
                                [attr.aria-label]="'خانهٔ ردیف ' + faNumber(r + 1) + ' ستون ' + faNumber(c + 1)"

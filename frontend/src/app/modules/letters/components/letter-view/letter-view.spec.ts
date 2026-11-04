@@ -130,6 +130,16 @@ describe('LetterViewPage — نمایش نامه', () => {
     expect(api.get).toHaveBeenCalledTimes(2);
   });
 
+  it('کنش‌های کم‌کاربرد (عودت، چاپ) داخل منوی «بیشتر» هستند و کنش‌های اصلی بیرون آن', () => {
+    setup(detail({ actions: ['sign', 'return', 'print'] }));
+    const menu = q('app-overflow-menu')!;
+    expect(menu).not.toBeNull();
+    expect(menu.querySelector('[data-testid="act-return"]')).not.toBeNull();
+    expect(menu.querySelector('[data-testid="act-print"]')).not.toBeNull();
+    expect(menu.querySelector('[data-testid="act-sign"]')).toBeNull();
+    expect(q('[data-testid="act-sign"]')).not.toBeNull();
+  });
+
   it('دکمهٔ چاپ بدون مجوز print پنهان و با آن نمایش داده می‌شود', () => {
     expect(q('[data-testid="act-print"]')).toBeNull();
     setup(detail({ actions: ['print'] }));

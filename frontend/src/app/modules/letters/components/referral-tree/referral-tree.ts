@@ -6,6 +6,7 @@ import { LoadingSkeletonComponent } from '../../../../shared/components/loading-
 import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
 import { PersianDatePipe } from '../../../../shared/pipes/persian-date.pipe';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { LettersOfflineChipComponent } from '../letters-offline-chip/letters-offline-chip';
 import { isServerUnreachable } from '../../../../core/services/server-reachability';
 import { ReferralNode, ReferralTreeNode, buildReferralTree, errorText } from '../../letters.models';
 import { LettersApiService } from '../../services/letters-api.service';
@@ -20,7 +21,7 @@ export const isMobileWidth = (): boolean => typeof window !== 'undefined' && win
 @Component({
   selector: 'app-letter-referral-tree',
   standalone: true,
-  imports: [NgTemplateOutlet, ReactiveFormsModule, ActionButtonComponent, LoadingSkeletonComponent, StatusBadgeComponent, PersianDatePipe, SvgIconDirective],
+  imports: [NgTemplateOutlet, ReactiveFormsModule, ActionButtonComponent, LoadingSkeletonComponent, StatusBadgeComponent, PersianDatePipe, SvgIconDirective, LettersOfflineChipComponent],
   templateUrl: './referral-tree.html',
 })
 export class ReferralTreeComponent {

@@ -68,9 +68,9 @@ describe('PartyPickerComponent — انتخابگر طرف بیرونی', () => 
     online.set(false);
     fixture.detectChanges();
     const input = fixture.nativeElement.querySelector('#letter-party-search') as HTMLInputElement;
-    const btn = fixture.nativeElement.querySelector('button[aria-label="طرف بیرونی تازه"]') as HTMLButtonElement;
+    const btn = fixture.nativeElement.querySelector('button[appAction="create"]') as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('نیاز به اتصال');
+    expect(fixture.nativeElement.querySelector('app-letters-offline-chip')?.textContent).toContain('نیاز به اتصال');
     expect(input).toBeTruthy();
   });
 

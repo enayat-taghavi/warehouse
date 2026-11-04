@@ -1,19 +1,19 @@
 <div class="flex flex-col gap-2 min-w-0" dir="rtl">
   @if (!online()) {
-    <p class="text-[11px] text-amber-800 bg-amber-50 rounded-xl px-2 py-1.5" role="status">جست‌وجوی طرف بیرونی نیاز به اتصال دارد.</p>
+    <app-letters-offline-chip text="جست‌وجوی طرف بیرونی نیاز به اتصال دارد." />
   }
   <div class="flex items-center gap-2 min-w-0">
     <label class="sr-only" for="letter-party-search">جست‌وجوی طرف بیرونی</label>
     <input id="letter-party-search" type="search" class="flex-1 min-w-0 h-10 rounded-xl border border-line bg-surface px-3 text-sm"
            placeholder="نام یا شناسهٔ طرف بیرونی" autocomplete="off"
+           [attr.aria-describedby]="!company() ? 'letter-party-company-hint' : null"
            [disabled]="disabled() || !online() || !company()" [ngModel]="query()" (ngModelChange)="onQuery($event)" (keydown.enter)="$event.preventDefault(); search()" />
-    <button type="button" class="tap-target min-w-[40px] min-h-[40px] rounded-xl border border-line bg-surface text-xs px-2 flex items-center gap-1"
-            [disabled]="disabled() || !online() || !company()" aria-label="طرف بیرونی تازه" title="طرف بیرونی تازه"
-            (click)="startCreate()">
-      <svg appIcon="user-plus" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
-      <span class="hidden sm:inline">طرف تازه</span>
-    </button>
+    <button type="button" appAction="create" label="طرف تازه" hint="طرف بیرونی تازه"
+            [disabled]="disabled() || !online() || !company()" (click)="startCreate()"></button>
   </div>
+  @if (!company()) {
+    <p id="letter-party-company-hint" class="text-[11px] text-fg-muted" role="status">نخست شرکت را انتخاب کنید.</p>
+  }
 
   @if (loading()) {
     <p class="text-[11px] text-fg-muted" role="status">در حال جست‌وجو…</p>
@@ -55,9 +55,9 @@
                [ngModel]="newNationalId()" (ngModelChange)="newNationalId.set($event)" (keydown.enter)="$event.preventDefault(); create()" />
       </div>
       <div class="flex items-center gap-2">
-        <button type="button" class="tap-target min-h-[40px] rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3"
-                [disabled]="saving() || !newName().trim() || !online()" (click)="create()">افزودن طرف</button>
-        <button type="button" class="tap-target min-h-[40px] rounded-xl border border-line text-xs px-3" (click)="creating.set(false)">انصراف</button>
+        <button type="button" appAction="confirm" label="افزودن" hint="افزودن طرف"
+                [disabled]="saving() || !newName().trim() || !online()" (click)="create()"></button>
+        <button type="button" appAction="close" label="انصراف" (click)="creating.set(false)"></button>
       </div>
     </div>
   }

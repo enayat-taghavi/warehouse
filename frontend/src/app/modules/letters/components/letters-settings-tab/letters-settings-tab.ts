@@ -1,5 +1,5 @@
 import { Component, Input, OnChanges, SimpleChanges, computed, inject, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { AttachmentsComponent } from '../../../../shared/components/attachments/attachments.component';
@@ -11,6 +11,21 @@ import { LettersApiService } from '../../services/letters-api.service';
 import { LettersOfflineService } from '../../services/letters-offline';
 
 export const LETTERS_ASSET_KIND = 'letters_secretariat';
+
+/** رقم‌های فارسی و عربی را به لاتین برمی‌گرداند (ورودی عددی با کیبورد فارسی). */
+export function normalizeDigits(text: string): string {
+  return text
+    .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 0x06F0))
+    .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x0660))
+    .trim();
+}
+
+/** عدد صحیح ۰ تا ۳۶۵ (مقدار می‌تواند متن با رقم فارسی باشد) */
+function dueDaysValidator(control: AbstractControl): ValidationErrors | null {
+  const raw = normalizeDigits(String(control.value ?? ''));
+  if (!/^[0-9]{1,3}$/.test(raw)) return { dueDays: true };
+  return Number(raw) > 365 ? { dueDays: true } : null;
+}
 
 @Component({
   selector: 'app-letters-settings-tab',
@@ -34,14 +49,9 @@ export class LettersSettingsTabComponent implements OnChanges {
   readonly saveSuccess = signal(false);
   readonly saveError = signal('');
 
-  readonly dueDaysControl = new FormControl<number>(7, {
+  readonly dueDaysControl = new FormControl<number | string>(7, {
     nonNullable: true,
-    validators: [
-      Validators.required,
-      Validators.min(0),
-      Validators.max(365),
-      Validators.pattern(/^[0-9]+$/),
-    ],
+    validators: [Validators.required, dueDaysValidator],
   });
 
   readonly initialDueDays = signal<number>(7);
@@ -51,7 +61,7 @@ export class LettersSettingsTabComponent implements OnChanges {
 
   constructor() {
     this.dueDaysControl.valueChanges.subscribe(val => {
-      this.dueDaysValue.set(Number(val));
+      this.dueDaysValue.set(Number(normalizeDigits(String(val ?? ''))));
       this.isControlInvalid.set(this.dueDaysControl.invalid);
       this.saveSuccess.set(false);
       this.saveError.set('');
@@ -142,6 +152,13 @@ export class LettersSettingsTabComponent implements OnChanges {
     });
   }
 
+  /** رقم فارسی تایپ‌شده را همان‌جا لاتین می‌کند تا اعتبارسنجی و ذخیره یکسان باشد */
+  onDueDaysInput(): void {
+    const raw = String(this.dueDaysControl.value ?? '');
+    const fixed = normalizeDigits(raw);
+    if (fixed !== raw) this.dueDaysControl.setValue(fixed);
+  }
+
   canEdit(key: string): boolean {
     return Boolean(this.settingsMap().get(key)?.can_edit);
   }
@@ -151,7 +168,7 @@ export class LettersSettingsTabComponent implements OnChanges {
     this.saving.set(true);
     this.saveSuccess.set(false);
     this.saveError.set('');
-    const val = Number(this.dueDaysControl.value);
+    const val = Number(normalizeDigits(String(this.dueDaysControl.value ?? '')));
 
     this.api.saveCompanySetting(this.companyId, 'default_due_days', val).subscribe({
       next: row => {

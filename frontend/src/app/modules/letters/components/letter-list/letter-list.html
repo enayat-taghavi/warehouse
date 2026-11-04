@@ -1,10 +1,11 @@
 <div class="flex flex-col gap-3 min-w-0" dir="rtl">
+  <h1 class="sr-only">نامه‌ها</h1>
   <app-command-center>
     <div cc-tabs class="min-w-0">
       <app-tab-bar [tabs]="tabs" [active]="filters().tab" mobile="icon" idPrefix="letters-tab" (activeChange)="onTab($event)" />
     </div>
     <div cc-actions class="flex items-center gap-2">
-      <button appAction="refresh" label="تازه کردن" (click)="reload()"></button>
+      <button appAction="refresh" (click)="reload()"></button>
       <button appAction="create" label="نامهٔ تازه" (click)="openNew()"></button>
     </div>
   </app-command-center>
@@ -67,8 +68,7 @@
           <span class="text-xs font-bold text-fg break-words min-w-0 flex-1">{{ d.subject || 'بی‌موضوع' }}</span>
           @if (d.message) { <span class="text-[11px] text-fg-muted break-words basis-full">{{ d.message }}</span> }
           @if (d.state === 'failed') {
-            <button type="button" class="tap-target min-h-[40px] rounded-xl border border-amber-300 bg-surface text-xs px-3"
-                    title="متن این پیش‌نویس در فرم نامهٔ تازه بیاید" (click)="openLocal(d)">باز کردن</button>
+            <button type="button" appAction="view" label="باز کردن" hint="متن این پیش‌نویس در فرم نامهٔ تازه بیاید" (click)="openLocal(d)"></button>
           }
         </div>
       }
@@ -133,9 +133,9 @@
               <td class="p-2"><a class="font-bold text-fg hover:text-indigo-700 break-words" [routerLink]="['/app/letters', r.id]">{{ r.subject || 'بی‌موضوع' }}</a>@if (unread(r)) {<span class="ms-1 text-[10px] rounded-full bg-indigo-50 text-indigo-700 px-1.5 py-0.5">نخوانده</span>}
                 @if (r.confidentiality !== 'normal') { <span class="ms-1 text-[10px] rounded-full bg-rose-50 text-rose-800 px-1.5">{{ confLabels[r.confidentiality] }}</span> }</td>
               <td class="p-2">{{ kindLabels[r.kind] }}</td>
-              <td class="p-2">{{ statusLabels[r.status] }}</td>
+              <td class="p-2"><app-status-badge [label]="statusLabels[r.status]" [color]="statusColors[r.status]" /></td>
               <td class="p-2">{{ r.project_title || '—' }}</td>
-              <td class="p-2 tabular-nums">{{ faDate(r.registered_at || r.created_at) }}</td>
+              <td class="p-2 tabular-nums">{{ (r.registered_at || r.created_at) | persianDate: 'short' }}</td>
             </tr>
           }
         </tbody>
@@ -150,12 +150,12 @@
              [routerLink]="['/app/letters', r.id]">
             <span class="flex items-center gap-2 min-w-0">
               <span class="text-sm font-bold text-fg flex-1 min-w-0 break-words">{{ r.subject || 'بی‌موضوع' }}@if (unread(r)) {<span class="ms-1 text-[10px] rounded-full bg-indigo-50 text-indigo-700 px-1.5 py-0.5">نخوانده</span>}</span>
-              <span class="text-[11px] rounded-full bg-surface-muted border border-line px-2 py-0.5 text-fg-muted shrink-0">{{ statusLabels[r.status] }}</span>
+              <app-status-badge class="shrink-0" [label]="statusLabels[r.status]" [color]="statusColors[r.status]" />
             </span>
             <span class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-fg-muted min-w-0">
               <span>{{ kindLabels[r.kind] }}</span>
               @if (r.number_display) { <bdi class="tabular-nums">{{ r.number_display }}</bdi> }
-              <span class="tabular-nums">{{ faDate(r.registered_at || r.created_at) }}</span>
+              <span class="tabular-nums">{{ (r.registered_at || r.created_at) | persianDate: 'short' }}</span>
               @if (r.confidentiality !== 'normal') { <span class="rounded-full bg-rose-50 text-rose-800 px-1.5">{{ confLabels[r.confidentiality] }}</span> }
               @if (r.project_title) { <span class="break-words min-w-0">{{ r.project_title }}</span> }
             </span>

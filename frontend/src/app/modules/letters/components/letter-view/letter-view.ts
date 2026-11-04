@@ -9,16 +9,17 @@ import { LoadingSkeletonComponent } from '../../../../shared/components/loading-
 import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
 import { AttachmentsComponent } from '../../../../shared/components/attachments/attachments.component';
 import { PersianDatePipe } from '../../../../shared/pipes/persian-date.pipe';
-import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { PrintPaperSize, PrintService } from '../../../../core/services/print.service';
 import { WebSocketService } from '../../../../core/http/websocket.service';
 import { isServerUnreachable } from '../../../../core/services/server-reachability';
 import {
-  LETTER_CONFIDENTIALITY_LABELS, LETTER_DOC_TYPE, LETTER_KIND_LABELS, LETTER_STATUS_LABELS, LetterAction,
-  LetterDraftCopy, LetterRecipientRow, LetterRun, LetterStatus, LetterViewDetail, errorText, runsText,
+  LETTER_CONFIDENTIALITY_LABELS, LETTER_DOC_TYPE, LETTER_KIND_LABELS, LETTER_STATUS_LABELS, LETTER_STATUS_COLOR, LetterAction,
+  LetterDraftCopy, LetterRecipientRow, LetterRun, LetterViewDetail, errorText, runsText,
 } from '../../letters.models';
 import { LetterLifecycleAction, LettersApiService } from '../../services/letters-api.service';
 import { LettersOfflineService } from '../../services/letters-offline';
+import { OverflowMenuComponent } from '../../../../shared/components/overflow-menu/overflow-menu.component';
+import { LettersOfflineChipComponent } from '../letters-offline-chip/letters-offline-chip';
 import { ReferralTreeComponent } from '../referral-tree/referral-tree';
 import { ReferDialogComponent } from '../refer-dialog/refer-dialog';
 
@@ -28,10 +29,6 @@ export const LETTER_SEND_METHODS: { id: string; label: string }[] = [
   { id: 'courier', label: 'پیک' },
   { id: 'email', label: 'ایمیل دستی' },
 ];
-
-const STATUS_COLOR: Record<LetterStatus, 'green' | 'blue' | 'amber' | 'rose' | 'slate' | 'indigo'> = {
-  draft: 'slate', signing: 'amber', registered: 'blue', sent: 'indigo', archived: 'slate', received: 'blue', void: 'rose',
-};
 
 const SIGNER_STATUS: Record<string, string> = { pending: 'در انتظار', signed: 'امضا شد', returned: 'عودت شد', skipped: 'رد شد' };
 
@@ -44,8 +41,8 @@ type FormAction = 'return' | 'void' | 'send';
   standalone: true,
   imports: [
     RouterLink, ReactiveFormsModule, ActionButtonComponent, CommandCenterComponent, LoadingSkeletonComponent,
-    StatusBadgeComponent, PersianDatePipe, SvgIconDirective, ReferralTreeComponent, ReferDialogComponent,
-    AttachmentsComponent,
+    StatusBadgeComponent, PersianDatePipe, ReferralTreeComponent, ReferDialogComponent,
+    AttachmentsComponent, OverflowMenuComponent, LettersOfflineChipComponent,
   ],
   templateUrl: './letter-view.html',
 })
@@ -61,6 +58,7 @@ export class LetterViewPage implements OnInit {
   readonly docType = LETTER_DOC_TYPE;
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  private readonly scanInput = viewChild<ElementRef<HTMLInputElement>>('scanFileInput');
   private readonly actionField = viewChild<ElementRef<HTMLElement>>('actionField');
 
   readonly kindLabels = LETTER_KIND_LABELS;
@@ -87,7 +85,7 @@ export class LetterViewPage implements OnInit {
   readonly method = new FormControl('in_person', { nonNullable: true });
 
   readonly actions = computed(() => new Set<LetterAction>(this.letter()?.actions || []));
-  readonly statusColor = computed(() => STATUS_COLOR[this.letter()?.status || 'draft']);
+  readonly statusColor = computed(() => LETTER_STATUS_COLOR[this.letter()?.status || 'draft']);
   readonly toRecipients = computed(() => (this.letter()?.recipients || []).filter(r => r.role === 'to'));
   readonly ccRecipients = computed(() => (this.letter()?.recipients || []).filter(r => r.role === 'cc'));
   private id = 0;
@@ -111,6 +109,10 @@ export class LetterViewPage implements OnInit {
     this.ws.documentChanges$([LETTER_DOC_TYPE]).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(ev => {
       if (Number(ev.doc_id) === this.id) this.load(true);
     });
+  }
+
+  pickScan(): void {
+    this.scanInput()?.nativeElement.click();
   }
 
   load(silent = false): void {

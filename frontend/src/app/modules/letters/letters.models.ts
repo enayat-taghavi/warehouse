@@ -28,6 +28,11 @@ export const LETTER_STATUS_LABELS: Record<LetterStatus, string> = {
   void: 'باطل',
 };
 
+/** رنگ نشان وضعیت نامه (برای app-status-badge) */
+export const LETTER_STATUS_COLOR: Record<LetterStatus, 'green' | 'blue' | 'amber' | 'rose' | 'slate' | 'indigo'> = {
+  draft: 'slate', signing: 'amber', registered: 'blue', sent: 'indigo', archived: 'slate', received: 'blue', void: 'rose',
+};
+
 export const LETTER_CONFIDENTIALITY_LABELS: Record<LetterConfidentiality, string> = {
   normal: 'عادی',
   confidential: 'محرمانه',

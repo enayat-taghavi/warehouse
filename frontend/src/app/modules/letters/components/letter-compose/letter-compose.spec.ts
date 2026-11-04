@@ -64,10 +64,11 @@ describe('LetterComposePage — نوشتن و پیش‌نویس آفلاین', (
 
   beforeEach(() => vi.restoreAllMocks());
 
-  it('آفلاین: «ارسال برای امضا» و «ثبت وارده» غیرفعال‌اند و ذخیره فعال است', () => {
+  it('آفلاین: «ارسال برای امضا» غیرفعال است، دلیلش دیده می‌شود و ذخیره فعال است', () => {
     setup(false);
     expect(btn('letter-submit').disabled).toBe(true);
-    expect(btn('letter-register').disabled).toBe(true);
+    expect(btn('letter-register')).toBeNull();
+    expect(btn('letter-action-block').textContent).toContain('نیاز به اتصال');
     expect(page.submitBlocked()).toBe('نیاز به اتصال');
     const save = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
     expect(save.disabled).toBe(false);
@@ -76,7 +77,18 @@ describe('LetterComposePage — نوشتن و پیش‌نویس آفلاین', (
   it('آنلاین و ذخیره‌شده: «ارسال برای امضا» فعال است', () => {
     setup(true);
     expect(btn('letter-submit').disabled).toBe(false);
-    expect(btn('letter-register').disabled).toBe(true);
+    expect(btn('letter-register')).toBeNull();
+    expect(btn('letter-action-block')).toBeNull();
+  });
+
+  it('وارده: فقط «ثبت» نشان داده می‌شود و «ارسال برای امضا» نیست', () => {
+    setup(true);
+    page.form.controls.kind.setValue('incoming');
+    fixture.detectChanges();
+    expect(btn('letter-submit')).toBeNull();
+    expect(btn('letter-register')).not.toBeNull();
+    expect(btn('letter-register').textContent).toContain('ثبت');
+    expect(btn('letter-action-block').textContent).toContain('تغییرها هنوز ذخیره نشده‌اند');
   });
 
   it('conflict: true «نسخهٔ ناهمگام» نشان می‌دهد و متن محلی را نگه می‌دارد', async () => {

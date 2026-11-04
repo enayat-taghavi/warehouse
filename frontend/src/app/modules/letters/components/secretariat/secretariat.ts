@@ -1,5 +1,4 @@
 import { Component, DestroyRef, HostListener, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
-import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
@@ -15,6 +14,7 @@ import { isServerUnreachable } from '../../../../core/services/server-reachabili
 import { LETTER_DOC_TYPE, LETTER_KIND_LABELS, LETTER_STATUS_LABELS, RegisterRow } from '../../letters.models';
 import { LettersApiService } from '../../services/letters-api.service';
 import { LettersOfflineService } from '../../services/letters-offline';
+import { LettersOfflineChipComponent } from '../letters-offline-chip/letters-offline-chip';
 import { RegisterIncomingComponent } from '../register-incoming/register-incoming';
 
 export type SecretariatTab = 'register' | 'pending' | 'incoming';
@@ -29,7 +29,7 @@ export type SecretariatTab = 'register' | 'pending' | 'incoming';
   standalone: true,
   imports: [
     RouterLink, ActionButtonComponent, CommandCenterComponent, LoadingSkeletonComponent, StatusBadgeComponent,
-    TabBarComponent, PersianDatePipe, RegisterIncomingComponent, SvgIconDirective,
+    TabBarComponent, PersianDatePipe, RegisterIncomingComponent, LettersOfflineChipComponent,
   ],
   templateUrl: './secretariat.html',
 })
