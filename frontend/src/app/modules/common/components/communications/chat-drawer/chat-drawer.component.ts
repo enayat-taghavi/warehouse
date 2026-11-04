@@ -11,6 +11,8 @@ import { AuthService } from '../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../shared/components/toast/toast.component';
 import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
+import { ChatEmojiPickerComponent } from '../chat-emoji-picker/chat-emoji-picker.component';
+import { ChatMessageMenuComponent } from '../chat-message-menu/chat-message-menu.component';
 import { ApiService } from '../../../../../core/api/api.service';
 import { saveBlob, FileOutputService } from '../../../../../core/platform/file-output';
 import { ConfigApiService } from '../../../../../core/api/config-api.service';
@@ -56,7 +58,7 @@ export const CHAT_DEFAULT_MAX_FILE_MB = 100;
 @Component({
   selector: 'app-chat-drawer',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, DocumentPreviewComponent],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, DocumentPreviewComponent, ChatEmojiPickerComponent, ChatMessageMenuComponent],
   templateUrl: './chat-drawer.component.html',
   styleUrls: ['./chat-drawer.component.css']
 })
@@ -179,6 +181,24 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   public editing = signal<ChatMessage | null>(null);
   public deleteTarget = signal<ChatMessage | null>(null);
   public deleteBusy = signal<boolean>(false);
+
+  // ─── فاز ۳: تعاملات تلگرامی، انتخاب چندتایی، پیش‌نویس، شکلک‌ها ───
+  public emojiPickerOpen = signal<boolean>(false);
+  public selectedMessageIds = signal<string[]>([]);
+  public isSelectionMode = computed(() => this.selectedMessageIds().length > 0);
+  public selectedMessageCount = computed(() => this.selectedMessageIds().length);
+  public swipingMsgId = signal<string | null>(null);
+  public swipeDelta = signal<number>(0);
+  public draftVersion = signal<number>(0);
+
+  private pointerStartX = 0;
+  private pointerStartY = 0;
+  private pointerDirectionLocked = false;
+  private pointerIsHorizontalSwipe = false;
+  private pointerCancelled = false;
+  private longPressTimer: any = null;
+  private longPressTriggered = false;
+  private hapticTriggered = false;
 
   // ─── اسکرول ───
   /** نمایش دکمهٔ شناور «پیام جدید» وقتی کاربر بالاتر است */
@@ -661,25 +681,324 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   @HostListener('document:click', ['$event'])
   onDocClick(ev: Event): void {
-    if (this.menuFor() === null) return;
     const t = ev.target as HTMLElement | null;
-    const root = t?.closest?.('[data-msg-menu-root]');
-    if (root && root.getAttribute('data-msg-menu-root') === this.menuFor()) return;
-    this.menuFor.set(null);
+    if (this.menuFor() !== null) {
+      const root = t?.closest?.('[data-msg-menu-root]');
+      if (!root || root.getAttribute('data-msg-menu-root') !== this.menuFor()) {
+        this.menuFor.set(null);
+      }
+    }
+    if (this.emojiPickerOpen()) {
+      if (!t?.closest('[data-testid="emoji-picker-container"]') && !t?.closest('[data-testid="emoji-picker-btn"]')) {
+        this.closeEmojiPicker();
+      }
+    }
   }
 
   public isMenuOpen(msg: ChatMessage): boolean {
     return this.menuFor() === String(msg.id);
   }
 
-  /** Escape منوی پیام را می‌بندد و تمرکز را به دکمهٔ همان منو برمی‌گرداند */
-  @HostListener('document:keydown.escape')
-  onMenuEscape(): void {
-    const open = this.menuFor();
-    if (open === null) return;
+  public closeMenu(): void {
     this.menuFor.set(null);
-    const sel = `[data-msg-menu-root="${open.replace(/"/g, '')}"] [data-testid="msg-menu-btn"]`;
-    (this.host.nativeElement.querySelector(sel) as HTMLElement | null)?.focus();
+  }
+
+  /** Escape لغو حالت انتخاب، بستن منو، بستن ایموجی یا لغو پاسخ/ویرایش */
+  @HostListener('document:keydown.escape', ['$event'])
+  onEscapeKey(ev?: Event): void {
+    if (this.isSelectionMode()) {
+      ev?.preventDefault();
+      this.clearSelection();
+      return;
+    }
+    const open = this.menuFor();
+    if (open !== null) {
+      ev?.preventDefault();
+      this.menuFor.set(null);
+      const sel = `[data-msg-menu-root="${open.replace(/"/g, '')}"] [data-testid="msg-menu-btn"]`;
+      (this.host.nativeElement.querySelector(sel) as HTMLElement | null)?.focus();
+      return;
+    }
+    if (this.emojiPickerOpen()) {
+      ev?.preventDefault();
+      this.closeEmojiPicker();
+      return;
+    }
+    if (this.replyTo() || this.editing()) {
+      ev?.preventDefault();
+      this.cancelCompose();
+      return;
+    }
+  }
+
+  public onReaction(emoji: string, msg: ChatMessage): void {
+    this.menuFor.set(null);
+    if (!this.isOnline()) {
+      this.toast.show('info', 'ثبت واکنش نیاز به اتصال به اینترنت دارد');
+      return;
+    }
+    this.toast.show('info', `واکنش ${emoji} ثبت شد`);
+  }
+
+  public showReadReceipts(msg: ChatMessage): void {
+    this.menuFor.set(null);
+    this.toast.show('info', 'وضعیت مطالعه: پیام شما به اعضا تحویل داده شده است');
+  }
+
+  // ─── انتخاب چندتایی (Multi-Select) ───
+  public startSelection(msg: ChatMessage): void {
+    this.menuFor.set(null);
+    this.selectedMessageIds.set([String(msg.id)]);
+  }
+
+  public toggleMessageSelection(msg: ChatMessage): void {
+    const id = String(msg.id);
+    const cur = this.selectedMessageIds();
+    if (cur.includes(id)) {
+      this.selectedMessageIds.set(cur.filter(x => x !== id));
+    } else {
+      this.selectedMessageIds.set([...cur, id]);
+    }
+  }
+
+  public isMessageSelected(msg: ChatMessage): boolean {
+    return this.selectedMessageIds().includes(String(msg.id));
+  }
+
+  public clearSelection(): void {
+    this.selectedMessageIds.set([]);
+  }
+
+  public async copySelectedMessages(): Promise<void> {
+    const sel = new Set(this.selectedMessageIds());
+    const ordered = this.messages().filter(m => sel.has(String(m.id)));
+    if (ordered.length === 0) return;
+    const lines = ordered.map(m => {
+      const author = m.sender_details?.full_name || (m.is_me ? 'من' : 'کاربر');
+      return `${author}: ${m.text || '[فایل]'}`;
+    }).join('\n\n');
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(lines);
+        this.toast.success(`${ordered.length.toLocaleString('fa-IR')} پیام کپی شد`);
+      } else {
+        this.toast.error('کپی در این دستگاه پشتیبانی نمی‌شود');
+      }
+    } catch {
+      this.toast.error('کپی انجام نشد');
+    }
+    this.clearSelection();
+  }
+
+  // ─── شکلک‌ها (Emoji Picker) ───
+  public toggleEmojiPicker(ev?: Event): void {
+    ev?.stopPropagation();
+    this.emojiPickerOpen.update(v => !v);
+  }
+
+  public closeEmojiPicker(): void {
+    this.emojiPickerOpen.set(false);
+  }
+
+  public onEmojiSelected(emoji: string): void {
+    const el = this.composer?.nativeElement as HTMLTextAreaElement | undefined;
+    const isFocused = typeof document !== 'undefined' && document.activeElement === el;
+    if (el && isFocused && typeof el.selectionStart === 'number') {
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      const cur = this.messageInputText || '';
+      this.messageInputText = cur.substring(0, start) + emoji + cur.substring(end);
+      setTimeout(() => {
+        el.focus();
+        const newPos = start + emoji.length;
+        el.setSelectionRange(newPos, newPos);
+        this.autoGrow();
+      }, 0);
+    } else {
+      this.messageInputText = (this.messageInputText || '') + emoji;
+      setTimeout(() => {
+        this.composer?.nativeElement?.focus();
+        this.autoGrow();
+      }, 0);
+    }
+    const conv = this.activeConv();
+    if (conv) {
+      this.saveDraft(conv.id, this.messageInputText);
+    }
+  }
+
+  // ─── پیش‌نویس (Per-Conversation Drafts) ───
+  private memoryDrafts = new Map<string, string>();
+
+  private getStorage(): { getItem(k: string): string | null; setItem(k: string, v: string): void; removeItem(k: string): void } | null {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) return window.localStorage;
+      if (typeof localStorage !== 'undefined') return localStorage;
+    } catch {}
+    return null;
+  }
+
+  public getDraftStorageKey(convId: string | number): string {
+    const uid = this.auth.user()?.id ?? this.commService.getCurrentUserId?.() ?? 'anon';
+    return `chat_draft_${uid}_${convId}`;
+  }
+
+  public getDraft(convId: string | number): string | null {
+    this.draftVersion(); // trigger reactive tracking
+    const key = this.getDraftStorageKey(convId);
+    try {
+      const s = this.getStorage();
+      if (s) {
+        const val = s.getItem(key);
+        return val && val.trim() ? val : null;
+      }
+    } catch {}
+    const mem = this.memoryDrafts.get(key);
+    return mem && mem.trim() ? mem : null;
+  }
+
+  public saveDraft(convId: string | number, text: string): void {
+    const key = this.getDraftStorageKey(convId);
+    const trimmed = text.trim();
+    try {
+      const s = this.getStorage();
+      if (s) {
+        if (trimmed) s.setItem(key, text);
+        else s.removeItem(key);
+      }
+    } catch {}
+    if (trimmed) this.memoryDrafts.set(key, text);
+    else this.memoryDrafts.delete(key);
+    this.draftVersion.update(v => v + 1);
+  }
+
+  public clearDraft(convId: string | number): void {
+    const key = this.getDraftStorageKey(convId);
+    try {
+      const s = this.getStorage();
+      if (s) s.removeItem(key);
+    } catch {}
+    this.memoryDrafts.delete(key);
+    this.draftVersion.update(v => v + 1);
+  }
+
+  // ─── کشیدن برای پاسخ (Swipe-to-Reply) و رویدادهای اشاره‌گر (Pointer Events) ───
+  public getBubbleTransform(msg: ChatMessage): string {
+    if (this.swipingMsgId() === String(msg.id)) {
+      return `translateX(${this.swipeDelta()}px)`;
+    }
+    return 'none';
+  }
+
+  public isSwipingMsg(msg: ChatMessage): boolean {
+    return this.swipingMsgId() === String(msg.id);
+  }
+
+  public getSwipeDelta(msg: ChatMessage): number {
+    return this.swipingMsgId() === String(msg.id) ? this.swipeDelta() : 0;
+  }
+
+  public onBubblePointerDown(ev: PointerEvent, msg: ChatMessage): void {
+    if ((ev.target as HTMLElement)?.closest('button, a, input, [data-prevent-swipe]')) return;
+    if (this.isSelectionMode()) {
+      ev.preventDefault();
+      this.toggleMessageSelection(msg);
+      return;
+    }
+    this.pointerStartX = ev.clientX;
+    this.pointerStartY = ev.clientY;
+    this.pointerDirectionLocked = false;
+    this.pointerIsHorizontalSwipe = false;
+    this.pointerCancelled = false;
+    this.longPressTriggered = false;
+    this.hapticTriggered = false;
+
+    clearTimeout(this.longPressTimer);
+    this.longPressTimer = setTimeout(() => {
+      this.longPressTriggered = true;
+      try { (navigator as any)?.vibrate?.(25); } catch {}
+      this.toggleMenu(msg);
+    }, 450);
+  }
+
+  public onBubblePointerMove(ev: PointerEvent, msg: ChatMessage): void {
+    if (this.pointerCancelled || this.longPressTriggered || this.isSelectionMode()) return;
+    const dx = ev.clientX - this.pointerStartX;
+    const dy = ev.clientY - this.pointerStartY;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > 8) {
+      clearTimeout(this.longPressTimer);
+    }
+
+    if (!this.pointerDirectionLocked && dist >= 10) {
+      this.pointerDirectionLocked = true;
+      // In RTL layout, swiping rightwards has positive deltaX > 0
+      if (Math.abs(dy) > Math.abs(dx) || dx <= 0) {
+        this.pointerCancelled = true;
+        this.swipingMsgId.set(null);
+        this.swipeDelta.set(0);
+        return;
+      } else {
+        this.pointerIsHorizontalSwipe = true;
+      }
+    }
+
+    if (this.pointerIsHorizontalSwipe && !this.pointerCancelled) {
+      const delta = Math.min(72, Math.max(0, dx));
+      this.swipingMsgId.set(String(msg.id));
+      this.swipeDelta.set(delta);
+      if (delta >= 60 && !this.hapticTriggered) {
+        this.hapticTriggered = true;
+        try { (navigator as any)?.vibrate?.(15); } catch {}
+      }
+    }
+  }
+
+  public onBubblePointerUp(ev: PointerEvent, msg: ChatMessage): void {
+    clearTimeout(this.longPressTimer);
+    if (this.pointerIsHorizontalSwipe && this.swipeDelta() >= 60 && !this.longPressTriggered) {
+      this.startReply(msg);
+    }
+    this.swipingMsgId.set(null);
+    this.swipeDelta.set(0);
+    this.pointerIsHorizontalSwipe = false;
+  }
+
+  public onBubblePointerCancel(ev: PointerEvent, msg: ChatMessage): void {
+    clearTimeout(this.longPressTimer);
+    this.swipingMsgId.set(null);
+    this.swipeDelta.set(0);
+    this.pointerIsHorizontalSwipe = false;
+  }
+
+  public onBubbleContextMenu(ev: MouseEvent, msg: ChatMessage): void {
+    ev.preventDefault();
+    clearTimeout(this.longPressTimer);
+    if (!this.hasMenu(msg)) return;
+    this.toggleMenu(msg, ev);
+  }
+
+  // ─── میانبرهای صفحه‌کلید (Keyboard Shortcuts) ───
+  public onComposerArrowUp(ev: KeyboardEvent): void {
+    if ((!this.messageInputText || this.messageInputText.trim() === '') && !this.editing()) {
+      const target = this.getLastOwnEditableMessage();
+      if (target) {
+        ev.preventDefault();
+        this.startEdit(target);
+      }
+    }
+  }
+
+  public getLastOwnEditableMessage(): ChatMessage | undefined {
+    const msgs = this.messages();
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const m = msgs[i];
+      if (m && !m.is_system && this.canEdit(m)) {
+        return m;
+      }
+    }
+    return undefined;
   }
 
   public startReply(msg: ChatMessage): void {
@@ -833,6 +1152,9 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   public onInputTyping(): void {
     const conv = this.activeConv();
+    if (conv && !this.editing()) {
+      this.saveDraft(conv.id, this.messageInputText || '');
+    }
     if (!conv || String(conv.id).startsWith('draft_')) return;
 
     this.commService.sendTypingStatus(conv.id, true);
@@ -874,6 +1196,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.replyTo.set(null);
     setTimeout(() => this.autoGrow(), 0);
     this.clearPicked();
+    this.clearDraft(conv.id);
     let handedToService = false;
 
     try {
@@ -999,6 +1322,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       const files = this.pickedFiles().map(p => p.file);
       if (voice) files.push(voice);
       this.commService.stashComposerDraft(this.lastConvId, files, this.messageInputText || '');
+      this.saveDraft(this.lastConvId, this.messageInputText || '');
     }
     this.clearPicked();
   }
@@ -1265,9 +1589,17 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   }
 
   private restoreDraft(convId: string): void {
+    const localDraft = this.getDraft(convId);
+    if (localDraft !== null) {
+      this.messageInputText = localDraft;
+      setTimeout(() => this.autoGrow(), 0);
+    }
     const draft = this.commService.takeComposerDraft(convId);
     if (!draft) return;
-    this.messageInputText = draft.text;
+    if (localDraft === null && draft.text) {
+      this.messageInputText = draft.text;
+      setTimeout(() => this.autoGrow(), 0);
+    }
     if (draft.files.length) this.restorePicked(draft.files);
   }
 

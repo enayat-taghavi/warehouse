@@ -415,3 +415,349 @@ describe('ChatDrawerComponent - Phase 2 (Telegram-Style Visual Shell & Grouping)
     expect(comp.isLastMessageMine(convOther)).toBe(false);
   });
 });
+
+describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Drafts, Multi-Select, Shortcuts)', () => {
+  let fixture: ComponentFixture<ChatDrawerComponent>;
+  let comp: ChatDrawerComponent;
+  let comm: any;
+  let convs$: BehaviorSubject<Conversation[]>;
+  let active$: BehaviorSubject<Conversation | null>;
+  let activeMsgs$: BehaviorSubject<ChatMessage[]>;
+  let mockToast: any;
+
+  const baseDate = '2026-11-04T10:00:00.000Z';
+  const sampleConv: Conversation = {
+    id: 'c300',
+    conv_type: 'group',
+    title: 'تیم پشتیبانی',
+    participants: [1, 2],
+    is_active: true,
+    created_at: baseDate,
+    updated_at: baseDate,
+    participants_details: [
+      { id: 1, username: 'me', full_name: 'من' },
+      { id: 2, username: 'ali', full_name: 'علی رضایی' }
+    ]
+  };
+
+  const myMsg: ChatMessage = {
+    id: '301',
+    conversation: 'c300',
+    sender: 1,
+    text: 'سلام به همگی',
+    created_at: baseDate,
+    is_me: true,
+    editable_until: new Date(Date.now() + 86400000).toISOString()
+  };
+
+  const otherMsg: ChatMessage = {
+    id: '302',
+    conversation: 'c300',
+    sender: 2,
+    sender_details: { id: 2, username: 'ali', full_name: 'علی رضایی' },
+    text: 'درود، من رسیدم',
+    created_at: baseDate,
+    is_me: false
+  };
+
+  async function setupPhase3Component() {
+    convs$ = new BehaviorSubject<Conversation[]>([sampleConv]);
+    active$ = new BehaviorSubject<Conversation | null>(sampleConv);
+    activeMsgs$ = new BehaviorSubject<ChatMessage[]>([myMsg, otherMsg]);
+
+    mockToast = {
+      show: vi.fn(),
+      success: vi.fn(),
+      error: vi.fn(),
+      warning: vi.fn()
+    };
+
+    comm = {
+      isChatDrawerOpen: signal(true),
+      hasActiveConversation: signal(true),
+      isMuted: signal(false),
+      conversations$: convs$,
+      activeConversation$: active$,
+      activeMessages$: activeMsgs$,
+      typingUser$: new Subject<any>(),
+      membershipEvents$: new Subject<any>(),
+      ensureConnected: vi.fn(),
+      refreshPresence: vi.fn(),
+      loadConversations: vi.fn().mockResolvedValue(undefined),
+      getContacts: vi.fn().mockResolvedValue([]),
+      getCapabilities: vi.fn().mockResolvedValue({ can_create_group: true }),
+      getMembers: vi.fn().mockResolvedValue([]),
+      openConversation: vi.fn().mockImplementation(async (c: Conversation) => active$.next(c)),
+      leaveConversation: vi.fn(),
+      closeDrawer: vi.fn(() => comm.isChatDrawerOpen.set(false)),
+      stashComposerDraft: vi.fn(),
+      takeComposerDraft: vi.fn().mockReturnValue(null),
+      getCurrentUserId: vi.fn().mockReturnValue(1),
+      isUserOnline: vi.fn().mockReturnValue(true),
+      toggleMute: vi.fn(),
+      sendMessage: vi.fn().mockResolvedValue(undefined),
+      editMessage: vi.fn().mockResolvedValue(undefined)
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [ChatDrawerComponent],
+      providers: [
+        { provide: CommunicationService, useValue: comm },
+        { provide: StateService, useValue: { appState: { activeWarehouseId: 'ALL' } } },
+        { provide: AuthService, useValue: { user: () => ({ id: 1, username: 'me', first_name: 'من', last_name: '' }) } },
+        { provide: ToastService, useValue: mockToast },
+        { provide: ApiService, useValue: { download: vi.fn() } },
+        { provide: ConfigApiService, useValue: { getPublicConfig: () => new Subject<any>() } },
+        { provide: FileOutputService, useValue: { canShareFiles: () => false, shareBlob: vi.fn() } },
+        { provide: Router, useValue: { navigate: vi.fn(), navigateByUrl: vi.fn(), url: '/app/launcher', events: of() } },
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({})) } },
+        { provide: HttpClient, useValue: { get: vi.fn(), post: vi.fn() } }
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ChatDrawerComponent);
+    comp = fixture.componentInstance;
+    comp.activeConv.set(sampleConv);
+    comp.activeTab.set('chat');
+    comp.messages.set([myMsg, otherMsg]);
+    fixture.detectChanges();
+    await flush(fixture);
+  }
+
+  const mockStorage: Record<string, string> = {};
+  const fakeLocalStorage = {
+    getItem: (k: string) => mockStorage[k] ?? null,
+    setItem: (k: string, v: string) => { mockStorage[k] = String(v); },
+    removeItem: (k: string) => { delete mockStorage[k]; },
+    clear: () => { for (const k in mockStorage) delete mockStorage[k]; }
+  };
+
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+    for (const k in mockStorage) delete mockStorage[k];
+    try {
+      Object.defineProperty(window, 'localStorage', { value: fakeLocalStorage, writable: true, configurable: true });
+    } catch {}
+  });
+
+  // ─── 1. Message Context Menu & Reactions ───
+  it('opens context menu on desktop right-click with reaction emojis and action buttons', async () => {
+    await setupPhase3Component();
+
+    const ev = { preventDefault: vi.fn(), stopPropagation: vi.fn() } as any;
+    comp.onBubbleContextMenu(ev, myMsg);
+    fixture.detectChanges();
+    await flush(fixture);
+
+    expect(ev.preventDefault).toHaveBeenCalled();
+    expect(comp.isMenuOpen(myMsg)).toBe(true);
+
+    const menuEl = fixture.nativeElement.querySelector('[data-testid="msg-menu"]');
+    expect(menuEl).not.toBeNull();
+
+    // Verify 6 reaction emojis are present
+    const reactionButtons = menuEl.querySelectorAll('[data-testid="menu-reactions"] button');
+    expect(reactionButtons.length).toBe(6);
+
+    // Verify action buttons
+    expect(menuEl.querySelector('[data-testid="menu-reply"]')).not.toBeNull();
+    expect(menuEl.querySelector('[data-testid="menu-copy"]')).not.toBeNull();
+    expect(menuEl.querySelector('[data-testid="menu-edit"]')).not.toBeNull();
+    expect(menuEl.querySelector('[data-testid="menu-select"]')).not.toBeNull();
+    expect(menuEl.querySelector('[data-testid="menu-read-receipts"]')).not.toBeNull();
+    expect(menuEl.querySelector('[data-testid="menu-delete"]')).not.toBeNull();
+  });
+
+  it('mobile long-press (450ms) triggers context menu', async () => {
+    await setupPhase3Component();
+    vi.useFakeTimers();
+
+    const evDown = { clientX: 100, clientY: 200, target: { closest: () => null } } as any;
+    comp.onBubblePointerDown(evDown, otherMsg);
+
+    expect(comp.isMenuOpen(otherMsg)).toBe(false);
+
+    // Advance timer past 450ms
+    vi.advanceTimersByTime(450);
+
+    expect(comp.isMenuOpen(otherMsg)).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it('clicking a reaction emoji invokes onReaction handler and closes menu', async () => {
+    await setupPhase3Component();
+
+    comp.menuFor.set(String(myMsg.id));
+    fixture.detectChanges();
+
+    comp.onReaction('❤️', myMsg);
+    expect(mockToast.show).toHaveBeenCalledWith('info', expect.stringContaining('❤️'));
+    expect(comp.menuFor()).toBeNull();
+  });
+
+  // ─── 2. Swipe-to-Reply with Pointer Events ───
+  it('swipe direction locking cancels horizontal swipe if initial 10px is mostly vertical', async () => {
+    await setupPhase3Component();
+
+    const evDown = { clientX: 100, clientY: 100, target: { closest: () => null } } as any;
+    comp.onBubblePointerDown(evDown, otherMsg);
+
+    // Movement: dx = +3, dy = +12 (|dy| > |dx|, dist >= 10)
+    const evMoveVertical = { clientX: 103, clientY: 112 } as any;
+    comp.onBubblePointerMove(evMoveVertical, otherMsg);
+
+    expect(comp.swipingMsgId()).toBeNull();
+    expect(comp.swipeDelta()).toBe(0);
+
+    // Further move does nothing because swipe was cancelled
+    comp.onBubblePointerMove({ clientX: 180, clientY: 112 } as any, otherMsg);
+    expect(comp.swipingMsgId()).toBeNull();
+  });
+
+  it('swiping right (dx > 0) locks horizontal swipe, caps at 72px, and triggers reply at 60px threshold', async () => {
+    await setupPhase3Component();
+
+    const evDown = { clientX: 100, clientY: 100, target: { closest: () => null } } as any;
+    comp.onBubblePointerDown(evDown, otherMsg);
+
+    // 1. Move dx = +20, dy = +2 -> horizontal swipe locked
+    comp.onBubblePointerMove({ clientX: 120, clientY: 102 } as any, otherMsg);
+    expect(comp.swipingMsgId()).toBe(String(otherMsg.id));
+    expect(comp.swipeDelta()).toBe(20);
+    expect(comp.getBubbleTransform(otherMsg)).toBe('translateX(20px)');
+
+    // 2. Below threshold (dx = 40px) on release does NOT activate reply
+    comp.onBubblePointerMove({ clientX: 140, clientY: 102 } as any, otherMsg);
+    comp.onBubblePointerUp({} as any, otherMsg);
+    expect(comp.replyTo()).toBeNull();
+    expect(comp.swipingMsgId()).toBeNull();
+
+    // 3. New swipe above threshold (dx = 65px) on release triggers startReply
+    comp.onBubblePointerDown(evDown, otherMsg);
+    comp.onBubblePointerMove({ clientX: 165, clientY: 102 } as any, otherMsg);
+    expect(comp.swipeDelta()).toBe(65);
+
+    comp.onBubblePointerUp({} as any, otherMsg);
+    expect(comp.replyTo()?.id).toBe(otherMsg.id);
+    expect(comp.swipingMsgId()).toBeNull();
+  });
+
+  // ─── 3. Local Emoji Picker ───
+  it('toggles emoji picker and inserts clicked emoji into composer', async () => {
+    await setupPhase3Component();
+
+    expect(comp.emojiPickerOpen()).toBe(false);
+    comp.toggleEmojiPicker();
+    expect(comp.emojiPickerOpen()).toBe(true);
+
+    comp.messageInputText = 'سلام ';
+    comp.onEmojiSelected('😊');
+
+    expect(comp.messageInputText).toBe('سلام 😊');
+    expect(comp.getDraft('c300')).toBe('سلام 😊');
+  });
+
+  // ─── 4. Per-Conversation Draft Persistence & Badge ───
+  it('persists unsent draft in localStorage and shows red "پیش‌نویس:" in sidebar', async () => {
+    await setupPhase3Component();
+
+    comp.saveDraft('c300', 'پیش‌نویس مهم انبار');
+    expect(fakeLocalStorage.getItem('chat_draft_1_c300')).toBe('پیش‌نویس مهم انبار');
+    expect(comp.getDraft('c300')).toBe('پیش‌نویس مهم انبار');
+
+    // Switch to conversations tab to check sidebar preview
+    comp.activeTab.set('conversations');
+    fixture.detectChanges();
+    await flush(fixture);
+
+    const draftPrefix = fixture.nativeElement.querySelector('[data-testid="draft-prefix"]');
+    expect(draftPrefix).not.toBeNull();
+    expect(draftPrefix.textContent).toContain('پیش‌نویس:');
+
+    const draftPreview = fixture.nativeElement.querySelector('[data-testid="draft-preview"]');
+    expect(draftPreview).not.toBeNull();
+    expect(draftPreview.textContent).toContain('پیش‌نویس مهم انبار');
+
+    // Opening/restoring draft in conversation
+    comp.messageInputText = '';
+    (comp as any).restoreDraft('c300');
+    expect(comp.messageInputText).toBe('پیش‌نویس مهم انبار');
+
+    // Sending message clears draft
+    await comp.sendMessage();
+    expect(comp.getDraft('c300')).toBeNull();
+  });
+
+  // ─── 5. Multi-Select Messages ───
+  it('enters multi-select mode from context menu, toggles selections, and copies selected messages', async () => {
+    await setupPhase3Component();
+
+    // Start selection with myMsg
+    comp.startSelection(myMsg);
+    expect(comp.isSelectionMode()).toBe(true);
+    expect(comp.selectedMessageCount()).toBe(1);
+    expect(comp.isMessageSelected(myMsg)).toBe(true);
+
+    fixture.detectChanges();
+    await flush(fixture);
+
+    // Selection bar is visible
+    const selectionBar = fixture.nativeElement.querySelector('[data-testid="selection-bar"]');
+    expect(selectionBar).not.toBeNull();
+    expect(selectionBar.querySelector('[data-testid="selection-count"]')?.textContent).toContain('۱ پیام انتخاب شده');
+
+    // Toggle otherMsg into selection
+    comp.toggleMessageSelection(otherMsg);
+    expect(comp.selectedMessageCount()).toBe(2);
+    expect(comp.isMessageSelected(otherMsg)).toBe(true);
+
+    // Copy selected messages
+    const writeTextSpy = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText: writeTextSpy } });
+
+    await comp.copySelectedMessages();
+    expect(writeTextSpy).toHaveBeenCalledWith(expect.stringContaining('سلام به همگی'));
+    expect(writeTextSpy).toHaveBeenCalledWith(expect.stringContaining('درود، من رسیدم'));
+    expect(mockToast.success).toHaveBeenCalledWith(expect.stringContaining('۲ پیام کپی شد'));
+    expect(comp.isSelectionMode()).toBe(false);
+  });
+
+  // ─── 6. Keyboard Shortcuts ───
+  it('Escape key cancels selection mode, closes menu, closes emoji picker, or cancels compose', async () => {
+    await setupPhase3Component();
+
+    // 1. In selection mode: Escape exits selection mode
+    comp.startSelection(myMsg);
+    expect(comp.isSelectionMode()).toBe(true);
+    comp.onEscapeKey();
+    expect(comp.isSelectionMode()).toBe(false);
+
+    // 2. Menu open: Escape closes menu
+    comp.menuFor.set('301');
+    comp.onEscapeKey();
+    expect(comp.menuFor()).toBeNull();
+
+    // 3. Emoji picker open: Escape closes emoji picker
+    comp.emojiPickerOpen.set(true);
+    comp.onEscapeKey();
+    expect(comp.emojiPickerOpen()).toBe(false);
+
+    // 4. Replying: Escape cancels reply
+    comp.replyTo.set(myMsg);
+    comp.onEscapeKey();
+    expect(comp.replyTo()).toBeNull();
+  });
+
+  it('ArrowUp on empty composer opens last own editable message for editing', async () => {
+    await setupPhase3Component();
+
+    comp.messageInputText = '';
+    const ev = { preventDefault: vi.fn() } as any;
+
+    comp.onComposerArrowUp(ev);
+
+    expect(ev.preventDefault).toHaveBeenCalled();
+    expect(comp.editing()?.id).toBe(myMsg.id);
+    expect(comp.messageInputText).toBe('سلام به همگی');
+  });
+});

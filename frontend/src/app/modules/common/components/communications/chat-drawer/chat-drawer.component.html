@@ -166,21 +166,27 @@
           <!-- Bottom row: Single-line preview + Unread counter pill -->
           <div class="flex items-center justify-between gap-2 mt-1">
             <p class="text-xs text-slate-500 dark:text-slate-400 truncate flex-1 min-w-0 flex items-center gap-1">
-              <span *ngIf="isLastMessageMine(conv) && !conv.last_message?.text?.startsWith('شما:')" class="font-bold text-indigo-600 dark:text-indigo-400 shrink-0">شما: </span>
-              <ng-container *ngIf="conv.last_message?.text; else noText">{{ conv.last_message?.text }}</ng-container>
-              <ng-template #noText>
-                <ng-container *ngIf="conv.last_message?.has_attachment; else noMsg">
-                  <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-clip" aria-hidden="true"></svg>
-                  <span data-testid="last-file">فایل</span>
-                </ng-container>
+              <ng-container *ngIf="getDraft(conv.id) as draft; else regularPreview">
+                <span class="text-rose-600 dark:text-rose-400 font-bold shrink-0" data-testid="draft-prefix">پیش‌نویس: </span>
+                <span class="truncate text-slate-700 dark:text-slate-300" data-testid="draft-preview">{{ draft }}</span>
+              </ng-container>
+              <ng-template #regularPreview>
+                <span *ngIf="isLastMessageMine(conv) && !conv.last_message?.text?.startsWith('شما:')" class="font-bold text-indigo-600 dark:text-indigo-400 shrink-0">شما: </span>
+                <ng-container *ngIf="conv.last_message?.text; else noText">{{ conv.last_message?.text }}</ng-container>
+                <ng-template #noText>
+                  <ng-container *ngIf="conv.last_message?.has_attachment; else noMsg">
+                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-clip" aria-hidden="true"></svg>
+                    <span data-testid="last-file">فایل</span>
+                  </ng-container>
+                </ng-template>
+                <ng-template #noMsg><span class="text-slate-400 dark:text-slate-500">بدون پیام</span></ng-template>
               </ng-template>
-              <ng-template #noMsg><span class="text-slate-400 dark:text-slate-500">بدون پیام</span></ng-template>
             </p>
 
             <span *ngIf="conv.unread_count && conv.unread_count > 0" 
                   [class.bg-indigo-600]="!conv.is_muted"
                   [class.bg-slate-600]="conv.is_muted"
-                  class="min-w-[20px] h-5 px-1.5 text-white text-[11px] font-bold rounded-full flex items-center justify-center shrink-0 tabular-nums shadow-sm">
+                  class="min-w-5 h-5 px-1.5 text-white text-[11px] font-bold rounded-full flex items-center justify-center shrink-0 tabular-nums shadow-sm">
               {{ conv.unread_count.toLocaleString('fa-IR') }}
             </span>
           </div>
@@ -238,8 +244,37 @@
 
     <!-- وقتی گفتگو فعال است -->
     <ng-container *ngIf="activeConv()">
-      <!-- هدر گفتگو -->
-      <div class="h-14 sm:h-16 px-2 sm:px-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white/80 dark:bg-slate-900/80 backdrop-blur shrink-0">
+      <!-- هدر حالت انتخاب چندتایی (Multi-Select Action Bar) -->
+      <div *ngIf="isSelectionMode()" data-testid="selection-bar"
+           class="h-14 sm:h-16 px-2 sm:px-4 border-b border-indigo-100 dark:border-indigo-900/50 flex items-center justify-between bg-indigo-50/90 dark:bg-indigo-950/80 backdrop-blur shrink-0 z-10">
+        <div class="flex items-center gap-2">
+          <button type="button" (click)="clearSelection()" data-testid="selection-cancel-btn"
+                  title="لغو انتخاب" aria-label="لغو انتخاب"
+                  class="min-w-[40px] min-h-[40px] rounded-xl text-fg-muted hover:text-fg hover:bg-surface-muted flex items-center justify-center cursor-pointer tap-target">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="x"></svg>
+          </button>
+          <span class="text-xs sm:text-sm font-bold text-fg tabular-nums" data-testid="selection-count">
+            {{ selectedMessageCount().toLocaleString('fa-IR') }} پیام انتخاب شده
+          </span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button type="button" (click)="copySelectedMessages()" data-testid="selection-copy-btn"
+                  title="کپی پیام‌های انتخاب‌شده" aria-label="کپی پیام‌های انتخاب‌شده"
+                  class="min-w-[40px] min-h-[40px] px-3 rounded-xl bg-white dark:bg-slate-800 border border-line hover:bg-surface-muted text-fg text-xs font-bold flex items-center gap-1.5 cursor-pointer tap-target shadow-sm">
+            <svg class="w-4 h-4 text-fg-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="copy"></svg>
+            <span class="hidden sm:inline">کپی</span>
+          </button>
+          <button type="button" disabled data-testid="selection-forward-btn"
+                  title="بازارسال" aria-label="بازارسال"
+                  class="min-w-[40px] min-h-[40px] px-3 rounded-xl bg-surface-muted opacity-50 cursor-not-allowed text-fg-muted text-xs font-bold flex items-center gap-1.5 tap-target">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="share"></svg>
+            <span class="hidden sm:inline">بازارسال</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- هدر معمولی گفتگو -->
+      <div *ngIf="!isSelectionMode()" class="h-14 sm:h-16 px-2 sm:px-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white/80 dark:bg-slate-900/80 backdrop-blur shrink-0">
         <div class="flex items-center gap-2 min-w-0">
           <!-- دکمه بازگشت در کشو یا موبایلِ صفحه -->
           <button [class.md:hidden]="mode() === 'page'"
@@ -349,24 +384,60 @@
         </span>
 
         <div class="flex items-end gap-1.5 max-w-full" [attr.data-msg-menu-root]="msg.id">
-        <!-- Message Bubble -->
-        <div class="max-w-[80%] min-w-0 p-3 text-xs leading-relaxed shadow-sm break-words flow-root rounded-2xl"
-             [class.order-1]="msg.is_me"
-             [class.order-2]="!msg.is_me"
-             [class.bg-indigo-50/95]="msg.is_me"
-             [class.dark:bg-indigo-950/70]="msg.is_me"
-             [class.border]="true"
-             [class.border-indigo-200/70]="msg.is_me"
-             [class.dark:border-indigo-800/60]="msg.is_me"
-             [class.text-slate-900]="msg.is_me"
-             [class.dark:text-slate-100]="msg.is_me"
-             [class.rounded-br-xs]="msg.is_me && isLastInGroup(items(), i)"
-             [class.bg-white]="!msg.is_me"
-             [class.dark:bg-slate-800]="!msg.is_me"
-             [class.border-slate-200/80]="!msg.is_me"
-             [class.dark:border-slate-700]="!msg.is_me"
-             [class.text-slate-800]="!msg.is_me"
-             [class.rounded-bl-xs]="!msg.is_me && isLastInGroup(items(), i)">
+          <!-- نشانگر انتخاب در حالت چندتایی -->
+          <div *ngIf="isSelectionMode()"
+               data-testid="msg-select-check"
+               (click)="toggleMessageSelection(msg); $event.stopPropagation()"
+               class="shrink-0 self-center me-2 cursor-pointer tap-target">
+            <div [class.bg-indigo-600]="isMessageSelected(msg)"
+                 [class.border-indigo-600]="isMessageSelected(msg)"
+                 [class.border-slate-300]="!isMessageSelected(msg)"
+                 [class.dark:border-slate-600]="!isMessageSelected(msg)"
+                 class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors">
+              <svg *ngIf="isMessageSelected(msg)" class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" appIcon="check"></svg>
+            </div>
+          </div>
+
+          <!-- آیکون پاسخ هنگام کشیدن حباب (Swipe-to-Reply) -->
+          <div *ngIf="getSwipeDelta(msg) > 0"
+               data-testid="swipe-reply-icon"
+               class="flex items-center justify-center w-8 h-8 rounded-full shrink-0 self-center transition-all"
+               [class.bg-indigo-600]="getSwipeDelta(msg) >= 60"
+               [class.text-white]="getSwipeDelta(msg) >= 60"
+               [class.bg-slate-200]="getSwipeDelta(msg) < 60"
+               [class.dark:bg-slate-700]="getSwipeDelta(msg) < 60"
+               [class.text-slate-600]="getSwipeDelta(msg) < 60"
+               [class.dark:text-slate-300]="getSwipeDelta(msg) < 60"
+               [style.opacity]="getSwipeDelta(msg) / 60">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" appIcon="hero-reply" aria-hidden="true"></svg>
+          </div>
+
+          <!-- Message Bubble -->
+          <div class="relative max-w-[80%] min-w-0 p-3 text-xs leading-relaxed shadow-sm break-words flow-root rounded-2xl select-text"
+               [style.transform]="getBubbleTransform(msg)"
+               [style.transition]="isSwipingMsg(msg) ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1)'"
+               (contextmenu)="onBubbleContextMenu($event, msg)"
+               (pointerdown)="onBubblePointerDown($event, msg)"
+               (pointermove)="onBubblePointerMove($event, msg)"
+               (pointerup)="onBubblePointerUp($event, msg)"
+               (pointercancel)="onBubblePointerCancel($event, msg)"
+               (click)="isSelectionMode() ? toggleMessageSelection(msg) : null"
+               [class.order-1]="msg.is_me"
+               [class.order-2]="!msg.is_me"
+               [class.bg-indigo-50/95]="msg.is_me"
+               [class.dark:bg-indigo-950/70]="msg.is_me"
+               [class.border]="true"
+               [class.border-indigo-200/70]="msg.is_me"
+               [class.dark:border-indigo-800/60]="msg.is_me"
+               [class.text-slate-900]="msg.is_me"
+               [class.dark:text-slate-100]="msg.is_me"
+               [class.rounded-br-xs]="msg.is_me && isLastInGroup(items(), i)"
+               [class.bg-white]="!msg.is_me"
+               [class.dark:bg-slate-800]="!msg.is_me"
+               [class.border-slate-200/80]="!msg.is_me"
+               [class.dark:border-slate-700]="!msg.is_me"
+               [class.text-slate-800]="!msg.is_me"
+               [class.rounded-bl-xs]="!msg.is_me && isLastInGroup(items(), i)">
 
           <!-- نقل‌قول پیام اصلی (پاسخ) -->
           <ng-container *ngIf="replyInfo(msg) as ri">
@@ -672,30 +743,23 @@
                   [class.sm:opacity-100]="isMenuOpen(msg)">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="more-vertical"></svg>
           </button>
-          <div *ngIf="isMenuOpen(msg)" data-testid="msg-menu"
-               [class.top-full]="!menuPlacement().up" [class.mt-1]="!menuPlacement().up"
-               [class.bottom-full]="menuPlacement().up" [class.mb-1]="menuPlacement().up"
-               [class.end-0]="!menuPlacement().flipX" [class.start-0]="menuPlacement().flipX"
-               class="absolute z-20 w-40 bg-surface border border-line rounded-xl shadow-lg p-1">
-            <button *ngIf="canReply()" type="button" data-testid="menu-reply" (click)="startReply(msg)"
-                    class="w-full min-h-[40px] px-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-fg hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 cursor-pointer">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-reply" aria-hidden="true"></svg>پاسخ
-            </button>
-            <button *ngIf="canEdit(msg)" type="button" data-testid="menu-edit" (click)="startEdit(msg)"
-                    [disabled]="!isOnline()"
-                    class="w-full min-h-[40px] px-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-fg hover:bg-surface-muted disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 cursor-pointer">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="edit" aria-hidden="true"></svg>ویرایش
-            </button>
-            <button *ngIf="msg.text" type="button" data-testid="menu-copy" (click)="copyText(msg)"
-                    class="w-full min-h-[40px] px-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-fg hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 cursor-pointer">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="copy" aria-hidden="true"></svg>کپی
-            </button>
-            <button *ngIf="canDelete(msg)" type="button" data-testid="menu-delete" (click)="askRemoveMsg(msg)"
-                    [disabled]="!isOnline()"
-                    class="w-full min-h-[40px] px-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-rose-600 hover:bg-surface-muted disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 cursor-pointer">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="action-delete" aria-hidden="true"></svg>حذف
-            </button>
-          </div>
+          <app-chat-message-menu *ngIf="isMenuOpen(msg)"
+                                 [msg]="msg"
+                                 [isGroup]="isGroup()"
+                                 [canReply]="canReply()"
+                                 [canEdit]="canEdit(msg)"
+                                 [canDelete]="canDelete(msg)"
+                                 [isOnline]="isOnline()"
+                                 [menuPlacement]="menuPlacement()"
+                                 (reaction)="onReaction($event, msg)"
+                                 (reply)="startReply(msg)"
+                                 (copy)="copyText(msg)"
+                                 (edit)="startEdit(msg)"
+                                 (select)="startSelection(msg)"
+                                 (readReceipts)="showReadReceipts(msg)"
+                                 (delete)="askRemoveMsg(msg)"
+                                 (close)="closeMenu()">
+          </app-chat-message-menu>
         </div>
 
         <!-- Sender Avatar (فقط در گروه برای دیگران روی پیام آخر دسته) -->
@@ -834,17 +898,36 @@
     </div>
 
     <!-- Input Form -->
-    <div *ngIf="!recording()" class="flex items-end gap-1.5">
+    <div *ngIf="!recording()" class="flex items-end gap-1.5 relative">
       <label class="min-w-[44px] min-h-[44px] p-2.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors flex items-center justify-center tap-target" title="پیوست فایل" aria-label="پیوست فایل">
         <input type="file" multiple data-testid="file-input" (change)="onFileSelected($event)" class="hidden" accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.xlsx,.xls,.doc,.docx,.txt,.csv,.webm,.ogg,.m4a" />
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="hero-paper-clip"></svg>
       </label>
+
+      <!-- دکمهٔ باز کردن انتخابگر شکلک (ایموجی) -->
+      <div class="relative shrink-0">
+        <button type="button" (click)="toggleEmojiPicker($event)"
+                data-testid="emoji-picker-btn"
+                title="شکلک و ایموجی" aria-label="شکلک و ایموجی"
+                [class.text-indigo-600]="emojiPickerOpen()"
+                class="min-w-[44px] min-h-[44px] p-2.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors flex items-center justify-center tap-target">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="smile"></svg>
+        </button>
+        <div *ngIf="emojiPickerOpen()"
+             class="absolute bottom-full mb-2 start-0 z-30 shadow-2xl"
+             (click)="$event.stopPropagation()">
+          <app-chat-emoji-picker (emojiSelect)="onEmojiSelected($event)"
+                                 (closePicker)="closeEmojiPicker()">
+          </app-chat-emoji-picker>
+        </div>
+      </div>
 
       <textarea #composer rows="1"
                 data-testid="composer"
                 [(ngModel)]="messageInputText"
                 (input)="onInputTyping(); autoGrow()"
                 (keydown.enter)="onComposerKey($any($event))"
+                (keydown.arrowup)="onComposerArrowUp($any($event))"
                 (paste)="onComposerPaste($event)"
                 aria-label="متن پیام"
                 placeholder="پیام خود را بنویسید..."
