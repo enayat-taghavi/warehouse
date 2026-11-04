@@ -1,4 +1,5 @@
-import { Directive, ElementRef, OnChanges, computed, inject, input, model, output, Component } from '@angular/core';
+import { Directive, ElementRef, OnChanges, computed, inject, input, model, output, signal, Component } from '@angular/core';
+import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import {
   LETTER_MAX_BLOCKS, LETTER_MAX_CHARS, LetterAlign, LetterBlock, LetterListBlock, LetterParagraphBlock, LetterTableBlock,
@@ -107,6 +108,17 @@ export class LetterEditorComponent {
   readonly chars = computed(() => countBlockChars(this.blocks()));
   readonly full = computed(() => this.blocks().length >= LETTER_MAX_BLOCKS);
   readonly runsText = runsText;
+  readonly moveNote = signal('');
+
+  private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  /** پیش از پاک کردن چیزی که متن دارد می‌پرسد؛ خالی را بی‌پرسش پاک می‌کند */
+  private async okToDelete(hasText: boolean, title: string, message: string): Promise<boolean> {
+    if (!hasText) return true;
+    const result = await this.confirmDialog.open({ title, message, type: 'danger', confirmText: 'حذف', cancelText: 'انصراف' });
+    return result === true;
+  }
 
   /** همیشه نسخهٔ فعلی بلوک (نه نسخهٔ گرفته‌شده در قالب) تا دو تغییر پشت‌سرهم همدیگر را پاک نکنند */
   private cur<T extends LetterBlock>(i: number, b: T): T {
@@ -126,17 +138,28 @@ export class LetterEditorComponent {
     this.blocks.update(list => [...list, block]);
   }
 
-  remove(i: number): void {
+  async remove(i: number): Promise<void> {
+    const b = this.blocks()[i];
+    if (!b) return;
+    if (!await this.okToDelete(countBlockChars([b]) > 0, 'حذف بلوک', 'این بلوک متن دارد. حذف شود؟')) return;
     this.blocks.update(list => list.filter((_, j) => j !== i));
   }
 
   move(i: number, delta: number): void {
     const j = i + delta;
+    if (j < 0 || j >= this.blocks().length) return;
     this.blocks.update(list => {
-      if (j < 0 || j >= list.length) return list;
       const copy = [...list];
       [copy[i], copy[j]] = [copy[j], copy[i]];
       return copy;
+    });
+    this.moveNote.set(`بلوک ${this.faNumber(i + 1)} به جای ${this.faNumber(j + 1)} رفت`);
+    // فوکوس روی دکمهٔ همان جهتِ بلوکِ جابه‌جاشده می‌ماند
+    setTimeout(() => {
+      const root = this.host.nativeElement;
+      const same = root.querySelector<HTMLButtonElement>(`#move-${delta < 0 ? 'up' : 'down'}-${j}`);
+      const other = root.querySelector<HTMLButtonElement>(`#move-${delta < 0 ? 'down' : 'up'}-${j}`);
+      (same && !same.disabled ? same : other)?.focus();
     });
   }
 
@@ -175,9 +198,11 @@ export class LetterEditorComponent {
     items.splice(after + 1, 0, [{ text: '' }]);
     this.replace(i, { ...b, items });
   }
-  removeItem(i: number, b: LetterListBlock, k: number): void {
+  async removeItem(i: number, b: LetterListBlock, k: number): Promise<void> {
     b = this.cur(i, b);
     if (b.items.length <= 1) return;
+    if (!await this.okToDelete(runsText(b.items[k] ?? []).length > 0, 'حذف بند', 'این بند متن دارد. حذف شود؟')) return;
+    b = this.cur(i, b);
     this.replace(i, { ...b, items: b.items.filter((_, j) => j !== k) });
   }
 
@@ -196,6 +221,23 @@ export class LetterEditorComponent {
     b = this.cur(i, b);
     if ((b.rows[0]?.length || 0) >= 12) return;
     this.replace(i, { ...b, rows: b.rows.map(row => [...row, '']) });
+  }
+  async removeRow(i: number, b: LetterTableBlock): Promise<void> {
+    b = this.cur(i, b);
+    if (b.rows.length <= 1) return;
+    const last = b.rows[b.rows.length - 1];
+    if (!await this.okToDelete(last.some(c => c.trim()), 'حذف ردیف', 'ردیف آخر متن دارد. حذف شود؟')) return;
+    b = this.cur(i, b);
+    if (b.rows.length <= 1) return;
+    this.replace(i, { ...b, rows: b.rows.slice(0, -1) });
+  }
+  async removeCol(i: number, b: LetterTableBlock): Promise<void> {
+    b = this.cur(i, b);
+    if ((b.rows[0]?.length || 0) <= 1) return;
+    if (!await this.okToDelete(b.rows.some(r => (r[r.length - 1] ?? '').trim()), 'حذف ستون', 'ستون آخر متن دارد. حذف شود؟')) return;
+    b = this.cur(i, b);
+    if ((b.rows[0]?.length || 0) <= 1) return;
+    this.replace(i, { ...b, rows: b.rows.map(row => row.slice(0, -1)) });
   }
   toggleHeader(i: number, b: LetterTableBlock): void {
     b = this.cur(i, b);

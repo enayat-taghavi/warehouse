@@ -88,7 +88,7 @@
       } @else {
         <p class="text-sm font-bold text-fg">بارگذاری فهرست ناموفق بود.</p>
       }
-      <button appAction="refresh" label="تلاش دوباره" (click)="reload()"></button>
+      <button appAction="refresh" display="label" label="تلاش دوباره" (click)="reload()"></button>
     </div>
   } @else if (filters().tab === 'projects') {
     @if (!projects().length) {
@@ -110,7 +110,7 @@
     <div class="bg-surface rounded-2xl border border-line p-4 flex flex-col items-start gap-2">
       <p class="text-sm font-bold text-fg">نامه‌ای پیدا نشد.</p>
       <p class="text-xs text-fg-muted">فیلترها را عوض کنید یا نامهٔ تازه بنویسید.</p>
-      <button appAction="create" label="نامهٔ تازه" (click)="openNew()"></button>
+      <button appAction="create" display="label" label="نامهٔ تازه" (click)="openNew()"></button>
     </div>
   } @else {
     <!-- دسکتاپ: جدول -->

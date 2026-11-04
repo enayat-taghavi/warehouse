@@ -97,8 +97,9 @@
           <input id="letter-subject" type="text" formControlName="subject" maxlength="500" autocomplete="off"
                  class="h-10 rounded-xl border bg-surface px-3 text-sm" [class.border-rose-400]="fieldErrors()['subject']"
                  [class.border-line]="!fieldErrors()['subject']" [readOnly]="readOnly()"
-                 [attr.aria-invalid]="fieldErrors()['subject'] ? true : null" aria-describedby="letter-subject-error" />
-          @if (fieldErrors()['subject']) { <p id="letter-subject-error" class="text-[11px] text-rose-700">{{ fieldErrors()['subject'] }}</p> }
+                 [attr.aria-invalid]="fieldErrors()['subject'] ? true : null"
+                 [attr.aria-describedby]="fieldErrors()['subject'] ? 'letter-subject-error' : null" />
+          @if (fieldErrors()['subject']) { <p id="letter-subject-error" class="text-[11px] text-rose-700" role="alert">{{ fieldErrors()['subject'] }}</p> }
         </div>
         <div class="flex flex-col gap-1">
           <label class="text-xs font-bold" for="letter-sign-mode">روش امضا</label>
@@ -113,16 +114,16 @@
             <option [ngValue]="null">بی‌پروژه</option>
             @for (p of projects(); track p.id) { <option [ngValue]="p.id">{{ p.name }}</option> }
           </select>
-          @if (fieldErrors()['project']) { <p class="text-[11px] text-rose-700">{{ fieldErrors()['project'] }}</p> }
+          @if (fieldErrors()['project']) { <p class="text-[11px] text-rose-700" role="alert">{{ fieldErrors()['project'] }}</p> }
         </div>
       </div>
 
-      <fieldset class="flex flex-col gap-2 min-w-0" [disabled]="readOnly()">
+      <fieldset id="letter-recipients" class="flex flex-col gap-2 min-w-0" [disabled]="readOnly()">
         <legend class="text-xs font-bold mb-1">گیرنده‌ها</legend>
         <span class="text-[11px] text-fg-muted">گیرندهٔ داخلی</span>
-        <app-person-role-picker formControlName="toUsers" [allowRoles]="false" placeholder="جست‌وجوی همکار" />
+        <app-person-role-picker formControlName="toUsers" [allowRoles]="false" placeholder="جست‌وجوی گیرنده" />
         <span class="text-[11px] text-fg-muted">رونوشت</span>
-        <app-person-role-picker formControlName="ccUsers" [allowRoles]="false" placeholder="جست‌وجوی همکار" />
+        <app-person-role-picker formControlName="ccUsers" [allowRoles]="false" placeholder="جست‌وجوی رونوشت" />
         <span class="text-[11px] text-fg-muted">طرف بیرونی</span>
         <app-letter-party-picker [company]="company()" [disabled]="readOnly()" (picked)="addParty($event)" />
         @if (parties().length) {
@@ -132,7 +133,7 @@
                 <span class="text-xs font-bold break-words flex-1 min-w-0">{{ p.name }}</span>
                 <label class="sr-only" [attr.for]="'party-role-' + p.id">نقش گیرنده</label>
                 <select [id]="'party-role-' + p.id" class="h-10 rounded-xl border border-line bg-surface px-1 text-xs"
-                        [value]="p.role" (change)="setPartyRole(p.id, $any($event.target).value)">
+                        [value]="p.role" [attr.aria-label]="'نقش ' + p.name" (change)="setPartyRole(p.id, $any($event.target).value)">
                   <option value="to">گیرنده</option>
                   <option value="cc">رونوشت</option>
                 </select>
@@ -144,16 +145,16 @@
             }
           </ul>
         }
-        @if (fieldErrors()['recipients']) { <p class="text-[11px] text-rose-700">{{ fieldErrors()['recipients'] }}</p> }
+        @if (fieldErrors()['recipients']) { <p class="text-[11px] text-rose-700" role="alert">{{ fieldErrors()['recipients'] }}</p> }
       </fieldset>
 
-      <fieldset class="flex flex-col gap-1 min-w-0" [disabled]="readOnly()">
+      <fieldset id="letter-signers" class="flex flex-col gap-1 min-w-0" [disabled]="readOnly()">
         <legend class="text-xs font-bold mb-1">امضاکننده‌ها (به ترتیب انتخاب)</legend>
         <app-person-role-picker formControlName="signers" [allowRoles]="false" [max]="10" placeholder="جست‌وجوی امضاکننده" />
-        @if (fieldErrors()['signers']) { <p class="text-[11px] text-rose-700">{{ fieldErrors()['signers'] }}</p> }
+        @if (fieldErrors()['signers']) { <p class="text-[11px] text-rose-700" role="alert">{{ fieldErrors()['signers'] }}</p> }
       </fieldset>
 
-      <div class="flex flex-col gap-1 min-w-0">
+      <div id="letter-body" class="flex flex-col gap-1 min-w-0">
         <span class="text-xs font-bold">متن نامه</span>
         <app-letter-editor [blocks]="body()" (blocksChange)="onBody($event)" [disabled]="readOnly()" [invalid]="fieldErrors()['body'] || null" />
       </div>
@@ -165,6 +166,13 @@
           <span class="text-[11px] rounded-full bg-amber-50 text-amber-800 px-2 py-0.5" role="status">در صف ارسال</span>
         } @else if (dirty()) {
           <span class="text-[11px] text-fg-muted">ذخیره نشده</span>
+        }
+        @if (notice(); as n) {
+          <!-- همان پیام بالای صفحه، کنار دکمهٔ ذخیره؛ اعلام صفحه‌خوان یک بار از پیام بالا -->
+          <span class="text-[11px] min-w-0 flex-1 break-words line-clamp-2" data-testid="letter-save-notice" aria-hidden="true"
+                [title]="n.text"
+                [class.text-emerald-700]="n.tone === 'ok'" [class.text-amber-800]="n.tone === 'warn'"
+                [class.text-rose-700]="n.tone === 'error'">{{ n.text }}</span>
         }
       </div>
     </form>

@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -13,7 +13,7 @@ import { isServerUnreachable } from '../../../../core/services/server-reachabili
 import {
   LETTER_CONFIDENTIALITY_LABELS, LETTER_KIND_LABELS, LETTER_SIGN_MODE_LABELS, LETTER_STATUS_LABELS, LetterBlock,
   LetterConfidentiality, LetterDetail, LetterDraftCopy, LetterKind, LetterProject, LetterSignMode, LetterStatus,
-  LetterWritePayload,
+  LetterRecipientRow, LetterWritePayload,
 } from '../../letters.models';
 import { LettersApiService } from '../../services/letters-api.service';
 import { LettersOfflineService, newClientTempId, serverErrorText } from '../../services/letters-offline';
@@ -24,6 +24,21 @@ interface PartyRecipient { id: number; name: string; role: 'to' | 'cc' }
 type Notice = { tone: 'ok' | 'warn' | 'error'; text: string };
 
 const emptyBody = (): LetterBlock[] => [{ type: 'paragraph', align: 'right', runs: [{ text: '' }] }];
+
+/** ترتیب فیلدهای فرم برای رفتن به نخستین خطا (کلید خطای سرور → گزینشگر) */
+const FIELD_ORDER: readonly [string, string][] = [
+  ['kind', '#letter-kind'], ['confidentiality', '#letter-conf'], ['subject', '#letter-subject'],
+  ['sign_mode', '#letter-sign-mode'], ['project', '#letter-project'], ['recipients', '#letter-recipients'],
+  ['signers', '#letter-signers'], ['body', '#letter-body'],
+];
+
+const userValues = (rows: LetterRecipientRow[] | undefined, role: 'to' | 'cc'): PersonRoleValue[] => (rows || [])
+  .filter(r => r.role === role && r.target_type === 'user' && r.user)
+  .map(r => ({ type: 'user', id: r.user as number, label: r.name_text || `کاربر ${r.user}` }));
+
+const partyValues = (rows: LetterRecipientRow[] | undefined): PartyRecipient[] => (rows || [])
+  .filter(r => r.target_type === 'party' && r.party)
+  .map(r => ({ id: r.party as number, name: r.party_name || `طرف ${r.party}`, role: r.role }));
 
 /**
  * نوشتن و ویرایش پیش‌نویس نامه (`/app/letters/new`، `/app/letters/:id/edit`؛ ن۱۶ و ن۱۱).
@@ -45,6 +60,7 @@ export class LetterComposePage implements OnInit {
   private readonly api = inject(LettersApiService);
   private readonly offline = inject(LettersOfflineService);
   private readonly companies = inject(ActiveCompanyService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly kindLabels = LETTER_KIND_LABELS;
   readonly statusLabels = LETTER_STATUS_LABELS;
@@ -75,6 +91,8 @@ export class LetterComposePage implements OnInit {
   readonly body = signal<LetterBlock[]>(emptyBody());
   readonly parties = signal<PartyRecipient[]>([]);
   private clientTempId = newClientTempId();
+  /** هر تغییر فرم یکی بالا می‌برد؛ «ذخیره نشده» فقط وقتی پاک می‌شود که در طول ذخیره چیزی تایپ نشده باشد */
+  private changeSeq = 0;
 
   readonly form = new FormGroup({
     kind: new FormControl<LetterKind>('internal', { nonNullable: true }),
@@ -94,7 +112,12 @@ export class LetterComposePage implements OnInit {
   readonly registerBlocked = computed(() => this.actionBlockReason(() => this.status() === 'received' && this.form.controls.kind.value === 'incoming'));
 
   constructor() {
-    this.form.valueChanges.subscribe(() => this.dirty.set(true));
+    this.form.valueChanges.subscribe(() => this.markDirty());
+  }
+
+  private markDirty(): void {
+    this.changeSeq++;
+    this.dirty.set(true);
   }
 
   private actionBlockReason(applies: () => boolean): string | null {
@@ -151,21 +174,17 @@ export class LetterComposePage implements OnInit {
     this.revision.set(letter.revision);
     this.status.set(letter.status);
     this.canEdit.set(letter.can_edit !== false);
-    const users = (role: 'to' | 'cc'): PersonRoleValue[] => (letter.recipients || [])
-      .filter(r => r.role === role && r.target_type === 'user' && r.user)
-      .map(r => ({ type: 'user', id: r.user as number, label: r.name_text || `کاربر ${r.user}` }));
     this.form.patchValue({
       kind: letter.kind,
       subject: letter.subject || '',
       confidentiality: letter.confidentiality,
       sign_mode: letter.sign_mode || 'electronic',
       project: letter.project,
-      toUsers: users('to'),
-      ccUsers: users('cc'),
+      toUsers: userValues(letter.recipients, 'to'),
+      ccUsers: userValues(letter.recipients, 'cc'),
       signers: (letter.signers || []).map(s => ({ type: 'user' as const, id: s.user.id, label: s.user.name })),
     }, { emitEvent: false });
-    this.parties.set((letter.recipients || []).filter(r => r.target_type === 'party' && r.party)
-      .map(r => ({ id: r.party as number, name: r.party_name || '', role: r.role })));
+    this.parties.set(partyValues(letter.recipients));
     this.body.set(letter.body?.length ? letter.body : emptyBody());
     this.copies.set(letter.draft_copies || []);
     this.dirty.set(false);
@@ -175,30 +194,41 @@ export class LetterComposePage implements OnInit {
     const rows = await this.offline.localDrafts();
     const row = rows.find(r => r.state === 'failed' && r.id === errorId);
     if (!row) return;
-    this.useText(row.body.subject, row.body.body, true);
-    if (row.body.kind) this.form.controls.kind.setValue(row.body.kind);
+    const b = row.body;
+    // همهٔ بخش‌های متن ذخیره‌شده برمی‌گردد، نه فقط موضوع و متن
+    this.form.patchValue({
+      kind: b.kind || 'internal',
+      confidentiality: b.confidentiality || 'normal',
+      sign_mode: b.sign_mode || 'electronic',
+      project: b.project ?? null,
+      toUsers: userValues(b.recipients, 'to'),
+      ccUsers: userValues(b.recipients, 'cc'),
+      signers: (b.signers || []).map(s => ({ type: 'user' as const, id: s.user, label: `کاربر ${s.user}` })),
+    });
+    this.parties.set(partyValues(b.recipients));
+    this.useText(b.subject, b.body, true);
     this.notice.set({ tone: 'warn', text: 'متن پیش‌نویس ردشده در فرم آمد؛ به‌صورت نامهٔ تازه ذخیره کنید.' });
   }
 
   onBody(blocks: LetterBlock[]): void {
     this.body.set(blocks);
-    this.dirty.set(true);
+    this.markDirty();
   }
 
   addParty(p: { id: number; name: string }, role: 'to' | 'cc' = 'to'): void {
     if (this.parties().some(x => x.id === p.id)) return;
     this.parties.update(list => [...list, { id: p.id, name: p.name, role }]);
-    this.dirty.set(true);
+    this.markDirty();
   }
 
   setPartyRole(id: number, role: string): void {
     this.parties.update(list => list.map(x => (x.id === id ? { ...x, role: role === 'cc' ? 'cc' : 'to' } : x)));
-    this.dirty.set(true);
+    this.markDirty();
   }
 
   removeParty(id: number): void {
     this.parties.update(list => list.filter(x => x.id !== id));
-    this.dirty.set(true);
+    this.markDirty();
   }
 
   buildPayload(): LetterWritePayload {
@@ -226,11 +256,16 @@ export class LetterComposePage implements OnInit {
   async save(): Promise<void> {
     if (this.saving() || this.readOnly()) return;
     if (!this.form.controls.subject.value.trim()) {
-      this.fieldErrors.set({ subject: 'موضوع نامه لازم است.' });
+      this.showFieldErrors({ subject: 'موضوع نامه لازم است.' });
       return;
     }
     this.fieldErrors.set({});
     this.saving.set(true);
+    const seq = this.changeSeq;
+    /** در طول ذخیره چیزی تایپ نشد؛ وگرنه «ذخیره نشده» و هشدار ترک صفحه می‌ماند */
+    const settled = () => {
+      if (this.changeSeq === seq) this.dirty.set(false);
+    };
     try {
       const out = await this.offline.saveDraft({ letterId: this.letterId(), payload: this.buildPayload() });
       switch (out.kind) {
@@ -242,7 +277,7 @@ export class LetterComposePage implements OnInit {
           this.copies.set(out.letter.draft_copies || []);
           this.conflict.set(null);
           this.queued.set(false);
-          this.dirty.set(false);
+          settled();
           if (wasNew) this.location.replaceState(`/app/letters/${out.letter.id}/edit`);
           this.notice.set({ tone: 'ok', text: 'ذخیره شد.' });
           break;
@@ -255,13 +290,19 @@ export class LetterComposePage implements OnInit {
           break;
         case 'queued':
           if (out.newTempId) this.clientTempId = out.newTempId;
+          if (out.letterId && !this.letterId()) {
+            // نامه پیش‌تر روی سرور ساخته شده بود (duplicate)؛ PATCH در صف است و فرم به حالت ویرایش می‌رود
+            this.letterId.set(out.letterId);
+            if (out.revision != null) this.revision.set(out.revision);
+            this.location.replaceState(`/app/letters/${out.letterId}/edit`);
+          }
           this.queued.set(true);
-          this.dirty.set(false);
+          settled();
           this.notice.set({ tone: 'warn', text: 'در صف ارسال؛ پس از اتصال فرستاده می‌شود.' });
           break;
         case 'rejected':
-          this.fieldErrors.set(out.fieldErrors);
           this.notice.set({ tone: 'error', text: out.message });
+          this.showFieldErrors(out.fieldErrors);
           break;
         case 'gone':
           this.gone.set(true);
@@ -271,9 +312,30 @@ export class LetterComposePage implements OnInit {
           this.notice.set({ tone: 'error', text: out.message });
           break;
       }
+    } catch (e) {
+      // ذخیرهٔ محلی (صف) شکست خورد، مثلاً فضای پر یا پایگاه بسته؛ متن و «ذخیره نشده» در فرم می‌ماند
+      console.warn('[Letters] ذخیرهٔ پیش‌نویس ممکن نشد (چیزی پاک نشد):', e);
+      this.notice.set({ tone: 'error', text: 'ذخیرهٔ محلی ممکن نشد؛ متن در فرم مانده است.' });
     } finally {
       this.saving.set(false);
     }
+  }
+
+  /** خطاهای فیلد را نشان می‌دهد و نشانگر را به نخستین فیلد نادرست می‌برد */
+  private showFieldErrors(errors: Record<string, string>): void {
+    this.fieldErrors.set(errors);
+    const hit = FIELD_ORDER.find(([key]) => errors[key]);
+    if (!hit) return;
+    // پس از نمایش پیام خطا در صفحه
+    setTimeout(() => {
+      const el = this.host.nativeElement.querySelector<HTMLElement>(hit[1]);
+      if (!el) return;
+      const target = el.matches('input, select, textarea, button')
+        ? el
+        : el.querySelector<HTMLElement>('input, select, textarea, button, [contenteditable="true"]') ?? el;
+      target.scrollIntoView?.({ block: 'center' });
+      target.focus?.({ preventScroll: true });
+    });
   }
 
   /** «جایگزین کن»: متن فرم روی نسخهٔ فعلی سرور ذخیره شود */
@@ -296,7 +358,7 @@ export class LetterComposePage implements OnInit {
     this.gone.set(false);
     this.copies.set([]);
     this.queued.set(false);
-    this.dirty.set(true);
+    this.markDirty();
     this.location.replaceState('/app/letters/new');
     this.notice.set({ tone: 'warn', text: 'نامهٔ تازه؛ برای ساختن آن «ذخیره» را بزنید.' });
   }
@@ -308,7 +370,7 @@ export class LetterComposePage implements OnInit {
   private useText(subject: string, body: LetterBlock[], asNew: boolean): void {
     this.form.controls.subject.setValue(subject || '');
     this.body.set(body?.length ? body : emptyBody());
-    this.dirty.set(true);
+    this.markDirty();
     if (asNew) this.asNewLetter();
   }
 

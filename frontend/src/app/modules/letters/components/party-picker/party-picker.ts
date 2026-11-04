@@ -69,6 +69,11 @@ export class PartyPickerComponent {
     this.search$.next(value);
   }
 
+  /** Enter در کادر جست‌وجو: جست‌وجو بی‌فرستادن فرم نامه */
+  search(): void {
+    this.search$.next(this.query());
+  }
+
   choose(p: LetterParty): void {
     this.picked.emit(p);
     this.query.set('');

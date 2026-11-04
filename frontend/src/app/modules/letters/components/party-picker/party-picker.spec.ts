@@ -48,7 +48,7 @@ describe('PartyPickerComponent — انتخابگر طرف بیرونی', () => 
     fixture.detectChanges();
 
     expect(api.parties).toHaveBeenCalledWith(3, 'نمونه');
-    const option = fixture.nativeElement.querySelector('[role="option"] button') as HTMLButtonElement;
+    const option = fixture.nativeElement.querySelector('ul li button') as HTMLButtonElement;
     expect(option.textContent).toContain('شرکت نمونه');
     option.click();
     expect(picked.map(p => p.id)).toEqual([4]);
@@ -72,5 +72,22 @@ describe('PartyPickerComponent — انتخابگر طرف بیرونی', () => 
     expect(btn.disabled).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('نیاز به اتصال');
     expect(input).toBeTruthy();
+  });
+
+  it('Enter در کادرهای انتخابگر فرم نامه را نمی‌فرستد', () => {
+    const search = fixture.nativeElement.querySelector('#letter-party-search') as HTMLInputElement;
+    const ev = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    search.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(true);
+    vi.advanceTimersByTime(350);
+
+    fixture.componentInstance.startCreate();
+    fixture.componentInstance.newName.set('طرف تازه');
+    fixture.detectChanges();
+    const name = fixture.nativeElement.querySelector('#letter-party-name') as HTMLInputElement;
+    const ev2 = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    name.dispatchEvent(ev2);
+    expect(ev2.defaultPrevented).toBe(true);
+    expect(api.createParty).toHaveBeenCalled();
   });
 });

@@ -26,12 +26,30 @@
             </select>
           }
           @case ('table') {
-            <button type="button" class="tap-target min-h-[40px] rounded-xl border border-line text-xs px-2"
+            <button type="button" class="tap-target min-w-[40px] min-h-[40px] rounded-xl border border-line text-xs px-2 flex items-center justify-center gap-1"
                     [disabled]="disabled()" aria-label="افزودن ردیف جدول" title="افزودن ردیف جدول"
-                    (click)="addRow(i, asTable(block))">+ ردیف</button>
-            <button type="button" class="tap-target min-h-[40px] rounded-xl border border-line text-xs px-2"
+                    (click)="addRow(i, asTable(block))">
+              <svg appIcon="plus" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+              <span class="hidden sm:inline">ردیف</span>
+            </button>
+            <button type="button" class="tap-target min-w-[40px] min-h-[40px] rounded-xl border border-line text-xs px-2 flex items-center justify-center gap-1"
+                    [disabled]="disabled() || asTable(block).rows.length <= 1" aria-label="حذف ردیف آخر" title="حذف ردیف آخر"
+                    (click)="removeRow(i, asTable(block))">
+              <svg appIcon="minus" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+              <span class="hidden sm:inline">ردیف</span>
+            </button>
+            <button type="button" class="tap-target min-w-[40px] min-h-[40px] rounded-xl border border-line text-xs px-2 flex items-center justify-center gap-1"
                     [disabled]="disabled()" aria-label="افزودن ستون جدول" title="افزودن ستون جدول (تا ۱۲)"
-                    (click)="addCol(i, asTable(block))">+ ستون</button>
+                    (click)="addCol(i, asTable(block))">
+              <svg appIcon="plus" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+              <span class="hidden sm:inline">ستون</span>
+            </button>
+            <button type="button" class="tap-target min-w-[40px] min-h-[40px] rounded-xl border border-line text-xs px-2 flex items-center justify-center gap-1"
+                    [disabled]="disabled() || (asTable(block).rows[0]?.length || 0) <= 1" aria-label="حذف ستون آخر" title="حذف ستون آخر"
+                    (click)="removeCol(i, asTable(block))">
+              <svg appIcon="minus" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+              <span class="hidden sm:inline">ستون</span>
+            </button>
             <button type="button" class="tap-target min-h-[40px] rounded-xl border border-line text-xs px-2"
                     [disabled]="disabled()" [attr.aria-pressed]="asTable(block).header"
                     aria-label="ردیف اول سرستون باشد" title="ردیف اول سرستون باشد"
@@ -39,11 +57,11 @@
           }
         }
         <span class="ms-auto flex items-center gap-1">
-          <button type="button" class="btn-icon-square btn-icon-slate min-w-[40px] min-h-[40px]"
+          <button type="button" class="btn-icon-square btn-icon-slate min-w-[40px] min-h-[40px]" [id]="'move-up-' + i"
                   [disabled]="disabled() || first" aria-label="بالا بردن بلوک" title="بالا بردن بلوک" (click)="move(i, -1)">
             <svg appIcon="chevron-up" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
           </button>
-          <button type="button" class="btn-icon-square btn-icon-slate min-w-[40px] min-h-[40px]"
+          <button type="button" class="btn-icon-square btn-icon-slate min-w-[40px] min-h-[40px]" [id]="'move-down-' + i"
                   [disabled]="disabled() || last" aria-label="پایین بردن بلوک" title="پایین بردن بلوک" (click)="move(i, 1)">
             <svg appIcon="chevron-down" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
           </button>
@@ -56,7 +74,7 @@
 
       @switch (block.type) {
         @case ('paragraph') {
-          <div class="min-h-[3rem] rounded-xl border border-line-subtle bg-surface-muted p-2 text-sm text-fg whitespace-pre-wrap break-words focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          <div data-placeholder="متن…" class="min-h-[3rem] empty:before:content-[attr(data-placeholder)] empty:before:text-fg-muted rounded-xl border border-line-subtle bg-surface-muted p-2 text-sm text-fg whitespace-pre-wrap break-words focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                role="textbox" aria-multiline="true" aria-label="متن پاراگراف"
                [class.font-bold]="isBold(asParagraph(block))"
                [class.text-center]="asParagraph(block).align === 'center'"
@@ -69,7 +87,7 @@
             @for (item of asList(block).items; track $index; let k = $index) {
               <li class="text-sm">
                 <div class="flex items-start gap-1 min-w-0">
-                  <div class="flex-1 min-w-0 min-h-[2.5rem] rounded-xl border border-line-subtle bg-surface-muted p-2 whitespace-pre-wrap break-words focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  <div data-placeholder="متن…" class="flex-1 min-w-0 min-h-[2.5rem] empty:before:content-[attr(data-placeholder)] empty:before:text-fg-muted rounded-xl border border-line-subtle bg-surface-muted p-2 whitespace-pre-wrap break-words focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                        role="textbox" [attr.aria-label]="'بند ' + faNumber(k + 1)"
                        [letterEditable]="runsText(item)" [editableDisabled]="disabled()" [enterCreates]="true"
                        (textChange)="setItem(i, asList(block), k, $event)" (enterPressed)="addItem(i, asList(block), k)"></div>
@@ -95,7 +113,8 @@
                                [class.font-bold]="asTable(block).header && r === 0"
                                [disabled]="disabled()" [value]="cell"
                                [attr.aria-label]="'خانهٔ ردیف ' + faNumber(r + 1) + ' ستون ' + faNumber(c + 1)"
-                               (input)="setCell(i, asTable(block), r, c, $any($event.target).value)" />
+                               (input)="setCell(i, asTable(block), r, c, $any($event.target).value)"
+                               (keydown.enter)="$event.preventDefault()" />
                       </td>
                     }
                   </tr>
@@ -128,9 +147,10 @@
     </button>
     <span class="ms-auto text-[11px] tabular-nums" [class.text-rose-700]="chars() > maxChars" [class.text-fg-muted]="chars() <= maxChars"
           [title]="'سقف: ' + faNumber(maxBlocks) + ' بلوک و ' + faNumber(maxChars) + ' نویسه'">
-      {{ faNumber(blocks().length) }} بلوک · {{ faNumber(chars()) }} نویسه
+      {{ faNumber(blocks().length) }} بلوک · {{ faNumber(chars()) }} نویسه@if (chars() > maxChars) { · سقف رد شد}
     </span>
   </div>
+  <span class="sr-only" role="status" aria-live="polite">{{ moveNote() }}</span>
   @if (invalid()) {
     <p class="text-xs text-rose-700" role="alert">{{ invalid() }}</p>
   }

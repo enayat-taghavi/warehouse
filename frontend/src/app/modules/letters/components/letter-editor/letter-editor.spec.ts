@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { LetterEditorComponent } from './letter-editor';
+import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
@@ -20,10 +21,12 @@ function pasteEvent(plain: string, html: string): Event {
 describe('LetterEditorComponent — ویرایشگر بلوکی (ن۱۴)', () => {
   let fixture: ComponentFixture<LetterEditorComponent>;
   let editor: LetterEditorComponent;
+  const confirmOpen = vi.fn();
 
   beforeEach(() => {
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ imports: [LetterEditorComponent] });
+    confirmOpen.mockReset().mockResolvedValue(true);
+    TestBed.configureTestingModule({ imports: [LetterEditorComponent], providers: [{ provide: ConfirmDialogService, useValue: { open: confirmOpen } }] });
     fixture = TestBed.createComponent(LetterEditorComponent);
     editor = fixture.componentInstance;
     editor.blocks.set([{ type: 'paragraph', align: 'right', runs: [{ text: '' }] }]);
@@ -72,5 +75,60 @@ describe('LetterEditorComponent — ویرایشگر بلوکی (ن۱۴)', () =>
     expect(box.getAttribute('contenteditable')).toBe('false');
     editor.add('paragraph');
     expect(editor.blocks().length).toBe(1);
+  });
+
+  it('حذف بلوک خالی بی‌پرسش و بلوک دارای متن با پرسش است', async () => {
+    editor.blocks.set([
+      { type: 'paragraph', align: 'right', runs: [{ text: '' }] },
+      { type: 'paragraph', align: 'right', runs: [{ text: 'سلام' }] },
+    ]);
+    await editor.remove(0);
+    expect(confirmOpen).not.toHaveBeenCalled();
+    expect(editor.blocks().length).toBe(1);
+
+    confirmOpen.mockResolvedValue(false);
+    await editor.remove(0);
+    expect(confirmOpen).toHaveBeenCalledTimes(1);
+    expect(editor.blocks().length).toBe(1);
+
+    confirmOpen.mockResolvedValue(true);
+    await editor.remove(0);
+    expect(editor.blocks().length).toBe(0);
+  });
+
+  it('حذف بند فهرست دارای متن می‌پرسد', async () => {
+    editor.blocks.set([{ type: 'list', style: 'bullet', items: [[{ text: 'الف' }], [{ text: '' }]] }]);
+    await editor.removeItem(0, editor.blocks()[0] as any, 1);
+    expect(confirmOpen).not.toHaveBeenCalled();
+    editor.blocks.set([{ type: 'list', style: 'bullet', items: [[{ text: 'الف' }], [{ text: 'ب' }]] }]);
+    await editor.removeItem(0, editor.blocks()[0] as any, 1);
+    expect(confirmOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('جدول: حذف ردیف و ستون آخر، دست‌کم یکی می‌ماند و متن‌دار می‌پرسد', async () => {
+    editor.blocks.set([{ type: 'table', header: true, rows: [['a', ''], ['', '']] }]);
+    fixture.detectChanges();
+    const t = () => editor.blocks()[0] as any;
+    await editor.removeRow(0, t());
+    expect(t().rows).toEqual([['a', '']]);
+    expect(confirmOpen).not.toHaveBeenCalled();
+    await editor.removeRow(0, t());
+    expect(t().rows.length).toBe(1);
+
+    editor.blocks.set([{ type: 'table', header: true, rows: [['a', 'b'], ['c', 'd']] }]);
+    await editor.removeCol(0, t());
+    expect(confirmOpen).toHaveBeenCalledTimes(1);
+    expect(t().rows).toEqual([['a'], ['c']]);
+    await editor.removeCol(0, t());
+    expect(t().rows[0].length).toBe(1);
+  });
+
+  it('Enter در خانهٔ جدول فرم را نمی‌فرستد', () => {
+    editor.add('table');
+    fixture.detectChanges();
+    const cell = fixture.nativeElement.querySelector('table input') as HTMLInputElement;
+    const ev = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+    cell.dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(true);
   });
 });

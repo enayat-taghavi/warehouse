@@ -21,6 +21,37 @@ try {
 
 getModuleRegistry().registerModule(MODULE);
 
+/** حافظهٔ ساده به‌جای localStorage/sessionStorage (در این محیط Node/jsdom تعریف نشده‌اند) */
+function memoryStorage(seed: Record<string, string> = {}): Storage {
+  const data = new Map(Object.entries(seed));
+  return {
+    get length() { return data.size; },
+    clear: () => data.clear(),
+    getItem: (k: string) => (data.has(k) ? data.get(k)! : null),
+    key: (i: number) => [...data.keys()][i] ?? null,
+    removeItem: (k: string) => { data.delete(k); },
+    setItem: (k: string, v: string) => { data.set(k, String(v)); },
+  } as Storage;
+}
+
+/** کاربر لاگین‌شده (همان کلیدی که getStoredCurrentUserId هسته می‌خواند) */
+function stubStorage(userId: number | null = null): void {
+  const seed: Record<string, string> = userId ? { wh_user_profile: JSON.stringify({ id: userId }) } : {};
+  vi.stubGlobal('sessionStorage', memoryStorage(seed));
+  vi.stubGlobal('localStorage', memoryStorage(seed));
+}
+
+/** navigator.locks ساختگی؛ available=false یعنی زبانهٔ دیگری قفل صف را دارد */
+function stubLocks(available: boolean | null): { request: ReturnType<typeof vi.fn> } | undefined {
+  if (available === null) {
+    Object.defineProperty(navigator, 'locks', { value: undefined, configurable: true });
+    return undefined;
+  }
+  const locks = { request: vi.fn(async (_name: string, _opts: unknown, cb: (lock: unknown) => unknown) => cb(available ? { name: _name } : null)) };
+  Object.defineProperty(navigator, 'locks', { value: locks, configurable: true });
+  return locks;
+}
+
 const payload = (over: Partial<LetterWritePayload> = {}): LetterWritePayload => ({
   kind: 'internal', company: 3, client_temp_id: 'tmp-1', subject: 'موضوع آزمایشی',
   body: [{ type: 'paragraph', align: 'right', runs: [{ text: 'متن کاربر' }] }],
@@ -51,9 +82,15 @@ describe('LettersOfflineService — پیش‌نویس آفلاین بی‌از�
       ],
     });
     service = TestBed.inject(LettersOfflineService);
+    stubStorage(1);
+    stubLocks(true);
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    delete (navigator as any).locks;
+  });
 
   it('قلمرو letters پایگاه دادهٔ خودش را دارد', () => {
     expect(resolveOfflineDbStrict(LETTERS_SCOPE)?.name).toBe('WarehouseOfflineDB_letters');
@@ -114,6 +151,24 @@ describe('LettersOfflineService — پیش‌نویس آفلاین بی‌از�
     expect(api.update.mock.calls[0][1].client_temp_id).toBeUndefined();
   });
 
+  it('duplicate و سپس 503 روی PATCH: ردیف PATCH با revision نامهٔ موجود در صف می‌رود، نه POST', async () => {
+    vi.spyOn(resolveOfflineDbStrict(LETTERS_SCOPE)!.syncQueue, 'toArray').mockResolvedValue([]);
+    api.create.mockReturnValue(of({ id: 11, revision: 4, duplicate: true }));
+    api.update.mockReturnValue(throwError(() => ({ status: 503 })));
+
+    const out = await service.saveDraft({ letterId: null, payload: payload({ subject: 'متن تازه' }) });
+
+    expect(out).toMatchObject({ kind: 'queued', merged: false, letterId: 11, revision: 4 });
+    expect(sync.enqueue).toHaveBeenCalledTimes(1);
+    const [method, url, body, meta] = sync.enqueue.mock.calls[0];
+    expect(method).toBe('PATCH');
+    expect(url).toMatch(/\/letters\/11\/$/);
+    expect(body).toMatchObject({ subject: 'متن تازه', revision: 4 });
+    expect(body.client_temp_id).toBeUndefined();
+    expect(body.kind).toBeUndefined();
+    expect(meta.entitySyncId).toBe('letter-11~attempted');
+  });
+
   it('نامهٔ محرمانه در آفلاین روی دستگاه ذخیره نمی‌شود', async () => {
     browserOnline = false;
     const out = await service.saveDraft({ letterId: null, payload: payload({ confidentiality: 'secret' }) });
@@ -135,7 +190,28 @@ describe('LettersOfflineService — پیش‌نویس آفلاین بی‌از�
     expect(out).toEqual({ kind: 'queued', merged: true });
     expect(update).toHaveBeenCalledWith(3, { body: expect.objectContaining({ subject: 'متن تازه‌تر', client_temp_id: 'tmp-1' }) });
     expect(sync.enqueue).not.toHaveBeenCalled();
+    expect((navigator as any).locks.request).toHaveBeenCalledWith('wh_offline_sync_queue_lock', { ifAvailable: true }, expect.any(Function));
   });
+
+  for (const [title, available] of [['قفل صف دست زبانهٔ دیگر است', false], ['Web Locks در دسترس نیست', null]] as const) {
+    it(`${title}: ردیف درجا عوض نمی‌شود و ردیف تازه ساخته می‌شود`, async () => {
+      browserOnline = false;
+      stubLocks(available);
+      const db = resolveOfflineDbStrict(LETTERS_SCOPE)!;
+      const queued: SyncQueueEntry = { id: 3, method: 'POST', url: '/api/v1/letters/', body: payload(), createdAt: 1,
+        retryCount: 0, status: 'pending', entityType: LETTER_DRAFT_ENTITY, entitySyncId: 'new-tmp-1', appScope: LETTERS_SCOPE };
+      vi.spyOn(db.syncQueue, 'toArray').mockResolvedValue([queued]);
+      const update = vi.spyOn(db.syncQueue, 'update').mockResolvedValue(1);
+      vi.spyOn(db, 'transaction').mockImplementation(((...args: any[]) => args[args.length - 1]()) as any);
+
+      const out = await service.saveDraft({ letterId: null, payload: payload({ subject: 'متن تازه‌تر' }) });
+
+      expect(out).toMatchObject({ kind: 'queued', merged: false });
+      expect(update).not.toHaveBeenCalled();
+      expect(sync.enqueue).toHaveBeenCalledTimes(1);
+      expect(sync.enqueue.mock.calls[0][2]).toMatchObject({ subject: 'متن تازه‌تر', client_temp_id: (out as any).newTempId });
+    });
+  }
 
   it('ردیفِ در حال ارسال یا «شاید رسیده» درجا عوض نمی‌شود؛ پیش‌نویس تازه با شناسهٔ موقت تازه', async () => {
     browserOnline = false;
@@ -163,6 +239,20 @@ describe('LettersOfflineService — پیش‌نویس آفلاین بی‌از�
     const rows = await service.localDrafts();
     expect(rows.map(r => [r.state, r.letterId, r.subject])).toEqual([['failed', 8, 'رد شده'], ['pending', null, 'موضوع آزمایشی']]);
   });
+
+  it('فهرست پیش‌نویس‌های محلی فقط مال کاربر فعلی است', async () => {
+    sync.getQueueEntries.mockResolvedValue([
+      { id: 1, url: '/api/v1/letters/', body: payload({ subject: 'مال من' }), createdAt: 10, entityType: LETTER_DRAFT_ENTITY, status: 'pending', userId: 1 },
+      { id: 2, url: '/api/v1/letters/', body: payload({ subject: 'مال دیگری' }), createdAt: 11, entityType: LETTER_DRAFT_ENTITY, status: 'pending', userId: 2 },
+      { id: 3, url: '/api/v1/letters/', body: payload({ subject: 'بی‌کاربر' }), createdAt: 12, entityType: LETTER_DRAFT_ENTITY, status: 'pending' },
+    ]);
+    sync.getErrors.mockResolvedValue([
+      { id: 4, url: '/api/v1/letters/8/', body: payload({ subject: 'ردشدهٔ دیگری' }), failedAt: 20, statusCode: 400, entityType: LETTER_DRAFT_ENTITY, userId: 2 },
+      { id: 5, url: '/api/v1/letters/9/', body: payload({ subject: 'ردشدهٔ من' }), failedAt: 21, statusCode: 400, entityType: LETTER_DRAFT_ENTITY, userId: 1 },
+    ]);
+    const rows = await service.localDrafts();
+    expect(rows.map(r => r.subject)).toEqual(['ردشدهٔ من', 'بی‌کاربر', 'مال من']);
+  });
 });
 
 describe('اجراکنندهٔ صف هسته با ردیف پیش‌نویس نامه', () => {
@@ -170,7 +260,13 @@ describe('اجراکنندهٔ صف هسته با ردیف پیش‌نویس ن�
     retryCount: 0, status: 'pending', entityType: LETTER_DRAFT_ENTITY, entitySyncId: 'new-tmp-1', appScope: LETTERS_SCOPE });
   const fakeNetwork = { reportServerUnreachable: vi.fn(), reportServerReachable: vi.fn() } as any;
 
-  afterEach(() => vi.restoreAllMocks());
+  // اجراکنندهٔ هسته localStorage را می‌خواند؛ در این محیط تعریف نشده است
+  beforeEach(() => stubStorage(null));
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
 
   function spies() {
     const db = resolveOfflineDbStrict(LETTERS_SCOPE)!;
