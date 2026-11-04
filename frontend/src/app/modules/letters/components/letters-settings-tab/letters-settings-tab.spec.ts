@@ -119,7 +119,7 @@ describe('LettersSettingsTabComponent — تنظیمات نامه در استو�
     expect(q('[data-testid="images-section"]')).toBeNull();
     const forbidden = q('[data-testid="images-forbidden"]');
     expect(forbidden).not.toBeNull();
-    expect(forbidden?.textContent).toContain('تصویر سربرگ و مهر را فقط مسئول تنظیمات نامه میبیند.');
+    expect(forbidden?.textContent).toContain('تصویر سربرگ و مهر را فقط مسئول تنظیمات نامه می‌بیند.');
 
     const input = q('[data-testid="input-due-days"]') as HTMLInputElement;
     expect(input.disabled).toBe(true);
@@ -143,6 +143,25 @@ describe('LettersSettingsTabComponent — تنظیمات نامه در استو�
     const successMsg = q('[data-testid="save-success"]');
     expect(successMsg).not.toBeNull();
     expect(successMsg?.textContent).toContain('ذخیره شد.');
+
+    // ویرایش دوباره پیام «ذخیره شد.» کهنه را برمی‌دارد
+    fixture.componentInstance.dueDaysControl.setValue(4);
+    fixture.detectChanges();
+    expect(q('[data-testid="save-success"]')).toBeNull();
+  });
+
+  it('مقدار نامعتبرِ دست‌خورده پیام خطای کنار فیلد و aria-invalid می‌گیرد', () => {
+    fixture.componentRef.setInput('companyId', 3);
+    fixture.detectChanges();
+
+    const ctrl = fixture.componentInstance.dueDaysControl;
+    ctrl.setValue(400);
+    ctrl.markAsDirty();
+    fixture.detectChanges();
+
+    const input = q('[data-testid="input-due-days"]') as HTMLInputElement;
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(q('[data-testid="due-days-error"]')?.textContent).toContain('عدد صحیح بین ۰ تا ۳۶۵ وارد کنید.');
   });
 
   it('مقدار نامعتبر (مثلاً ۴۰۰ یا منفی) دکمهٔ «ذخیره» را غیرفعال نگه می‌دارد', () => {
@@ -165,7 +184,7 @@ describe('LettersSettingsTabComponent — تنظیمات نامه در استو�
     fixture.componentRef.setInput('companyId', 3);
     fixture.detectChanges();
 
-    expect(q('[data-testid="settings-empty"]')?.textContent).toContain('تنظیمی برای نامهها پیدا نشد.');
+    expect(q('[data-testid="settings-empty"]')?.textContent).toContain('تنظیمی برای نامه‌ها پیدا نشد.');
 
     // با شرکت null نباید چیزی بارگذاری شود
     api.companySettings.mockClear();

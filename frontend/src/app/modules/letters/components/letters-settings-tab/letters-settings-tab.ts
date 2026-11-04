@@ -1,9 +1,11 @@
-import { Component, Input, OnChanges, OnInit, SimpleChanges, computed, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges, computed, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { AttachmentsComponent } from '../../../../shared/components/attachments/attachments.component';
+import { LoadingSkeletonComponent } from '../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { isServerUnreachable } from '../../../../core/services/server-reachability';
 import { CompanySettingRow, errorText } from '../../letters.models';
 import { LettersApiService } from '../../services/letters-api.service';
 import { LettersOfflineService } from '../../services/letters-offline';
@@ -13,10 +15,10 @@ export const LETTERS_ASSET_KIND = 'letters_secretariat';
 @Component({
   selector: 'app-letters-settings-tab',
   standalone: true,
-  imports: [RouterLink, ReactiveFormsModule, ActionButtonComponent, AttachmentsComponent, SvgIconDirective],
+  imports: [RouterLink, ReactiveFormsModule, ActionButtonComponent, AttachmentsComponent, LoadingSkeletonComponent, SvgIconDirective],
   templateUrl: './letters-settings-tab.html',
 })
-export class LettersSettingsTabComponent implements OnInit, OnChanges {
+export class LettersSettingsTabComponent implements OnChanges {
   @Input() companyId: number | null = null;
 
   private readonly api = inject(LettersApiService);
@@ -27,7 +29,7 @@ export class LettersSettingsTabComponent implements OnInit, OnChanges {
 
   readonly settings = signal<CompanySettingRow[]>([]);
   readonly loading = signal(false);
-  readonly loadError = signal(false);
+  readonly loadError = signal<'offline' | 'error' | null>(null);
   readonly saving = signal(false);
   readonly saveSuccess = signal(false);
   readonly saveError = signal('');
@@ -51,6 +53,8 @@ export class LettersSettingsTabComponent implements OnInit, OnChanges {
     this.dueDaysControl.valueChanges.subscribe(val => {
       this.dueDaysValue.set(Number(val));
       this.isControlInvalid.set(this.dueDaysControl.invalid);
+      this.saveSuccess.set(false);
+      this.saveError.set('');
     });
     this.dueDaysControl.statusChanges.subscribe(() => {
       this.isControlInvalid.set(this.dueDaysControl.invalid);
@@ -90,8 +94,6 @@ export class LettersSettingsTabComponent implements OnInit, OnChanges {
     );
   });
 
-  ngOnInit(): void {}
-
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['companyId']) {
       if (this.companyId) {
@@ -99,7 +101,7 @@ export class LettersSettingsTabComponent implements OnInit, OnChanges {
       } else {
         this.settings.set([]);
         this.loading.set(false);
-        this.loadError.set(false);
+        this.loadError.set(null);
       }
     }
   }
@@ -108,7 +110,7 @@ export class LettersSettingsTabComponent implements OnInit, OnChanges {
     if (!this.companyId) return;
     const seq = ++this.loadSeq;
     this.loading.set(true);
-    this.loadError.set(false);
+    this.loadError.set(null);
     this.saveSuccess.set(false);
     this.saveError.set('');
 
@@ -118,7 +120,7 @@ export class LettersSettingsTabComponent implements OnInit, OnChanges {
         const rows = res?.results || [];
         this.settings.set(rows);
         this.loading.set(false);
-        this.loadError.set(false);
+        this.loadError.set(null);
 
         const dueRow = rows.find(r => r.key === 'default_due_days');
         const dueVal = typeof dueRow?.value === 'number' ? dueRow.value : 7;
@@ -132,10 +134,10 @@ export class LettersSettingsTabComponent implements OnInit, OnChanges {
           this.dueDaysControl.enable();
         }
       },
-      error: () => {
+      error: err => {
         if (seq !== this.loadSeq) return;
         this.loading.set(false);
-        this.loadError.set(true);
+        this.loadError.set(!this.online() || isServerUnreachable(Number(err?.status ?? 0)) ? 'offline' : 'error');
       },
     });
   }

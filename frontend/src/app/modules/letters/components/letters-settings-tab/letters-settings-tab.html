@@ -1,12 +1,12 @@
 <div class="flex flex-col gap-4 min-w-0" dir="rtl">
   @if (loading()) {
-    <div class="py-8 text-center text-sm font-bold text-fg flex flex-col items-center justify-center gap-2" role="status" aria-busy="true">
-      <svg appIcon="loader" class="w-6 h-6 animate-spin text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-      <span>در حال بارگذاری تنظیمات نامه…</span>
+    <div role="status" aria-busy="true">
+      <span class="sr-only">در حال بارگذاری تنظیمات نامه…</span>
+      <app-loading-skeleton type="card" [count]="3" />
     </div>
   } @else if (loadError()) {
     <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2 items-start" role="alert">
-      <p class="text-sm font-bold text-fg">بارگذاری تنظیمات انجام نشد.</p>
+      <p class="text-sm font-bold text-fg" data-testid="load-error">{{ loadError() === 'offline' ? 'برای دیدن تنظیمات به اینترنت وصل شوید.' : 'بارگذاری تنظیمات انجام نشد.' }}</p>
       <button type="button" appAction="refresh" display="label" label="تلاش دوباره" (click)="load()"></button>
     </div>
   } @else {
@@ -16,16 +16,16 @@
 
     @if (settings().length === 0) {
       <div class="bg-surface rounded-2xl border border-dashed border-line p-6 text-center text-xs text-fg-muted" data-testid="settings-empty">
-        تنظیمی برای نامهها پیدا نشد.
+        تنظیمی برای نامه‌ها پیدا نشد.
       </div>
     } @else {
       <!-- پیوند به شماره‌گذاری اسناد -->
       <div class="flex justify-start">
         <a [routerLink]="[]" [queryParams]="{ tab: 'numbering' }" queryParamsHandling="merge"
-           class="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800"
+           class="inline-flex items-center gap-1.5 min-h-[40px] px-1 rounded-lg text-xs font-bold text-indigo-600 hover:text-indigo-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
            data-testid="link-numbering">
           <svg appIcon="file-text" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-          <span>شمارهگذاری اسناد</span>
+          <span>شماره‌گذاری اسناد</span>
         </a>
       </div>
 
@@ -75,7 +75,7 @@
         </section>
       } @else {
         <div class="bg-surface rounded-2xl border border-line p-4 text-xs text-fg-muted" data-testid="images-forbidden">
-          تصویر سربرگ و مهر را فقط مسئول تنظیمات نامه میبیند.
+          تصویر سربرگ و مهر را فقط مسئول تنظیمات نامه می‌بیند.
         </div>
       }
 
@@ -90,10 +90,15 @@
               min="0"
               max="365"
               step="1"
-              class="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-surface-muted"
+              class="rounded-xl border border-line bg-surface px-3 py-2 text-sm text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-50 disabled:bg-surface-muted"
+              aria-describedby="letters-due-days-hint letters-due-days-error"
+              [attr.aria-invalid]="dueDaysControl.invalid ? 'true' : null"
               [formControl]="dueDaysControl"
               data-testid="input-due-days">
-            <span class="text-[11px] text-fg-muted">۰ یعنی بیمهلت</span>
+            <span id="letters-due-days-hint" class="text-[11px] text-fg-muted">{{ canEditDueDays() ? '۰ یعنی بی‌مهلت' : '۰ یعنی بی‌مهلت؛ فقط مسئول تنظیمات نامه تغییر می‌دهد.' }}</span>
+            @if (dueDaysControl.dirty && dueDaysControl.invalid) {
+              <span id="letters-due-days-error" class="text-[11px] text-rose-700" role="alert" data-testid="due-days-error">عدد صحیح بین ۰ تا ۳۶۵ وارد کنید.</span>
+            }
           </div>
 
           <div class="flex items-center gap-2">

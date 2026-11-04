@@ -266,7 +266,7 @@ export interface RegisterRow {
 export interface CircularRow extends LetterRow { is_read: boolean }
 export interface AudienceEntry { scope: 'company' | 'section'; section_id?: number | null; section_name?: string }
 
-/** پیام خطای API (detail، message یا نخستین خطای فیلد) */
+/** ردیف تنظیم شرکت (`/settings/company/<id>/?module=letters`، ل-ح) */
 export interface CompanySettingRow<T = unknown> {
   module: string;
   key: string;
@@ -278,6 +278,7 @@ export interface CompanySettingRow<T = unknown> {
   can_edit: boolean;
 }
 
+/** پیام خطای API (detail، message یا نخستین خطای فیلد) */
 export function errorText(body: any): string {
   if (!body) return '';
   if (typeof body === 'string') return body.length < 300 ? body : '';

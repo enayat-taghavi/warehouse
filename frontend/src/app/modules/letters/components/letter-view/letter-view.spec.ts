@@ -135,7 +135,8 @@ describe('LetterViewPage — نمایش نامه', () => {
     setup(detail({ actions: ['print'] }));
     const printBtn = q('[data-testid="act-print"]');
     expect(printBtn).not.toBeNull();
-    expect(printBtn?.getAttribute('aria-label')).toBe('چاپ یا PDF نامه');
+    expect(printBtn?.getAttribute('aria-label')).toBe('چاپ');
+    expect(printBtn?.getAttribute('title')).toBe('چاپ یا PDF نامه');
     expect(printBtn?.textContent).toContain('چاپ');
   });
 
@@ -159,7 +160,8 @@ describe('LetterViewPage — نمایش نامه', () => {
     setup(detail({ actions: ['upload_scan'] }));
     const uploadBtn = q('[data-testid="act-upload-scan"]');
     expect(uploadBtn).not.toBeNull();
-    expect(uploadBtn?.getAttribute('aria-label')).toBe('بارگذاری نسخهٔ امضاشده (اسکن)');
+    expect(uploadBtn?.getAttribute('aria-label')).toBe('نسخهٔ امضاشده');
+    expect(uploadBtn?.getAttribute('title')).toBe('بارگذاری نسخهٔ امضاشده (اسکن)');
     expect(uploadBtn?.textContent).toContain('نسخهٔ امضاشده');
   });
 

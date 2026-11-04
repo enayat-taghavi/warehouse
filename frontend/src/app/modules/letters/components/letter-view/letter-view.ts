@@ -248,6 +248,7 @@ export class LetterViewPage implements OnInit {
     if (!l || !this.online() || this.printing() || this.acting()) return;
     this.printing.set(true);
     this.actionError.set('');
+    this.scanSuccess.set('');
     try {
       const ok = await this.printService.printPdf(this.docType, l.id, this.paperSize());
       if (!ok) {
@@ -286,7 +287,9 @@ export class LetterViewPage implements OnInit {
         input.value = '';
         const data = err?.error;
         let msg = 'بارگذاری انجام نشد.';
-        if (data) {
+        if (isServerUnreachable(Number(err?.status ?? 0))) {
+          msg = 'اتصال به سرور برقرار نیست؛ دوباره تلاش کنید.';
+        } else if (data) {
           if (typeof data.detail === 'string' && data.detail.trim()) msg = data.detail;
           else if (Array.isArray(data.file) && data.file[0]) msg = String(data.file[0]);
           else if (typeof data.file === 'string' && data.file.trim()) msg = data.file;
