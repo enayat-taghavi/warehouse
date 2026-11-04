@@ -179,7 +179,7 @@
 
             <span *ngIf="conv.unread_count && conv.unread_count > 0" 
                   [class.bg-indigo-600]="!conv.is_muted"
-                  [class.bg-slate-400]="conv.is_muted"
+                  [class.bg-slate-600]="conv.is_muted"
                   class="min-w-[20px] h-5 px-1.5 text-white text-[11px] font-bold rounded-full flex items-center justify-center shrink-0 tabular-nums shadow-sm">
               {{ conv.unread_count.toLocaleString('fa-IR') }}
             </span>
@@ -240,14 +240,14 @@
     <ng-container *ngIf="activeConv()">
       <!-- هدر گفتگو -->
       <div class="h-14 sm:h-16 px-2 sm:px-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white/80 dark:bg-slate-900/80 backdrop-blur shrink-0">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 min-w-0">
           <!-- دکمه بازگشت در کشو یا موبایلِ صفحه -->
           <button [class.md:hidden]="mode() === 'page'"
                   appAction="back" display="icon" (click)="backToList()" data-testid="drawer-back"
                   title="بازگشت به فهرست" aria-label="بازگشت به فهرست"></button>
 
-          <div class="flex items-center gap-2.5">
-            <div class="relative">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="relative shrink-0">
               <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 text-white font-bold flex items-center justify-center text-xs shadow-sm">
                 <svg *ngIf="activeConv()?.conv_type === 'group'" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="users" aria-hidden="true"></svg>
                 <ng-container *ngIf="activeConv()?.conv_type !== 'group'">{{ getConversationTitle(activeConv()!).charAt(0) }}</ng-container>
@@ -256,7 +256,7 @@
                     class="absolute bottom-0 start-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900"
                     title="آنلاین"></span>
             </div>
-            <div>
+            <div class="min-w-0">
               <h3 class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate max-w-[170px] sm:max-w-xs">
                 {{ getConversationTitle(activeConv()!) }}
               </h3>
@@ -322,7 +322,7 @@
       <ng-container *ngFor="let it of items(); trackBy: trackItem; let i = index">
       <!-- جداکنندهٔ روز (چیپ تاریخ چسبان) -->
       <div *ngIf="it.kind === 'sep'" data-testid="date-sep"
-           class="sticky top-2 z-10 mx-auto w-fit px-3 py-0.5 rounded-full bg-slate-900/45 dark:bg-slate-950/65 backdrop-blur-sm text-white text-[11px] font-bold shadow-sm select-none">
+           class="sticky top-2 z-10 mx-auto w-fit px-3 py-0.5 rounded-full bg-slate-800/75 dark:bg-slate-950/80 backdrop-blur-sm text-white text-[11px] font-bold shadow-sm select-none">
         {{ $any(it).label }}
       </div>
 
@@ -593,7 +593,7 @@
             </button>
           </div>
 
-          <p *ngIf="msg.text" class="whitespace-pre-wrap leading-relaxed"><ng-container *ngFor="let seg of segments(msg.text)"><a *ngIf="seg.url" [href]="seg.text" target="_blank" rel="noopener noreferrer" class="underline break-all text-indigo-600 dark:text-indigo-400" dir="ltr">{{ seg.text }}</a><ng-container *ngIf="!seg.url">{{ seg.text }}</ng-container></ng-container><span class="float-end ms-2.5 mt-1 text-[10px] select-none inline-flex items-center gap-1 text-slate-500 dark:text-slate-400"><span *ngIf="msg.edited_at" data-testid="edited-label" class="text-[9px] opacity-80">ویرایش‌شده</span><span class="font-mono tabular-nums">{{ formatTime(msg.created_at) }}</span><ng-container *ngIf="msg.is_me"><svg *ngIf="msg.delivery_status === 'pending' || (msg.is_pending && msg.delivery_status !== 'failed')" class="w-3 h-3 animate-pulse text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="clock" role="img" title="در حال ارسال..." aria-label="در حال ارسال"></svg><ng-container *ngIf="msg.delivery_status !== 'failed' && !msg.is_pending"><svg *ngIf="msg.read_by_count && msg.read_by_count > 0" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="check-check" role="img" title="خوانده شده" aria-label="خوانده شده"></svg><svg *ngIf="!msg.read_by_count || msg.read_by_count === 0" class="w-3 h-3 text-slate-400 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="check" role="img" title="ارسال شده" aria-label="ارسال شده"></svg><button *ngIf="canShowReadBy(msg)" type="button" (click)="openReadBy(msg)" data-testid="read-by-btn" title="خوانده‌شده توسط" aria-label="خوانده‌شده توسط" class="min-w-[40px] min-h-[40px] -my-3 rounded-xl flex items-center justify-center cursor-pointer tap-target hover:bg-black/5 dark:hover:bg-white/10"><svg class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="eye"></svg></button></ng-container><div *ngIf="msg.delivery_status === 'failed'" class="flex items-center gap-1 bg-rose-500/10 text-rose-600 dark:text-rose-300 px-1.5 py-0.5 rounded border border-rose-300 dark:border-rose-700"><span title="خطا در ارسال پیام" class="inline-flex items-center gap-1"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="alert-triangle" aria-hidden="true"></svg>ناموفق</span><button (click)="retryMessage(msg)" type="button" title="تلاش مجدد برای ارسال" aria-label="تلاش مجدد برای ارسال" class="underline font-bold transition-colors flex items-center gap-1 cursor-pointer"><span>تلاش مجدد</span><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="action-refresh"></svg></button><button (click)="discardMessage(msg)" type="button" title="حذف این پیام ارسال‌نشده" aria-label="حذف این پیام ارسال‌نشده" class="underline font-bold transition-colors flex items-center gap-1 cursor-pointer"><span>حذف</span><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="action-delete"></svg></button></div></ng-container></span></p>
+          <p *ngIf="msg.text" class="whitespace-pre-wrap leading-relaxed"><ng-container *ngFor="let seg of segments(msg.text)"><a *ngIf="seg.url" [href]="seg.text" target="_blank" rel="noopener noreferrer" class="underline break-all text-indigo-600 dark:text-indigo-400" dir="ltr">{{ seg.text }}</a><ng-container *ngIf="!seg.url">{{ seg.text }}</ng-container></ng-container><span class="float-end ms-2.5 mt-1 text-[10px] select-none inline-flex items-center gap-1 text-slate-500 dark:text-slate-400"><span *ngIf="msg.edited_at" data-testid="edited-label" class="text-[10px] opacity-80">ویرایش‌شده</span><span class="font-mono tabular-nums">{{ formatTime(msg.created_at) }}</span><ng-container *ngIf="msg.is_me"><svg *ngIf="msg.delivery_status === 'pending' || (msg.is_pending && msg.delivery_status !== 'failed')" class="w-3 h-3 animate-pulse text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="clock" role="img" title="در حال ارسال..." aria-label="در حال ارسال"></svg><ng-container *ngIf="msg.delivery_status !== 'failed' && !msg.is_pending"><svg *ngIf="msg.read_by_count && msg.read_by_count > 0" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="check-check" role="img" title="خوانده شده" aria-label="خوانده شده"></svg><svg *ngIf="!msg.read_by_count || msg.read_by_count === 0" class="w-3 h-3 text-slate-400 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="check" role="img" title="ارسال شده" aria-label="ارسال شده"></svg><button *ngIf="canShowReadBy(msg)" type="button" (click)="openReadBy(msg)" data-testid="read-by-btn" title="خوانده‌شده توسط" aria-label="خوانده‌شده توسط" class="min-w-[40px] min-h-[40px] -my-3 rounded-xl flex items-center justify-center cursor-pointer tap-target hover:bg-black/5 dark:hover:bg-white/10"><svg class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="eye"></svg></button></ng-container><div *ngIf="msg.delivery_status === 'failed'" class="flex items-center gap-1 bg-rose-500/10 text-rose-600 dark:text-rose-300 px-1.5 py-0.5 rounded border border-rose-300 dark:border-rose-700"><span title="خطا در ارسال پیام" class="inline-flex items-center gap-1"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="alert-triangle" aria-hidden="true"></svg>ناموفق</span><button (click)="retryMessage(msg)" type="button" title="تلاش مجدد برای ارسال" aria-label="تلاش مجدد برای ارسال" class="underline font-bold transition-colors flex items-center gap-1 cursor-pointer"><span>تلاش مجدد</span><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="action-refresh"></svg></button><button (click)="discardMessage(msg)" type="button" title="حذف این پیام ارسال‌نشده" aria-label="حذف این پیام ارسال‌نشده" class="underline font-bold transition-colors flex items-center gap-1 cursor-pointer"><span>حذف</span><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" appIcon="action-delete"></svg></button></div></ng-container></span></p>
 
           <!-- پیام در صندوق خروجی منتظر اینترنت است و خودکار فرستاده می‌شود -->
           <p *ngIf="msg.delivery_status === 'pending' && msg.waiting_network" data-testid="waiting-network" role="status"
@@ -606,7 +606,7 @@
           
           <!-- Timestamp & Status if no text -->
           <div *ngIf="!msg.text" class="flex items-center justify-end gap-1.5 mt-1.5 text-[10px] text-slate-500 dark:text-slate-400">
-            <span *ngIf="msg.edited_at" data-testid="edited-label" class="text-[9px] opacity-80">ویرایش‌شده</span>
+            <span *ngIf="msg.edited_at" data-testid="edited-label" class="text-[10px] opacity-80">ویرایش‌شده</span>
             <span class="font-mono tabular-nums">{{ formatTime(msg.created_at) }}</span>
             <ng-container *ngIf="msg.is_me">
               <!-- Pending State -->
