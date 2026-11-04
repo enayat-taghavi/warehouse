@@ -63,7 +63,8 @@ class CreateTests(ApiBase):
         self.assertEqual(second.status_code, 200)
         self.assertEqual(second.json()['id'], first.json()['id'])
         self.assertEqual(Letter.objects.filter(client_temp_id=tid).count(), 1)
-        self.assertEqual(Letter.objects.get(client_temp_id=tid).subject, 'test')
+        # ل-ز: پخش دوبارهٔ ساخت مثل PATCH اعمال می‌شود (متن تازه‌تر صف گم نمی‌شود)
+        self.assertEqual(Letter.objects.get(client_temp_id=tid).subject, 'other')
 
     def test_kind_permissions(self):
         self.assertEqual(self.create(kind='incoming').status_code, 403)

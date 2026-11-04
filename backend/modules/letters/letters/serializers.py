@@ -172,6 +172,15 @@ def _user_brief(user):
     return {'id': user.pk, 'name': name or user.get_username()}
 
 
+def recipient_name(r):
+    if r.target_type == LetterRecipient.TARGET_USER:
+        brief = _user_brief(r.user)
+        return brief['name'] if brief else ''
+    if r.target_type == LetterRecipient.TARGET_PARTY:
+        return r.party.name if r.party_id else ''
+    return r.name_text or ''
+
+
 def lock_info(letter):
     now = timezone.now()
     active = bool(letter.edit_locked_by_id and letter.edit_locked_until and letter.edit_locked_until > now)
@@ -185,6 +194,7 @@ def lock_info(letter):
 class LetterListSerializer(serializers.ModelSerializer):
     """ردیف فهرست: بی‌متن؛ همهٔ داده از select_related (بی N+1)."""
     author = serializers.SerializerMethodField()
+    recipients_brief = serializers.SerializerMethodField()
     project_title = serializers.SerializerMethodField()
     edit_lock = serializers.SerializerMethodField()
 
@@ -192,10 +202,14 @@ class LetterListSerializer(serializers.ModelSerializer):
         model = Letter
         fields = ('id', 'company', 'kind', 'subject', 'status', 'confidentiality', 'number_display', 'registered_at',
                   'created_at', 'updated_at', 'revision', 'response_due_at', 'project', 'project_title', 'author',
-                  'edit_lock', 'follow_up_of', 'reply_to')
+                  'edit_lock', 'follow_up_of', 'reply_to', 'recipients_brief')
 
     def get_author(self, obj):
         return _user_brief(obj.author)
+
+    def get_recipients_brief(self, obj):
+        """نام گیرنده‌ها و رونوشت‌ها برای فهرست (ل-ز)؛ از prefetch `recipients` با user و party (بی N+1)."""
+        return [{'role': r.role, 'name': recipient_name(r)} for r in obj.recipients.all()]
 
     def get_project_title(self, obj):
         project = obj.project
@@ -220,7 +234,8 @@ class LetterDetailSerializer(LetterListSerializer):
 
     def get_recipients(self, obj):
         return [{'id': r.pk, 'role': r.role, 'target_type': r.target_type, 'user': r.user_id,
-                 'section_id': r.section_id, 'party': r.party_id, 'party_name': r.party.name if r.party_id else '',
+                 'section_id': r.section_id, 'party': r.party_id,
+                 'user_name': recipient_name(r) if r.target_type == LetterRecipient.TARGET_USER else '', 'party_name': r.party.name if r.party_id else '',
                  'name_text': r.name_text, 'title_text': r.title_text, 'order': r.order}
                 for r in obj.recipients.all()]
 
