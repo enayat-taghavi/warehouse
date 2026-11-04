@@ -195,7 +195,7 @@
                       (click)="toggleConversationPin(conv, $event)"
                       [title]="conv.is_pinned ? 'برداشتن سنجاق گفتگو' : 'سنجاق کردن گفتگو'"
                       [attr.aria-label]="conv.is_pinned ? 'برداشتن سنجاق گفتگو' : 'سنجاق کردن گفتگو'"
-                      class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-200/60 dark:hover:bg-slate-700/60 text-slate-500 hover:text-indigo-600 cursor-pointer tap-target"
+                      class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-indigo-500 transition-opacity hover:bg-slate-200/60 dark:hover:bg-slate-700/60 text-slate-500 hover:text-indigo-600 cursor-pointer tap-target"
                       [class.opacity-100]="conv.is_pinned">
                 <svg class="w-3.5 h-3.5" [class.text-indigo-600]="conv.is_pinned" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="pin" aria-hidden="true"></svg>
               </button>

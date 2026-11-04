@@ -10,8 +10,12 @@ import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive
   template: `
     <div *ngIf="pinnedMessages().length > 0"
          data-testid="chat-pinned-bar"
+         role="button"
+         tabindex="0"
          (click)="onBarClick()"
-         class="flex items-center justify-between px-3 py-1.5 bg-surface/95 backdrop-blur border-b border-line cursor-pointer select-none hover:bg-surface-muted/50 transition-colors shrink-0">
+         (keydown.enter)="onBarClick()"
+         (keydown.space)="onBarClick(); $event.preventDefault()"
+         class="flex items-center justify-between px-3 py-1.5 bg-surface/95 backdrop-blur border-b border-line cursor-pointer select-none hover:bg-surface-muted/50 transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
       
       <!-- Right side (RTL start): Segmented vertical indicator + Pinned Text Preview -->
       <div class="flex items-center gap-2.5 min-w-0 flex-1">
