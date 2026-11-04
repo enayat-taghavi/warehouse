@@ -25,7 +25,7 @@ import { ToastService } from '../../../../../shared/components/toast/toast.compo
         <!-- Header -->
         <div class="px-4 py-3.5 border-b border-line flex items-center justify-between shrink-0 bg-surface-muted/30">
           <div class="flex items-center gap-2">
-            <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="share" aria-hidden="true"></svg>
             </div>
             <div>
@@ -82,7 +82,6 @@ import { ToastService } from '../../../../../shared/components/toast/toast.compo
                  [class.cursor-not-allowed]="isRowDisabled(conv.id)"
                  [class.cursor-pointer]="!isRowDisabled(conv.id)"
                  [class.bg-indigo-50/50]="isSelected(conv.id)"
-                 [class.dark:bg-indigo-950/30]="isSelected(conv.id)"
                  class="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-surface-muted transition-colors min-h-[48px] tap-target">
             <input type="checkbox"
                    [checked]="isSelected(conv.id)"
@@ -117,8 +116,6 @@ import { ToastService } from '../../../../../shared/components/toast/toast.compo
             <span class="px-2 py-0.5 rounded-lg text-xs font-bold tabular-nums"
                   [class.bg-indigo-100]="selectedCount() > 0"
                   [class.text-indigo-700]="selectedCount() > 0"
-                  [class.dark:bg-indigo-900/50]="selectedCount() > 0"
-                  [class.dark:text-indigo-300]="selectedCount() > 0"
                   [class.bg-surface-muted]="selectedCount() === 0"
                   [class.text-fg-muted]="selectedCount() === 0">
               {{ selectedCount().toLocaleString('fa-IR') }} / ۵
