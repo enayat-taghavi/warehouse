@@ -1,0 +1,137 @@
+<div class="flex flex-col gap-3 min-w-0" dir="rtl">
+  @for (block of blocks(); track $index; let i = $index; let first = $first; let last = $last) {
+    <section class="bg-surface rounded-2xl border border-line p-2 sm:p-3 min-w-0" [attr.aria-label]="'بلوک ' + faNumber(i + 1)">
+      <div class="flex flex-wrap items-center gap-1 mb-2">
+        @switch (block.type) {
+          @case ('paragraph') {
+            <label class="sr-only" [attr.for]="'align-' + i">تراز پاراگراف</label>
+            <select [id]="'align-' + i" class="rounded-xl border border-line bg-surface text-xs h-10 px-2"
+                    [disabled]="disabled()" [value]="asParagraph(block).align"
+                    (change)="setAlign(i, asParagraph(block), $any($event.target).value)">
+              @for (a of aligns; track a) { <option [value]="a">{{ alignLabels[a] }}</option> }
+            </select>
+            <button type="button" class="tap-target min-w-[40px] min-h-[40px] rounded-xl border border-line text-xs font-black px-2"
+                    [class.bg-indigo-600]="isBold(asParagraph(block))" [class.text-white]="isBold(asParagraph(block))"
+                    [disabled]="disabled()" [attr.aria-pressed]="isBold(asParagraph(block))"
+                    aria-label="پررنگ کردن پاراگراف" title="پررنگ کردن پاراگراف"
+                    (click)="toggleBold(i, asParagraph(block))">پررنگ</button>
+          }
+          @case ('list') {
+            <label class="sr-only" [attr.for]="'list-style-' + i">نوع فهرست</label>
+            <select [id]="'list-style-' + i" class="rounded-xl border border-line bg-surface text-xs h-10 px-2"
+                    [disabled]="disabled()" [value]="asList(block).style"
+                    (change)="setListStyle(i, asList(block), $any($event.target).value)">
+              <option value="bullet">نقطه‌ای</option>
+              <option value="ordered">شماره‌دار</option>
+            </select>
+          }
+          @case ('table') {
+            <button type="button" class="tap-target min-h-[40px] rounded-xl border border-line text-xs px-2"
+                    [disabled]="disabled()" aria-label="افزودن ردیف جدول" title="افزودن ردیف جدول"
+                    (click)="addRow(i, asTable(block))">+ ردیف</button>
+            <button type="button" class="tap-target min-h-[40px] rounded-xl border border-line text-xs px-2"
+                    [disabled]="disabled()" aria-label="افزودن ستون جدول" title="افزودن ستون جدول (تا ۱۲)"
+                    (click)="addCol(i, asTable(block))">+ ستون</button>
+            <button type="button" class="tap-target min-h-[40px] rounded-xl border border-line text-xs px-2"
+                    [disabled]="disabled()" [attr.aria-pressed]="asTable(block).header"
+                    aria-label="ردیف اول سرستون باشد" title="ردیف اول سرستون باشد"
+                    (click)="toggleHeader(i, asTable(block))">سرستون</button>
+          }
+        }
+        <span class="ms-auto flex items-center gap-1">
+          <button type="button" class="btn-icon-square btn-icon-slate min-w-[40px] min-h-[40px]"
+                  [disabled]="disabled() || first" aria-label="بالا بردن بلوک" title="بالا بردن بلوک" (click)="move(i, -1)">
+            <svg appIcon="chevron-up" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+          </button>
+          <button type="button" class="btn-icon-square btn-icon-slate min-w-[40px] min-h-[40px]"
+                  [disabled]="disabled() || last" aria-label="پایین بردن بلوک" title="پایین بردن بلوک" (click)="move(i, 1)">
+            <svg appIcon="chevron-down" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+          </button>
+          <button type="button" class="btn-icon-square btn-icon-rose min-w-[40px] min-h-[40px]"
+                  [disabled]="disabled()" aria-label="حذف بلوک" title="حذف بلوک" (click)="remove(i)">
+            <svg appIcon="trash-2" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+          </button>
+        </span>
+      </div>
+
+      @switch (block.type) {
+        @case ('paragraph') {
+          <div class="min-h-[3rem] rounded-xl border border-line-subtle bg-surface-muted p-2 text-sm text-fg whitespace-pre-wrap break-words focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+               role="textbox" aria-multiline="true" aria-label="متن پاراگراف"
+               [class.font-bold]="isBold(asParagraph(block))"
+               [class.text-center]="asParagraph(block).align === 'center'"
+               [class.text-justify]="asParagraph(block).align === 'justify'"
+               [letterEditable]="runsText(asParagraph(block).runs)" [editableDisabled]="disabled()"
+               (textChange)="setParagraphText(i, asParagraph(block), $event)"></div>
+        }
+        @case ('list') {
+          <ol class="flex flex-col gap-1 ps-5" [class.list-decimal]="asList(block).style === 'ordered'" [class.list-disc]="asList(block).style === 'bullet'">
+            @for (item of asList(block).items; track $index; let k = $index) {
+              <li class="text-sm">
+                <div class="flex items-start gap-1 min-w-0">
+                  <div class="flex-1 min-w-0 min-h-[2.5rem] rounded-xl border border-line-subtle bg-surface-muted p-2 whitespace-pre-wrap break-words focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                       role="textbox" [attr.aria-label]="'بند ' + faNumber(k + 1)"
+                       [letterEditable]="runsText(item)" [editableDisabled]="disabled()" [enterCreates]="true"
+                       (textChange)="setItem(i, asList(block), k, $event)" (enterPressed)="addItem(i, asList(block), k)"></div>
+                  <button type="button" class="btn-icon-square btn-icon-slate min-w-[40px] min-h-[40px]"
+                          [disabled]="disabled() || asList(block).items.length <= 1"
+                          aria-label="حذف بند" title="حذف بند" (click)="removeItem(i, asList(block), k)">
+                    <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+                  </button>
+                </div>
+              </li>
+            }
+          </ol>
+        }
+        @case ('table') {
+          <div class="overflow-x-auto max-w-full">
+            <table class="text-xs border-collapse">
+              <tbody>
+                @for (row of asTable(block).rows; track $index; let r = $index) {
+                  <tr>
+                    @for (cell of row; track $index; let c = $index) {
+                      <td class="border border-line p-0.5">
+                        <input type="text" class="w-24 sm:w-32 rounded-lg px-1.5 h-9 bg-surface text-xs"
+                               [class.font-bold]="asTable(block).header && r === 0"
+                               [disabled]="disabled()" [value]="cell"
+                               [attr.aria-label]="'خانهٔ ردیف ' + faNumber(r + 1) + ' ستون ' + faNumber(c + 1)"
+                               (input)="setCell(i, asTable(block), r, c, $any($event.target).value)" />
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </section>
+  } @empty {
+    <p class="text-xs text-fg-muted p-3 rounded-2xl border border-dashed border-line text-center">متن نامه خالی است؛ یک پاراگراف بیفزایید.</p>
+  }
+
+  <div class="flex flex-wrap items-center gap-2">
+    <button type="button" class="tap-target min-h-[40px] rounded-xl border border-line bg-surface text-xs px-3 flex items-center gap-1"
+            [disabled]="disabled() || full()" aria-label="افزودن پاراگراف" title="افزودن پاراگراف" (click)="add('paragraph')">
+      <svg appIcon="plus" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+      <span>پاراگراف</span>
+    </button>
+    <button type="button" class="tap-target min-h-[40px] rounded-xl border border-line bg-surface text-xs px-3 flex items-center gap-1"
+            [disabled]="disabled() || full()" aria-label="افزودن فهرست" title="افزودن فهرست" (click)="add('list')">
+      <svg appIcon="list" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+      <span>فهرست</span>
+    </button>
+    <button type="button" class="tap-target min-h-[40px] rounded-xl border border-line bg-surface text-xs px-3 flex items-center gap-1"
+            [disabled]="disabled() || full()" aria-label="افزودن جدول" title="افزودن جدول" (click)="add('table')">
+      <svg appIcon="grid" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+      <span>جدول</span>
+    </button>
+    <span class="ms-auto text-[11px] tabular-nums" [class.text-rose-700]="chars() > maxChars" [class.text-fg-muted]="chars() <= maxChars"
+          [title]="'سقف: ' + faNumber(maxBlocks) + ' بلوک و ' + faNumber(maxChars) + ' نویسه'">
+      {{ faNumber(blocks().length) }} بلوک · {{ faNumber(chars()) }} نویسه
+    </span>
+  </div>
+  @if (invalid()) {
+    <p class="text-xs text-rose-700" role="alert">{{ invalid() }}</p>
+  }
+</div>
