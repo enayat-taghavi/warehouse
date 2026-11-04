@@ -318,7 +318,9 @@ export class DocumentPreviewComponent implements OnDestroy {
     this.previewRotation = 0;
     this.panX = 0;
     this.panY = 0;
-    this.isFullscreenPreview = false;
+    if (!wasOpen) {
+      this.isFullscreenPreview = false;
+    }
     this.useIframeFallback = false;
 
     this.previewModal = {

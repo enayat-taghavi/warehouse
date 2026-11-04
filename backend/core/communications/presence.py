@@ -11,6 +11,7 @@ import logging
 import time
 
 from django.core.cache import cache
+from django.utils import timezone
 from channels.db import database_sync_to_async
 
 logger = logging.getLogger(__name__)
@@ -20,10 +21,97 @@ CACHE_PRESENCE_LOCK_KEY = "chat_active_online_users_lock"
 CACHE_TIMEOUT = 86400  # 24 hours
 # عمر شمارندهٔ اتصال؛ با هر ping تمدید می‌شود تا پردازهٔ ازکارافتاده کاربر را برای همیشه آنلاین نگه ندارد
 CONNECTION_COUNT_TTL = 600
+# فاصلهٔ مجاز ثبت آخرین بازدید در دیتابیس (۶۰ ثانیه)
+LAST_SEEN_THROTTLE_SECONDS = 60
 
 
 def _count_key(user_id) -> str:
     return f"chat_presence_conn_{int(user_id)}"
+
+
+def _last_seen_throttle_key(user_id) -> str:
+    return f"chat:last_seen_write_throttle:{int(user_id)}"
+
+
+def _last_seen_cache_key(user_id) -> str:
+    return f"chat:last_seen:{int(user_id)}"
+
+
+def record_last_seen_sync(user_id: int, force: bool = False) -> None:
+    """
+    ثبت آخرین زمان مشاهده کاربر در ChatPresence.
+    - اگر force=True باشد (هنگام قطع اتصال و آفلاین شدن)، بدون درنگ در دیتابیس ثبت می‌شود.
+    - اگر force=False باشد (هنگام اتصال یا heartbeat)، با کش حداکثر هر ۶۰ ثانیه یک بار در دیتابیس نوشته می‌شود.
+    """
+    user_id = int(user_id)
+    throttle_key = _last_seen_throttle_key(user_id)
+    now = timezone.now()
+
+    if not force:
+        acquired = cache.add(throttle_key, 1, LAST_SEEN_THROTTLE_SECONDS)
+        if not acquired:
+            return
+    else:
+        try:
+            cache.set(throttle_key, 1, LAST_SEEN_THROTTLE_SECONDS)
+        except Exception:
+            pass
+
+    try:
+        from .models import ChatPresence
+        ChatPresence.objects.update_or_create(
+            user_id=user_id,
+            defaults={'last_seen_at': now}
+        )
+        cache.set(_last_seen_cache_key(user_id), now.isoformat(), CACHE_TIMEOUT)
+    except Exception as e:
+        logger.debug(f"[PresenceCache] record_last_seen error for user {user_id}: {e}")
+
+
+def get_user_last_seen_iso(user_or_id) -> str | None:
+    """
+    دریافت رشتهٔ ISO زمان آخرین مشاهدهٔ کاربر، با اولویت رابطهٔ پیش‌واکشی‌شده، سپس کش، سپس دیتابیس.
+    """
+    if user_or_id is None:
+        return None
+    user_id = getattr(user_or_id, 'id', user_or_id)
+    try:
+        user_id = int(user_id)
+    except (ValueError, TypeError):
+        return None
+
+    # ۱. بررسی پیش‌واکشی (Prefetch / select_related)
+    if hasattr(user_or_id, 'chat_presence'):
+        try:
+            presence = getattr(user_or_id, 'chat_presence', None)
+            if presence and presence.last_seen_at:
+                return presence.last_seen_at.isoformat()
+        except Exception:
+            pass
+
+    # ۲. بررسی کش
+    try:
+        cached = cache.get(_last_seen_cache_key(user_id))
+        if cached and isinstance(cached, str):
+            return cached
+    except Exception:
+        pass
+
+    # ۳. بررسی دیتابیس
+    try:
+        from .models import ChatPresence
+        presence = ChatPresence.objects.filter(user_id=user_id).first()
+        if presence and presence.last_seen_at:
+            iso = presence.last_seen_at.isoformat()
+            try:
+                cache.set(_last_seen_cache_key(user_id), iso, CACHE_TIMEOUT)
+            except Exception:
+                pass
+            return iso
+    except Exception as e:
+        logger.debug(f"[PresenceCache] get_user_last_seen_iso error for {user_id}: {e}")
+
+    return None
 
 
 def _get_current_set() -> set:
@@ -84,6 +172,7 @@ def connect_user_sync(user_id: int) -> int:
                 count = cache.incr(key)
             cache.touch(key, CONNECTION_COUNT_TTL)
         _mutate_set(lambda users: users.add(user_id))
+        record_last_seen_sync(user_id, force=False)
         return count
     except Exception as e:
         logger.debug(f"[PresenceCache] connect error: {e}")
@@ -105,6 +194,7 @@ def disconnect_user_sync(user_id: int) -> int:
             count = 0
         if count == 0:
             _mutate_set(lambda users: users.discard(user_id) if _connection_count(user_id) <= 0 else None)
+            record_last_seen_sync(user_id, force=True)
         return count
     except Exception as e:
         logger.debug(f"[PresenceCache] disconnect error: {e}")
@@ -120,6 +210,7 @@ def touch_online_user_sync(user_id: int) -> None:
             _mutate_set(lambda users: users.add(user_id))
         else:
             cache.touch(key, CONNECTION_COUNT_TTL)
+        record_last_seen_sync(user_id, force=False)
     except Exception as e:
         logger.debug(f"[PresenceCache] touch error: {e}")
 
@@ -173,3 +264,9 @@ def remove_online_user(user_id: int) -> list:
 @database_sync_to_async
 def get_online_users() -> list:
     return get_online_users_sync()
+
+
+@database_sync_to_async
+def record_last_seen(user_id: int, force: bool = False) -> None:
+    return record_last_seen_sync(user_id, force=force)
+

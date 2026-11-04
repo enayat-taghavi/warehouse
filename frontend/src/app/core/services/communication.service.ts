@@ -24,6 +24,7 @@ export interface UserShort {
   first_name?: string;
   last_name?: string;
   full_name: string;
+  last_seen_at?: string | null;
 }
 
 export interface MessageAttachment {
@@ -134,6 +135,8 @@ export interface Conversation {
   is_pinned?: boolean;
   pinned_at?: string | null;
   pinned_messages?: PinnedMessageItem[];
+  last_seen_at?: string | null;
+  other_user_last_seen_at?: string | null;
 }
 
 export interface ReadStatusMember {
@@ -216,6 +219,7 @@ export class CommunicationService implements OnDestroy {
   public totalUnreadCount = signal<number>(0);
   public hasNewIncomingPulse = signal<boolean>(false);
   public onlineUsers = signal<Set<number>>(new Set<number>());
+  public lastSeenUsers = signal<Map<number, string>>(new Map<number, string>());
 
   public conversations$ = new BehaviorSubject<Conversation[]>([]);
   public activeConversation$ = new BehaviorSubject<Conversation | null>(null);
@@ -380,6 +384,26 @@ export class CommunicationService implements OnDestroy {
     const idNum = Number(userId);
     if (isNaN(idNum)) return false;
     return this.onlineUsers().has(idNum);
+  }
+
+  /**
+   * دریافت زمان آخرین مشاهده کاربر بر اساس شناسه (ISO)
+   */
+  public getLastSeen(userId?: number | string | null): string | null {
+    if (userId === undefined || userId === null) return null;
+    const idNum = Number(userId);
+    if (isNaN(idNum)) return null;
+    return this.lastSeenUsers().get(idNum) ?? null;
+  }
+
+  /**
+   * تنظیم یا بروزرسانی زمان آخرین مشاهده کاربر (ISO)
+   */
+  public setLastSeen(userId: number, isoStr: string): void {
+    if (!userId || !isoStr) return;
+    const map = new Map(this.lastSeenUsers());
+    map.set(userId, isoStr);
+    this.lastSeenUsers.set(map);
   }
 
   /**
@@ -602,7 +626,7 @@ export class CommunicationService implements OnDestroy {
           } else if (payload.event === 'chat.typing') {
             this.typingUser$.next(payload.data);
           } else if (payload.event === 'chat.presence') {
-            const { user_id, status } = payload.data || {};
+            const { user_id, status, last_seen_at } = payload.data || {};
             if (user_id !== undefined && user_id !== null) {
               const current = new Set(this.onlineUsers());
               const idNum = Number(user_id);
@@ -610,6 +634,9 @@ export class CommunicationService implements OnDestroy {
                 current.add(idNum);
               } else if (status === 'offline') {
                 current.delete(idNum);
+                if (last_seen_at) {
+                  this.setLastSeen(idNum, last_seen_at);
+                }
               }
               this.onlineUsers.set(current);
             }
@@ -821,6 +848,16 @@ export class CommunicationService implements OnDestroy {
         })
       );
       const convs: Conversation[] = Array.isArray(res) ? res : (res?.results || []);
+      const myId = this.getCurrentUserId();
+      for (const c of convs) {
+        if (c.conv_type === 'direct') {
+          const other = c.participants_details?.find(p => p.id !== myId);
+          const lastSeen = c.other_user_last_seen_at || c.last_seen_at || other?.last_seen_at;
+          if (other?.id && lastSeen) {
+            this.setLastSeen(other.id, lastSeen);
+          }
+        }
+      }
       this.conversations$.next(convs);
       
       const totalUnread = convs.reduce((acc, curr) => acc + (curr.unread_count || 0), 0);

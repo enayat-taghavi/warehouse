@@ -4,6 +4,7 @@ from django.dispatch import receiver
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
+from django.utils import timezone
 from common.sync_models import SyncModelMixin
 from .reactions import ALLOWED_REACTION_EMOJIS
 
@@ -546,3 +547,30 @@ class ChatCompanyPolicy(models.Model):
 
     def __str__(self):
         return f"{self.company_id}: scope={self.contact_scope}"
+
+
+class ChatPresence(models.Model):
+    """
+    وضعیت حضور و آخرین زمان مشاهده کاربر در چت (فاز ۷).
+    کلید اصلی شناسه کاربر است و جدول auth_user تغییر نمی‌کند.
+    """
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='chat_presence',
+        primary_key=True,
+        verbose_name="کاربر"
+    )
+    last_seen_at = models.DateTimeField(
+        default=timezone.now,
+        db_index=True,
+        verbose_name="آخرین زمان مشاهده"
+    )
+
+    class Meta:
+        verbose_name = "وضعیت حضور در چت"
+        verbose_name_plural = "وضعیت‌های حضور در چت"
+
+    def __str__(self):
+        return f"{self.user_id}: {self.last_seen_at}"
+

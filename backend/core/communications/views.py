@@ -173,8 +173,13 @@ class ConversationViewSet(viewsets.ModelViewSet):
             to_attr='prefetched_pinned_messages'
         )
 
+        participants_prefetch = Prefetch(
+            'participants',
+            queryset=User.objects.select_related('chat_presence')
+        )
+
         if self.action in DETAIL_CONVERSATION_ACTIONS:
-            return Conversation.objects.all().select_related('created_by').prefetch_related('participants', pinned_msg_prefetch)
+            return Conversation.objects.all().select_related('created_by').prefetch_related(participants_prefetch, pinned_msg_prefetch)
 
         user = self.request.user
         wh_id = self.request.query_params.get('warehouse_id')
@@ -230,7 +235,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         qs = visible_conversations(user).select_related(
             'created_by'
         ).prefetch_related(
-            'participants',
+            participants_prefetch,
             last_msg_prefetch,
             pinned_msg_prefetch
         ).annotate(

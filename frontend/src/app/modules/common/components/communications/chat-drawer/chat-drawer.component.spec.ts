@@ -8,7 +8,7 @@ import { signal } from '@angular/core';
 import { Router, ActivatedRoute, convertToParamMap } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 
-import { ChatDrawerComponent } from './chat-drawer.component';
+import { ChatDrawerComponent, formatLastSeen } from './chat-drawer.component';
 import { CommunicationService, Conversation, ChatMessage } from '../../../../../core/services/communication.service';
 import { StateService } from '../../../../../core/services/state.service';
 import { AuthService } from '../../../../../core/auth/auth.service';
@@ -80,6 +80,8 @@ describe('ChatDrawerComponent - Phase 1 (Page mode, expand button, URL sync)', (
       takeComposerDraft: vi.fn().mockReturnValue(null),
       getCurrentUserId: vi.fn().mockReturnValue(1),
       isUserOnline: vi.fn().mockReturnValue(false),
+      getLastSeen: vi.fn().mockReturnValue(null),
+      setLastSeen: vi.fn(),
       toggleMute: vi.fn(),
       reactToMessage: vi.fn().mockReturnValue(of({ message_id: 1, conversation_id: 'c101', reactions: [{ emoji: '❤️', count: 1, mine: true }] })),
       getMessageReactions: vi.fn().mockReturnValue(of([{ user_id: 1, full_name: 'من', emoji: '❤️', created_at: new Date().toISOString() }])),
@@ -509,6 +511,8 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
       takeComposerDraft: vi.fn().mockReturnValue(null),
       getCurrentUserId: vi.fn().mockReturnValue(1),
       isUserOnline: vi.fn().mockReturnValue(true),
+      getLastSeen: vi.fn().mockReturnValue(null),
+      setLastSeen: vi.fn(),
       toggleMute: vi.fn(),
       sendMessage: vi.fn().mockResolvedValue(undefined),
       editMessage: vi.fn().mockResolvedValue(undefined),
@@ -1140,5 +1144,158 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
 
     unpinBtn.click();
     expect(comm.togglePinMessage).toHaveBeenCalledWith(301, false);
+  });
+});
+
+describe('ChatDrawerComponent - Phase 7 (Approximate Last Seen & Presence)', () => {
+  const baseNow = new Date('2026-11-04T12:00:00Z').getTime();
+  let fixture: ComponentFixture<ChatDrawerComponent>;
+  let comp: ChatDrawerComponent;
+  let comm: any;
+
+  async function setupComponent() {
+    TestBed.resetTestingModule();
+    const convs$ = new BehaviorSubject<Conversation[]>([]);
+    const active$ = new BehaviorSubject<Conversation | null>(null);
+
+    comm = {
+      isChatDrawerOpen: signal(true),
+      chatReturnUrl: signal<string | null>(null),
+      hasActiveConversation: signal(true),
+      isMuted: signal(false),
+      conversations$: convs$,
+      activeConversation$: active$,
+      activeMessages$: new BehaviorSubject<ChatMessage[]>([]),
+      typingUser$: new Subject<any>(),
+      membershipEvents$: new Subject<any>(),
+      ensureConnected: vi.fn(),
+      refreshPresence: vi.fn(),
+      loadConversations: vi.fn().mockResolvedValue(undefined),
+      getContacts: vi.fn().mockResolvedValue([]),
+      getCapabilities: vi.fn().mockResolvedValue({ can_create_group: true }),
+      getMembers: vi.fn().mockResolvedValue([]),
+      openConversation: vi.fn(),
+      leaveConversation: vi.fn(),
+      closeDrawer: vi.fn(),
+      stashComposerDraft: vi.fn(),
+      takeComposerDraft: vi.fn().mockReturnValue(null),
+      getCurrentUserId: vi.fn().mockReturnValue(1),
+      isUserOnline: vi.fn().mockReturnValue(false),
+      getLastSeen: vi.fn().mockReturnValue(null),
+      setLastSeen: vi.fn(),
+      toggleMute: vi.fn()
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [ChatDrawerComponent],
+      providers: [
+        { provide: CommunicationService, useValue: comm },
+        { provide: StateService, useValue: { appState: { activeWarehouseId: 'ALL' } } },
+        { provide: AuthService, useValue: { user: () => ({ id: 1, username: 'me', first_name: 'من', last_name: '' }) } },
+        { provide: ToastService, useValue: { show: vi.fn(), success: vi.fn(), error: vi.fn(), warning: vi.fn() } },
+        { provide: ApiService, useValue: { download: vi.fn() } },
+        { provide: ConfigApiService, useValue: { getPublicConfig: () => new Subject<any>() } },
+        { provide: FileOutputService, useValue: { canShareFiles: () => false, shareBlob: vi.fn() } },
+        { provide: Router, useValue: { navigate: vi.fn(), navigateByUrl: vi.fn(), url: '/app/launcher', events: of() } },
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({})) } },
+        { provide: HttpClient, useValue: { get: vi.fn(), post: vi.fn() } }
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ChatDrawerComponent);
+    comp = fixture.componentInstance;
+    comp.activeTab.set('chat');
+    fixture.detectChanges();
+    await flush(fixture);
+  }
+
+  it('State 1: formatLastSeen returns "آنلاین" when isOnline is true', () => {
+    expect(formatLastSeen(true, null, baseNow)).toBe('آنلاین');
+    expect(formatLastSeen(true, new Date(baseNow - 3600000).toISOString(), baseNow)).toBe('آنلاین');
+  });
+
+  it('State 2: formatLastSeen returns "آخرین بازدید اخیراً" when null or within 2 minutes', () => {
+    // null or invalid date
+    expect(formatLastSeen(false, null, baseNow)).toBe('آخرین بازدید اخیراً');
+    expect(formatLastSeen(false, undefined, baseNow)).toBe('آخرین بازدید اخیراً');
+    expect(formatLastSeen(false, 'invalid-date', baseNow)).toBe('آخرین بازدید اخیراً');
+
+    // 60 seconds ago (< 120s)
+    const sixtySecAgo = new Date(baseNow - 60 * 1000).toISOString();
+    expect(formatLastSeen(false, sixtySecAgo, baseNow)).toBe('آخرین بازدید اخیراً');
+  });
+
+  it('State 3: formatLastSeen returns "آخرین بازدید امروز ساعت ..." for earlier same calendar day', () => {
+    // 3 hours ago on same calendar day
+    const threeHoursAgo = new Date(baseNow - 3 * 3600 * 1000);
+    const res = formatLastSeen(false, threeHoursAgo.toISOString(), baseNow);
+    expect(res).toContain('آخرین بازدید امروز ساعت');
+  });
+
+  it('State 4: formatLastSeen returns "آخرین بازدید دیروز" for yesterday calendar day', () => {
+    const nowDate = new Date(baseNow);
+    const yesterday = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - 1, 14, 0, 0);
+    expect(formatLastSeen(false, yesterday.toISOString(), baseNow)).toBe('آخرین بازدید دیروز');
+  });
+
+  it('State 5: formatLastSeen returns "آخرین بازدید این هفته" for 2 to 6 days ago', () => {
+    const fourDaysAgo = new Date(baseNow - 4 * 86400 * 1000);
+    expect(formatLastSeen(false, fourDaysAgo.toISOString(), baseNow)).toBe('آخرین بازدید این هفته');
+  });
+
+  it('State 6: formatLastSeen returns "آخرین بازدید مدتی پیش" for 7+ days ago', () => {
+    const tenDaysAgo = new Date(baseNow - 10 * 86400 * 1000);
+    expect(formatLastSeen(false, tenDaysAgo.toISOString(), baseNow)).toBe('آخرین بازدید مدتی پیش');
+  });
+
+  it('component getDirectPresenceText and DOM render approximate last seen in direct chat header', async () => {
+    const sampleConv: Conversation = {
+      id: 'c101',
+      conv_type: 'direct',
+      title: 'علی رضایی',
+      participants: [1, 2],
+      is_active: true,
+      created_at: '',
+      updated_at: '',
+      participants_details: [
+        { id: 1, username: 'me', full_name: 'من' },
+        { id: 2, username: 'ali', full_name: 'علی رضایی' }
+      ]
+    };
+    await setupComponent();
+
+    // Direct conversation with other user offline, last seen yesterday
+    const nowDate = new Date();
+    const yesterday = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - 1, 15, 30, 0);
+    const directConv: Conversation = {
+      ...sampleConv,
+      conv_type: 'direct',
+      participants_details: [
+        { id: 1, username: 'me', full_name: 'من' },
+        { id: 2, username: 'ali', full_name: 'علی رضایی', last_seen_at: yesterday.toISOString() }
+      ]
+    };
+
+    comp.activeConv.set(directConv);
+    comm.isUserOnline.mockReturnValue(false);
+    fixture.detectChanges();
+    await flush(fixture);
+
+    expect(comp.getDirectPresenceText()).toBe('آخرین بازدید دیروز');
+
+    const headerTextEl = fixture.nativeElement.querySelector('.text-\\[10px\\].text-slate-400') as HTMLElement;
+    expect(headerTextEl).not.toBeNull();
+    expect(headerTextEl.textContent?.trim()).toBe('آخرین بازدید دیروز');
+
+    // Switch other user to online
+    comm.isUserOnline.mockReturnValue(true);
+    comp.activeConv.set({ ...directConv });
+    fixture.detectChanges();
+    await flush(fixture);
+
+    expect(comp.getDirectPresenceText()).toBe('آنلاین');
+    const onlineEl = fixture.nativeElement.querySelector('.text-\\[10px\\].text-emerald-500') as HTMLElement;
+    expect(onlineEl).not.toBeNull();
+    expect(onlineEl.textContent).toContain('آنلاین');
   });
 });

@@ -57,6 +57,63 @@ export const CHAT_MAX_FILES = 10;
 /** سقف پیش‌فرض حجم هر فایل (مگابایت)؛ تا رسیدن تنظیم سرور (chat_max_upload_mb) یا در حالت آفلاین */
 export const CHAT_DEFAULT_MAX_FILE_MB = 100;
 
+/**
+ * قالب‌بندی زمان آخرین بازدید به صورت تقریبی و فارسی (فاز ۷، تصمیم ۶ طرح):
+ * ۱. آنلاین
+ * ۲. آخرین بازدید اخیراً (< ۲ دقیقه یا بدون تاریخ)
+ * ۳. آخرین بازدید امروز ساعت HH:MM (ارقام فارسی fa-IR)
+ * ۴. آخرین بازدید دیروز
+ * ۵. آخرین بازدید این هفته (< ۷ روز)
+ * ۶. آخرین بازدید مدتی پیش (>= ۷ روز)
+ */
+export function formatLastSeen(isOnline: boolean, lastSeenIso?: string | null, nowMs?: number): string {
+  if (isOnline) {
+    return 'آنلاین';
+  }
+  if (!lastSeenIso) {
+    return 'آخرین بازدید اخیراً';
+  }
+  const now = new Date(nowMs ?? Date.now());
+  const target = new Date(lastSeenIso);
+  if (isNaN(target.getTime())) {
+    return 'آخرین بازدید اخیراً';
+  }
+  const diffSec = (now.getTime() - target.getTime()) / 1000;
+  if (diffSec < 120) {
+    return 'آخرین بازدید اخیراً';
+  }
+
+  // بررسی همان روز تقویمی (به وقت محلی/ایران)
+  const isSameDay =
+    now.getFullYear() === target.getFullYear() &&
+    now.getMonth() === target.getMonth() &&
+    now.getDate() === target.getDate();
+
+  if (isSameDay) {
+    const timeStr = target.toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+    return `آخرین بازدید امروز ساعت ${timeStr}`;
+  }
+
+  // بررسی روز قبل (دیروز تقویمی)
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const isYesterday =
+    yesterday.getFullYear() === target.getFullYear() &&
+    yesterday.getMonth() === target.getMonth() &&
+    yesterday.getDate() === target.getDate();
+
+  if (isYesterday) {
+    return 'آخرین بازدید دیروز';
+  }
+
+  // درون ۷ روز اخیر
+  if (diffSec < 7 * 86400) {
+    return 'آخرین بازدید این هفته';
+  }
+
+  // بیش از ۷ روز
+  return 'آخرین بازدید مدتی پیش';
+}
+
 @Component({
   selector: 'app-chat-drawer',
   standalone: true,
@@ -95,6 +152,10 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   public pendingRouteConvId: string | null = null;
   /** سقف مؤثر حجم هر فایل به مگابایت (تنظیم سرور، پیش‌فرض ۱۰۰) */
   public maxUploadMb = signal<number>(CHAT_DEFAULT_MAX_FILE_MB);
+  /** زمان فعلی برای بروزرسانی برچسب آخرین بازدید تقریبی (هر ۱ دقیقه) */
+  public lastSeenNow = signal<number>(Date.now());
+  public previewVersion = signal<number>(0);
+  private lastSeenTimer: ReturnType<typeof setInterval> | null = null;
   private sub = new Subscription();
   /** پیش‌نمایش عکس پیوست‌ها (blob با توکن، چون <img> هدر Authorization نمی‌فرستد) */
   private attachmentPreviews = new Map<string, string | null>();
@@ -250,6 +311,9 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.commService.refreshPresence();
     this.commService.loadConversations(whId);
     this.loadContacts(whId);
+    this.lastSeenTimer = setInterval(() => {
+      this.lastSeenNow.set(Date.now());
+    }, 60000);
     this.commService.getCapabilities()
       .then(c => this.canCreateGroup.set(!!c?.can_create_group))
       .catch(() => this.canCreateGroup.set(false));
@@ -477,6 +541,10 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.attachmentFull.clear();
     if (this.typingTimeout) clearTimeout(this.typingTimeout);
     if (this.typingIndicatorClearTimer) clearTimeout(this.typingIndicatorClearTimer);
+    if (this.lastSeenTimer) {
+      clearInterval(this.lastSeenTimer);
+      this.lastSeenTimer = null;
+    }
     if (this.audioEl) { this.audioEl.pause(); this.audioEl.removeAttribute('src'); this.audioEl = null; }
   }
 
@@ -1114,6 +1182,10 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.editing.set(null);
     this.replyTo.set(msg);
     setTimeout(() => this.composer?.nativeElement?.focus(), 0);
+  }
+
+  public replyToMessage(msg: ChatMessage): void {
+    this.startReply(msg);
   }
 
   public startEdit(msg: ChatMessage): void {
@@ -1978,6 +2050,26 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     return this.commService.isUserOnline(other.id);
   }
 
+  /** دریافت زمان آخرین مشاهده طرف مقابل در گفتگوی دونفره (ISO) */
+  public getOtherUserLastSeen(conv?: Conversation | null): string | null {
+    const c = conv || this.activeConv();
+    if (!c || c.conv_type !== 'direct') return null;
+    const other = this.getOtherParticipant(c);
+    if (!other) return null;
+    const live = this.commService.getLastSeen(other.id);
+    if (live) return live;
+    return other.last_seen_at || c.other_user_last_seen_at || c.last_seen_at || null;
+  }
+
+  /** متن فارسی آخرین وضعیت حضور طرف مقابل در هدر گفتگوی دونفره (فاز ۷) */
+  public getDirectPresenceText(conv?: Conversation | null): string {
+    const c = conv || this.activeConv();
+    if (!c || c.conv_type !== 'direct') return '';
+    const isOnline = this.isOtherUserOnline(c);
+    const lastSeenIso = this.getOtherUserLastSeen(c);
+    return formatLastSeen(isOnline, lastSeenIso, this.lastSeenNow());
+  }
+
   public trackByMessageId(index: number, msg: ChatMessage): string {
     return msg.id || msg.client_temp_id || String(index);
   }
@@ -2014,8 +2106,9 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
    * فقط عکسی که بندانگشتی ندارد (قدیمی یا ناموفق) فایل کامل را نشان می‌دهد.
    */
   public attachmentPreview(att: { id?: string; download_url?: string; thumbnail_url?: string | null; content_type?: string; preview_status?: string }): string | null {
+    this.previewVersion();
     if (!att?.id) return null;
-    const fallback = att.preview_status === 'pending' || !(att.content_type || '').startsWith('image/') ? null : att.download_url;
+    const fallback = !(att.content_type || '').startsWith('image/') ? null : att.download_url;
     const url = att.thumbnail_url || fallback;
     if (!url) return null;
     const key = `${att.id}|${url}`;
@@ -2029,12 +2122,16 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       .then((blob) => {
         this.attachmentPreviews.set(key, URL.createObjectURL(blob));
         if (isThumb) void putChatThumb(uid, attId, blob);
+        this.previewVersion.update(v => v + 1);
       })
       .catch(async () => {
         // آفلاین یا خطای شبکه: بندانگشتی دیده‌شدهٔ قبلی از کش نشان داده می‌شود
         if (!isThumb) return;
         const cached = await getChatThumb(uid, attId);
-        if (cached) this.attachmentPreviews.set(key, URL.createObjectURL(cached));
+        if (cached) {
+          this.attachmentPreviews.set(key, URL.createObjectURL(cached));
+          this.previewVersion.update(v => v + 1);
+        }
       });
     return null;
   }

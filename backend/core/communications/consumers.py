@@ -205,6 +205,21 @@ def check_user_active_and_chat_allowed(user_id):
     return bool(user) and chat_allowed(user)
 
 
+@database_sync_to_async
+def check_user_can_contact_id(user, target_id):
+    try:
+        from .contact_scope import can_contact, chat_allowed
+        if not chat_allowed(user):
+            return False
+        target = User.objects.filter(id=target_id, is_active=True).first()
+        if not target or not chat_allowed(target):
+            return False
+        return can_contact(user, target)
+    except Exception:
+        return False
+
+
+
 class ChatConsumer(WsAuthLifecycleMixin, AsyncWebsocketConsumer):
     async def _still_permitted(self):
         # کاربری که در میانهٔ اتصال بسته شود، حداکثر تا ping بعدی (۶۰ ثانیه) بیرون می‌رود (طرح دسترسی به چت، ت۲)
@@ -289,12 +304,15 @@ class ChatConsumer(WsAuthLifecycleMixin, AsyncWebsocketConsumer):
                 try:
                     # کاربر هنوز اتصال دیگری دارد (تب یا دستگاه دیگر): آفلاین اعلام نمی‌شود (E10)
                     if remaining <= 0:
+                        from django.utils import timezone
+                        now_iso = timezone.now().isoformat()
                         await self.channel_layer.group_send(
                             self.presence_group,
                             {
                                 'type': 'chat_presence_event',
                                 'user_id': self.user.id,
-                                'status': 'offline'
+                                'status': 'offline',
+                                'last_seen_at': now_iso,
                             }
                         )
                 except Exception:
@@ -437,12 +455,22 @@ class ChatConsumer(WsAuthLifecycleMixin, AsyncWebsocketConsumer):
     async def chat_presence_event(self, event):
         """ارسال تغییر وضعیت آنلاین/آفلاین کاربر به کلاینت‌های دیگر"""
         if hasattr(self, 'user') and self.user and event.get('user_id') != self.user.id:
+            target_id = event.get('user_id')
+            last_seen = event.get('last_seen_at')
+            if last_seen and target_id:
+                # محرمانگی و تفکیک قلمرو: ارسال last_seen_at فقط در صورت وجود مجوز contact_scope
+                can_see = await check_user_can_contact_id(self.user, target_id)
+                if not can_see:
+                    last_seen = None
+            data = {
+                'user_id': target_id,
+                'status': event.get('status')
+            }
+            if last_seen:
+                data['last_seen_at'] = last_seen
             await self.send(text_data=json.dumps({
                 'event': 'chat.presence',
-                'data': {
-                    'user_id': event.get('user_id'),
-                    'status': event.get('status')
-                }
+                'data': data
             }))
 
 

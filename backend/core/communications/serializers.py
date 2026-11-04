@@ -27,14 +27,22 @@ _REPLY_TO_ERROR = 'پیام مورد پاسخ در این گفتگو نیست'
 
 class UserShortSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
+    last_seen_at = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'full_name']
+        fields = ['id', 'username', 'first_name', 'last_name', 'full_name', 'last_seen_at']
 
     def get_full_name(self, obj):
         name = f"{obj.first_name or ''} {obj.last_name or ''}".strip()
         return name if name else obj.username
+
+    def get_last_seen_at(self, obj):
+        # زمان آخرین مشاهده فقط برای طرف مقابل در گفتگوی دونفره (با بررسی صریح مجوز) بازگردانده می‌شود
+        last_seen_map = self.context.get('direct_participants_last_seen')
+        if last_seen_map and isinstance(last_seen_map, dict):
+            return last_seen_map.get(obj.id)
+        return None
 
 
 class MessageAttachmentSerializer(serializers.ModelSerializer):
@@ -227,7 +235,7 @@ def get_conversation_pinned_messages_data(obj):
 
 class ConversationSerializer(serializers.ModelSerializer):
     participants = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
-    participants_details = UserShortSerializer(source='participants', many=True, read_only=True)
+    participants_details = serializers.SerializerMethodField()
     target_user_id = serializers.IntegerField(write_only=True, required=False)
     # پس از فاز ۴، `warehouse` دیگر FK نیست؛ فیلد API را به `warehouse_id` ساده مپ می‌کنیم
     # تا عین قراردادِ قبلی (عدد شناسهٔ انبار، قابل خواندن و نوشتن) حفظ شود.
@@ -247,6 +255,8 @@ class ConversationSerializer(serializers.ModelSerializer):
     is_pinned = serializers.SerializerMethodField()
     pinned_at = serializers.SerializerMethodField()
     pinned_messages = serializers.SerializerMethodField()
+    last_seen_at = serializers.SerializerMethodField()
+    other_user_last_seen_at = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
@@ -254,9 +264,76 @@ class ConversationSerializer(serializers.ModelSerializer):
             'id', 'title', 'conv_type', 'warehouse', 'participants', 'target_user_id',
             'participants_details', 'is_active', 'created_at', 'updated_at',
             'last_message', 'unread_count', 'member_ids', 'my_role', 'member_count', 'is_muted', 'can_post',
-            'is_pinned', 'pinned_at', 'pinned_messages'
+            'is_pinned', 'pinned_at', 'pinned_messages', 'last_seen_at', 'other_user_last_seen_at'
         ]
         read_only_fields = ['id', 'participants', 'created_at', 'updated_at', 'is_active']
+
+    def _get_other_user_last_seen(self, obj):
+        """
+        محاسبه آخرین زمان مشاهده برای طرف مقابل در گفتگوی دونفره (فاز ۷).
+        قانون اکید محرمانگی (tenant-scope-reviewer):
+        - فقط در گفتگوی دونفره (conv_type == 'direct')
+        - فقط در صورتی که کاربر جاری به پیام‌رسان دسترسی داشته باشد (chat_allowed)
+        - فقط در صورتی که طرف مقابل مسدود نباشد
+        - فقط در صورتی که طرف مقابل طبق contact_scope در حوزهٔ مخاطبان کاربر جاری باشد
+        - در غیر این صورت مقدار None بازگردانده می‌شود.
+        """
+        if obj.conv_type != ConversationType.DIRECT:
+            return None
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return None
+
+        from .contact_scope import chat_allowed, blocked_user_ids, visible_contact_ids
+        if not hasattr(request, '_user_chat_allowed_cached'):
+            request._user_chat_allowed_cached = chat_allowed(request.user)
+        if not request._user_chat_allowed_cached:
+            return None
+
+        participants = list(obj.participants.all())
+        other_user = next((p for p in participants if p.id != request.user.id), None)
+        if not other_user:
+            other_user = participants[0] if participants else None
+        if not other_user or not getattr(other_user, 'is_active', True):
+            return None
+
+        if not hasattr(request, '_blocked_user_ids_cached'):
+            request._blocked_user_ids_cached = blocked_user_ids()
+        if other_user.id in request._blocked_user_ids_cached:
+            return None
+
+        if request.user.is_superuser:
+            can_see = True
+        else:
+            if not hasattr(request, '_visible_contact_ids_cached'):
+                request._visible_contact_ids_cached = visible_contact_ids(request.user)
+            visible_ids = request._visible_contact_ids_cached
+            can_see = (visible_ids is None or other_user.id in visible_ids)
+
+        if not can_see:
+            return None
+
+        from .presence import get_user_last_seen_iso
+        return get_user_last_seen_iso(other_user)
+
+    def get_last_seen_at(self, obj):
+        return self._get_other_user_last_seen(obj)
+
+    def get_other_user_last_seen_at(self, obj):
+        return self._get_other_user_last_seen(obj)
+
+    def get_participants_details(self, obj):
+        last_seen_map = {}
+        if obj.conv_type == ConversationType.DIRECT:
+            last_seen = self._get_other_user_last_seen(obj)
+            if last_seen:
+                request = self.context.get('request')
+                for p in obj.participants.all():
+                    if request and p.id != request.user.id:
+                        last_seen_map[p.id] = last_seen
+        ctx = dict(self.context)
+        ctx['direct_participants_last_seen'] = last_seen_map
+        return UserShortSerializer(obj.participants.all(), many=True, context=ctx).data
 
     def validate_title(self, value):
         return value.strip() if isinstance(value, str) else value
