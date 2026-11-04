@@ -1,0 +1,181 @@
+<div class="flex flex-col gap-3 min-w-0" dir="rtl">
+  <app-command-center>
+    <div cc-tabs class="min-w-0">
+      <app-tab-bar [tabs]="tabs" [active]="filters().tab" mobile="icon" idPrefix="letters-tab" (activeChange)="onTab($event)" />
+    </div>
+    <div cc-actions class="flex items-center gap-2">
+      <button appAction="refresh" label="تازه کردن" (click)="reload()"></button>
+      <button appAction="create" label="نامهٔ تازه" (click)="openNew()"></button>
+    </div>
+  </app-command-center>
+
+  @if (filters().tab !== 'projects') {
+    <div class="bg-surface rounded-2xl border border-line shadow-xs p-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 min-w-0" role="search" aria-label="فیلتر نامه‌ها">
+      <div class="col-span-2 sm:col-span-3 lg:col-span-2 flex items-center gap-1 min-w-0">
+        <label class="sr-only" for="letters-q">جست‌وجوی موضوع یا شماره</label>
+        <input id="letters-q" type="search" class="flex-1 min-w-0 h-10 rounded-xl border border-line bg-surface px-3 text-sm"
+               placeholder="موضوع یا شماره" [value]="filters().q" (change)="setFilter({ q: value($event) })" />
+      </div>
+      <label class="sr-only" for="letters-kind">نوع نامه</label>
+      <select id="letters-kind" class="h-10 min-w-0 rounded-xl border border-line bg-surface px-2 text-xs" [value]="filters().kind"
+              (change)="setFilter({ kind: $any(value($event)) })">
+        <option value="">همهٔ نوع‌ها</option>
+        @for (k of kinds; track k) { <option [value]="k">{{ kindLabels[k] }}</option> }
+      </select>
+      @if (filters().tab === 'all') {
+        <label class="sr-only" for="letters-status">وضعیت</label>
+        <select id="letters-status" class="h-10 min-w-0 rounded-xl border border-line bg-surface px-2 text-xs" [value]="filters().status"
+                (change)="setFilter({ status: $any(value($event)) })">
+          <option value="">همهٔ وضعیت‌ها</option>
+          @for (s of statuses; track s) { <option [value]="s">{{ statusLabels[s] }}</option> }
+        </select>
+      }
+      <label class="sr-only" for="letters-conf">سطح محرمانگی</label>
+      <select id="letters-conf" class="h-10 min-w-0 rounded-xl border border-line bg-surface px-2 text-xs" [value]="filters().confidentiality"
+              (change)="setFilter({ confidentiality: $any(value($event)) })">
+        <option value="">همهٔ سطح‌ها</option>
+        @for (c of confs; track c) { <option [value]="c">{{ confLabels[c] }}</option> }
+      </select>
+      <label class="sr-only" for="letters-due">مهلت پاسخ</label>
+      <select id="letters-due" class="h-10 min-w-0 rounded-xl border border-line bg-surface px-2 text-xs" [value]="filters().due"
+              (change)="setFilter({ due: $any(value($event)) })">
+        <option value="">هر مهلتی</option>
+        <option value="today">مهلت امروز</option>
+        <option value="overdue">گذشته از مهلت</option>
+      </select>
+      @if (filters().project) {
+        <span class="col-span-2 sm:col-span-1 flex items-center gap-1 rounded-xl bg-indigo-50 text-indigo-800 text-xs px-2 min-h-[40px] min-w-0">
+          <span class="truncate">پروژه: {{ activeProject()?.name || faNumber(filters().project!) }}</span>
+          <button type="button" class="btn-icon-sm btn-icon-indigo min-w-[40px] min-h-[40px] ms-auto"
+                  aria-label="برداشتن فیلتر پروژه" title="برداشتن فیلتر پروژه" (click)="setFilter({ project: null })">
+            <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+          </button>
+        </span>
+      }
+    </div>
+  }
+
+  @if (local().length) {
+    <section class="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex flex-col gap-2 min-w-0" aria-label="پیش‌نویس‌های روی دستگاه" data-testid="letters-local">
+      <h2 class="text-xs font-black text-amber-900">پیش‌نویس‌های روی دستگاه</h2>
+      @for (d of local(); track d.state + d.id) {
+        <div class="flex flex-wrap items-center gap-2 min-w-0">
+          <span class="text-[11px] rounded-full px-2 py-0.5 shrink-0"
+                [class.bg-amber-100]="d.state === 'pending'" [class.bg-rose-100]="d.state === 'failed'" [class.text-rose-800]="d.state === 'failed'">
+            {{ d.state === 'pending' ? 'در صف' : 'ردشده' }}
+          </span>
+          <span class="text-xs font-bold text-fg break-words min-w-0 flex-1">{{ d.subject || 'بی‌موضوع' }}</span>
+          @if (d.message) { <span class="text-[11px] text-fg-muted break-words basis-full">{{ d.message }}</span> }
+          @if (d.state === 'failed') {
+            <button type="button" class="tap-target min-h-[40px] rounded-xl border border-amber-300 bg-surface text-xs px-3"
+                    title="متن این پیش‌نویس در فرم نامهٔ تازه بیاید" (click)="openLocal(d)">باز کردن</button>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  @if (loading()) {
+    <app-loading-skeleton [type]="filters().tab === 'projects' ? 'card' : 'table'" />
+  } @else if (error()) {
+    <div class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col items-start gap-2" role="alert">
+      @if (error() === 'offline') {
+        <p class="text-sm font-bold text-fg flex items-center gap-1">
+          <svg appIcon="wifi-off" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+          آفلاین
+        </p>
+        <p class="text-xs text-fg-muted">فهرست نامه‌ها روی دستگاه نگه داشته نمی‌شود؛ پیش‌نویس تازه را می‌توانید بنویسید.</p>
+      } @else {
+        <p class="text-sm font-bold text-fg">بارگذاری فهرست ناموفق بود.</p>
+      }
+      <button appAction="refresh" label="تلاش دوباره" (click)="reload()"></button>
+    </div>
+  } @else if (filters().tab === 'projects') {
+    @if (!projects().length) {
+      <p class="bg-surface rounded-2xl border border-line p-4 text-xs text-fg-muted">پروژه‌ای در این شرکت نیست.</p>
+    } @else {
+      <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 min-w-0">
+        @for (p of projects(); track p.id) {
+          <li class="min-w-0">
+            <button type="button" class="w-full text-start bg-surface rounded-2xl border border-line shadow-xs p-3 min-h-[40px] min-w-0 hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    [attr.aria-label]="'نامه‌های پروژهٔ ' + p.name" (click)="setFilter({ tab: 'all', project: p.id })">
+              <span class="block text-sm font-bold text-fg break-words">{{ p.name }}</span>
+              <span class="text-[11px] text-fg-muted"><bdi dir="ltr">{{ p.code }}</bdi> · {{ faNumber(p.letter_count) }} نامه</span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  } @else if (!rows().length) {
+    <div class="bg-surface rounded-2xl border border-line p-4 flex flex-col items-start gap-2">
+      <p class="text-sm font-bold text-fg">نامه‌ای پیدا نشد.</p>
+      <p class="text-xs text-fg-muted">فیلترها را عوض کنید یا نامهٔ تازه بنویسید.</p>
+      <button appAction="create" label="نامهٔ تازه" (click)="openNew()"></button>
+    </div>
+  } @else {
+    <!-- دسکتاپ: جدول -->
+    <div class="hidden md:block bg-surface rounded-2xl border border-line shadow-xs overflow-hidden" data-testid="letters-table">
+      <table class="w-full text-xs">
+        <thead class="bg-surface-muted text-fg-muted">
+          <tr>
+            <th class="text-start p-2 font-bold">شماره</th>
+            <th class="text-start p-2 font-bold">موضوع</th>
+            <th class="text-start p-2 font-bold">نوع</th>
+            <th class="text-start p-2 font-bold">وضعیت</th>
+            <th class="text-start p-2 font-bold">پروژه</th>
+            <th class="text-start p-2 font-bold">تاریخ</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of rows(); track r.id) {
+            <tr class="border-t border-line-subtle hover:bg-surface-muted">
+              <td class="p-2 tabular-nums"><bdi>{{ r.number_display || '—' }}</bdi></td>
+              <td class="p-2"><a class="font-bold text-fg hover:text-indigo-700 break-words" [routerLink]="['/app/letters', r.id, 'edit']">{{ r.subject || 'بی‌موضوع' }}</a>
+                @if (r.confidentiality !== 'normal') { <span class="ms-1 text-[10px] rounded-full bg-rose-50 text-rose-800 px-1.5">{{ confLabels[r.confidentiality] }}</span> }</td>
+              <td class="p-2">{{ kindLabels[r.kind] }}</td>
+              <td class="p-2">{{ statusLabels[r.status] }}</td>
+              <td class="p-2">{{ r.project_title || '—' }}</td>
+              <td class="p-2 tabular-nums">{{ faDate(r.registered_at || r.created_at) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- موبایل: کارت (۳۶۰ پیکسل، بی‌اسکرول افقی) -->
+    <ul class="md:hidden flex flex-col gap-2 min-w-0" data-testid="letters-cards">
+      @for (r of rows(); track r.id) {
+        <li class="min-w-0">
+          <a class="block bg-surface rounded-2xl border border-line shadow-xs p-3 min-w-0 break-words focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+             [routerLink]="['/app/letters', r.id, 'edit']">
+            <span class="flex items-center gap-2 min-w-0">
+              <span class="text-sm font-bold text-fg flex-1 min-w-0 break-words">{{ r.subject || 'بی‌موضوع' }}</span>
+              <span class="text-[11px] rounded-full bg-surface-muted border border-line px-2 py-0.5 text-fg-muted shrink-0">{{ statusLabels[r.status] }}</span>
+            </span>
+            <span class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-fg-muted min-w-0">
+              <span>{{ kindLabels[r.kind] }}</span>
+              @if (r.number_display) { <bdi class="tabular-nums">{{ r.number_display }}</bdi> }
+              <span class="tabular-nums">{{ faDate(r.registered_at || r.created_at) }}</span>
+              @if (r.confidentiality !== 'normal') { <span class="rounded-full bg-rose-50 text-rose-800 px-1.5">{{ confLabels[r.confidentiality] }}</span> }
+              @if (r.project_title) { <span class="break-words min-w-0">{{ r.project_title }}</span> }
+            </span>
+          </a>
+        </li>
+      }
+    </ul>
+
+    @if (pages() > 1) {
+      <nav class="flex items-center justify-center gap-2" aria-label="صفحه‌بندی">
+        <button type="button" class="btn-icon-square btn-icon-slate min-w-[40px] min-h-[40px]" [disabled]="filters().page <= 1"
+                aria-label="صفحهٔ قبل" title="صفحهٔ قبل" (click)="setFilter({ page: filters().page - 1 })">
+          <svg appIcon="chevron-right" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+        </button>
+        <span class="text-xs tabular-nums text-fg-muted">{{ faNumber(filters().page) }} از {{ faNumber(pages()) }}</span>
+        <button type="button" class="btn-icon-square btn-icon-slate min-w-[40px] min-h-[40px]" [disabled]="filters().page >= pages()"
+                aria-label="صفحهٔ بعد" title="صفحهٔ بعد" (click)="setFilter({ page: filters().page + 1 })">
+          <svg appIcon="chevron-left" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+        </button>
+      </nav>
+    }
+  }
+</div>

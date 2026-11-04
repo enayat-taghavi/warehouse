@@ -1,0 +1,64 @@
+<div class="flex flex-col gap-2 min-w-0" dir="rtl">
+  @if (!online()) {
+    <p class="text-[11px] text-amber-800 bg-amber-50 rounded-xl px-2 py-1.5" role="status">جست‌وجوی طرف بیرونی نیاز به اتصال دارد.</p>
+  }
+  <div class="flex items-center gap-2 min-w-0">
+    <label class="sr-only" for="letter-party-search">جست‌وجوی طرف بیرونی</label>
+    <input id="letter-party-search" type="search" class="flex-1 min-w-0 h-10 rounded-xl border border-line bg-surface px-3 text-sm"
+           placeholder="نام یا شناسهٔ طرف بیرونی" autocomplete="off"
+           [disabled]="disabled() || !online() || !company()" [ngModel]="query()" (ngModelChange)="onQuery($event)" />
+    <button type="button" class="tap-target min-w-[40px] min-h-[40px] rounded-xl border border-line bg-surface text-xs px-2 flex items-center gap-1"
+            [disabled]="disabled() || !online() || !company()" aria-label="طرف بیرونی تازه" title="طرف بیرونی تازه"
+            (click)="startCreate()">
+      <svg appIcon="user-plus" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+      <span class="hidden sm:inline">طرف تازه</span>
+    </button>
+  </div>
+
+  @if (loading()) {
+    <p class="text-[11px] text-fg-muted" role="status">در حال جست‌وجو…</p>
+  }
+  @if (error()) {
+    <p class="text-[11px] text-rose-700" role="alert">{{ error() }}</p>
+  }
+  @if (results().length) {
+    <ul class="flex flex-col rounded-xl border border-line bg-surface divide-y divide-line-subtle" role="listbox" aria-label="طرف‌های پیداشده">
+      @for (p of results(); track p.id) {
+        <li role="option" aria-selected="false">
+          <button type="button" class="w-full text-start px-3 py-2 min-h-[40px] text-sm hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  (click)="choose(p)">
+            <span class="font-bold break-words">{{ p.name }}</span>
+            <span class="text-[11px] text-fg-muted ms-1">{{ p.kind === 'legal' ? 'حقوقی' : 'حقیقی' }}</span>
+            @if (p.national_id) { <bdi class="text-[11px] text-fg-subtle ms-1" dir="ltr">{{ p.national_id }}</bdi> }
+          </button>
+        </li>
+      }
+    </ul>
+  } @else if (query().trim().length >= 2 && !loading() && !error() && online()) {
+    <p class="text-[11px] text-fg-muted">طرفی پیدا نشد؛ «طرف تازه» را بزنید.</p>
+  }
+
+  @if (creating()) {
+    <div class="flex flex-col gap-2 rounded-xl border border-line bg-surface-muted p-2">
+      <label class="text-xs font-bold" for="letter-party-name">نام طرف</label>
+      <input id="letter-party-name" type="text" class="h-10 rounded-xl border border-line bg-surface px-3 text-sm"
+             [ngModel]="newName()" (ngModelChange)="newName.set($event)" />
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="text-xs font-bold" for="letter-party-kind">نوع</label>
+        <select id="letter-party-kind" class="h-10 rounded-xl border border-line bg-surface px-2 text-xs"
+                [ngModel]="newKind()" (ngModelChange)="newKind.set($event)">
+          <option value="legal">حقوقی</option>
+          <option value="person">حقیقی</option>
+        </select>
+        <label class="text-xs font-bold" for="letter-party-nid">شناسه/کد ملی</label>
+        <input id="letter-party-nid" type="text" inputmode="numeric" dir="ltr" class="h-10 w-36 rounded-xl border border-line bg-surface px-2 text-sm"
+               [ngModel]="newNationalId()" (ngModelChange)="newNationalId.set($event)" />
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" class="tap-target min-h-[40px] rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3"
+                [disabled]="saving() || !newName().trim() || !online()" (click)="create()">افزودن طرف</button>
+        <button type="button" class="tap-target min-h-[40px] rounded-xl border border-line text-xs px-3" (click)="creating.set(false)">انصراف</button>
+      </div>
+    </div>
+  }
+</div>
