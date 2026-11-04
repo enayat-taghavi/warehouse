@@ -143,11 +143,11 @@ Plan: warehouse counting and accounting as two independently installable modules
 - Code searches skip the tracked chat archives `chat_history_data.json` and `chat_history_dashboard.html` (listed in `.gitignore`); pass the path explicitly to search them.
 - **Release on this machine** (`app`, no real users: no yes/no needed; executed by Antigravity, see "All `app.farsalish.ir` work goes to Antigravity"; releases to `soft` follow `deploy.ps1` and need explicit approval):
   1. Back up with `create_database_backup` from `accounts/backup_service.py`. Don't run `run_auto_backup`: it deletes old backups.
-  2. Frontend build in `frontend`: `npx ng build --delete-output-path=false && node tools/patch-ngsw-530.js`. The flag keeps files that are being served from being deleted mid-build.
+  2. Frontend build in `frontend`: `node tools/build-for-modules.js --modules=warehouse,accounting,letters --delete-output-path=false` (runs the ngsw patch and restores the committed `installed-modules.ts`). The flag keeps files that are being served from being deleted mid-build. Since 4 Nov 2026 the `app` profile includes the opt-in `letters` module (the user wants to see it), so `migrate`, Daphne and the worker run with `WH_MODULES=warehouse,accounting,letters`.
   3. Backend restart: close the daphne process on port 8000 and its venv launcher with `taskkill`. Then relaunch it in a Windows Terminal tab so it doesn't depend on the Claude session:
-     `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "$(cygpath -w "$PWD/backend")" --title "Backend Daphne" cmd /k ".\venv\Scripts\python.exe -m daphne -b 0.0.0.0 -p 8000 config.asgi:application"`
-  4. GDrive sync worker (D9): launch in an auto-restarting tab (to restart during release, simply `taskkill` the python worker process):
-     `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "$(cygpath -w "$PWD/backend")" --title "GDrive Sync Worker" cmd /k "for /l %i in (1,0,2) do (.\venv\Scripts\python.exe -X utf8 manage.py run_gdrive_sync_worker --interval 5 & timeout /t 10 /nobreak >nul)"`
+     `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "$(cygpath -w "$PWD/backend")" --title "Backend Daphne" cmd /k "set WH_MODULES=warehouse,accounting,letters&& .\venv\Scripts\python.exe -m daphne -b 0.0.0.0 -p 8000 config.asgi:application"`
+  4. GDrive sync worker (D9): launch in an auto-restarting tab (to restart during release, simply `taskkill` the python worker process; to change its `WH_MODULES`, kill the tab's `cmd.exe` loop too):
+     `MSYS_NO_PATHCONV=1 wt.exe -w 0 new-tab -d "$(cygpath -w "$PWD/backend")" --title "GDrive Sync Worker" cmd /k "set WH_MODULES=warehouse,accounting,letters&& for /l %i in (1,0,2) do (.\venv\Scripts\python.exe -X utf8 manage.py run_gdrive_sync_worker --interval 5 & timeout /t 10 /nobreak >nul)"`
   5. Verify: `https://app.farsalish.ir/` and `https://app.farsalish.ir/api/public/config/` must return 200, and worker heartbeat is fresh.
 - Claude Code automation:
   - **Hooks** in `.claude/settings.json` run `.claude/hooks/guard.py`; Antigravity calls the same script from `.agents/hooks.json`.
