@@ -130,7 +130,7 @@
           @for (r of rows(); track r.id) {
             <tr class="border-t border-line-subtle hover:bg-surface-muted">
               <td class="p-2 tabular-nums"><bdi>{{ r.number_display || '—' }}</bdi></td>
-              <td class="p-2"><a class="font-bold text-fg hover:text-indigo-700 break-words" [routerLink]="['/app/letters', r.id, 'edit']">{{ r.subject || 'بی‌موضوع' }}</a>
+              <td class="p-2"><a class="font-bold text-fg hover:text-indigo-700 break-words" [routerLink]="['/app/letters', r.id]">{{ r.subject || 'بی‌موضوع' }}</a>@if (unread(r)) {<span class="ms-1 text-[10px] rounded-full bg-indigo-50 text-indigo-700 px-1.5 py-0.5">نخوانده</span>}
                 @if (r.confidentiality !== 'normal') { <span class="ms-1 text-[10px] rounded-full bg-rose-50 text-rose-800 px-1.5">{{ confLabels[r.confidentiality] }}</span> }</td>
               <td class="p-2">{{ kindLabels[r.kind] }}</td>
               <td class="p-2">{{ statusLabels[r.status] }}</td>
@@ -149,7 +149,7 @@
           <a class="block bg-surface rounded-2xl border border-line shadow-sm p-3 min-w-0 break-words focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
              [routerLink]="['/app/letters', r.id, 'edit']">
             <span class="flex items-center gap-2 min-w-0">
-              <span class="text-sm font-bold text-fg flex-1 min-w-0 break-words">{{ r.subject || 'بی‌موضوع' }}</span>
+              <span class="text-sm font-bold text-fg flex-1 min-w-0 break-words">{{ r.subject || 'بی‌موضوع' }}@if (unread(r)) {<span class="ms-1 text-[10px] rounded-full bg-indigo-50 text-indigo-700 px-1.5 py-0.5">نخوانده</span>}</span>
               <span class="text-[11px] rounded-full bg-surface-muted border border-line px-2 py-0.5 text-fg-muted shrink-0">{{ statusLabels[r.status] }}</span>
             </span>
             <span class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-fg-muted min-w-0">

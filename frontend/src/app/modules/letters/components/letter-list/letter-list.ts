@@ -74,6 +74,7 @@ export class LetterListPage implements OnInit {
     { id: 'drafts', label: 'پیش‌نویس‌ها', icon: 'file' },
     { id: 'all', label: 'همه', icon: 'list' },
     { id: 'projects', label: 'بایگانی پروژه‌ها', shortLabel: 'پروژه‌ها', icon: 'folder' },
+    { id: 'circulars', label: 'بخشنامه‌ها', shortLabel: 'بخشنامه', icon: 'file-text' },
   ];
   readonly kindLabels = LETTER_KIND_LABELS;
   readonly statusLabels = LETTER_STATUS_LABELS;
@@ -134,6 +135,18 @@ export class LetterListPage implements OnInit {
       });
       if (f.tab === 'projects') return;
     }
+    if (f.tab === 'circulars') {
+      this.api.circulars(company).subscribe({
+        next: rows => {
+          if (seq !== this.loadSeq) return;
+          this.rows.set(rows || []);
+          this.count.set((rows || []).length);
+          this.loading.set(false);
+        },
+        error: fail,
+      });
+      return;
+    }
     this.api.list(f, company).subscribe({
       next: page => {
         if (seq !== this.loadSeq) return;
@@ -147,6 +160,11 @@ export class LetterListPage implements OnInit {
 
   private async loadLocal(): Promise<void> {
     this.local.set(await this.offline.localDrafts());
+  }
+
+  /** بخشنامهٔ نخوانده (فقط زیرزبانهٔ «بخشنامه‌ها» `is_read` دارد) */
+  unread(r: LetterRow): boolean {
+    return (r as LetterRow & { is_read?: boolean }).is_read === false;
   }
 
   openNew(): void {

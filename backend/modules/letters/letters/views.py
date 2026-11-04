@@ -34,7 +34,7 @@ from .models import (
 from .parties import can_create_party, get_or_create_party, parties_for, party_payload
 from .permissions import LettersPermission
 from .serializers import (
-    LetterDetailSerializer, LetterListSerializer, LetterWriteSerializer, register_row,
+    LetterDetailSerializer, LetterListSerializer, LetterWriteSerializer, register_row, validate_body,
 )
 
 EDIT_LOCK_MINUTES = 15
@@ -72,11 +72,64 @@ def _visible_or_404(user, pk, for_update=False):
 
 def _detail(letter, user, **extra):
     letter = (Letter.objects.select_related('author', 'project', 'edit_locked_by')
-              .prefetch_related('recipients__party', 'signers__user', 'editors__user', 'links', 'draft_copies')
+              .prefetch_related('recipients__party', 'recipients__user', 'signers__user', 'editors__user', 'links',
+                                'draft_copies')
               .get(pk=letter.pk))
     data = LetterDetailSerializer(letter, context={'viewer': user, 'can_edit': access.is_editor(user, letter)}).data
+    data['actions'] = allowed_actions(user, letter)
     data.update(extra)
     return data
+
+
+def allowed_actions(user, letter):
+    """
+    کنش‌هایی که همین الان برای کاربر مجازند (ل-ز، فقط برای نمایش دکمه‌ها). همان قاعده‌های `lifecycle` و `referral`؛
+    خود کنش‌ها همهٔ قاعده‌ها را دوباره در تراکنش می‌سنجند. مدیر کل فقط می‌خواند (بی‌کنش).
+    """
+    from .referral import REFERABLE_STATUSES, may_root_refer, referral_instance
+    if not access._live(user) or user.is_superuser:
+        return []
+    out = []
+    st = letter.status
+    editor = access.is_editor(user, letter)
+    secretariat = lifecycle._is_secretariat(user, letter)
+    if editor and st in access.EDITABLE_STATUSES:
+        out.append('edit')
+    if editor and st == Letter.STATUS_DRAFT and letter.kind in lifecycle.SIGNABLE_KINDS:
+        out.append('submit')
+    if st == Letter.STATUS_SIGNING:
+        engine, key = lifecycle._workflow()
+        task = engine.open_task(key, letter.pk)
+        if task is not None and engine.can_act(user, task):
+            out += ['sign', 'return']
+    if (letter.kind == Letter.KIND_INCOMING and st == Letter.STATUS_RECEIVED and secretariat
+            and not letter.issued_number_id):
+        out.append('register')
+    if letter.kind == Letter.KIND_OUTGOING and st == Letter.STATUS_REGISTERED and secretariat:
+        out.append('send')
+    if lifecycle._can_archive(user, letter):
+        if st in lifecycle.ARCHIVABLE:
+            out.append('archive')
+        elif st == Letter.STATUS_ARCHIVED:
+            out.append('unarchive')
+    if st != Letter.STATUS_VOID:
+        if st in lifecycle.VOIDABLE_REGISTERED or letter.issued_number_id:
+            may_void = secretariat
+        elif st in access.EDITABLE_STATUSES:
+            may_void = secretariat or (letter.author_id == user.pk
+                                       and letter.company_id in access.member_company_ids(user))
+        else:
+            may_void = False
+        if may_void:
+            out.append('void')
+    if letter.registered_at and st in REFERABLE_STATUSES:
+        from workflow.models import WorkflowTask
+        instance = referral_instance(letter)
+        mine = instance is not None and WorkflowTask.objects.filter(
+            instance=instance, track=WorkflowTask.TRACK_REFERRAL, is_open=True, target_user_id=user.pk).exists()
+        if mine or may_root_refer(user, letter.pk):
+            out.append('refer')
+    return out
 
 
 # ─── هم‌شرکتی بودن ارجاع‌ها (ن۲، ن۱۳) ──────────────────────────────────────────────────────────
@@ -203,12 +256,54 @@ def _lock_active(letter, now=None):
 
 # ─── فهرست و ساخت ────────────────────────────────────────────────────────────────────────────
 
+def _date(value, name):
+    from django.utils.dateparse import parse_date
+    if value in (None, ''):
+        return None
+    try:
+        parsed = parse_date(str(value).strip()[:10])
+    except ValueError:
+        parsed = None
+    if parsed is None:
+        raise ValidationError({name: 'تاریخ نامعتبر است (YYYY-MM-DD).'})
+    return parsed
+
+
+def _personal_filters(user, qs, params):
+    """
+    فیلترهای ل-ز روی همان queryset دیدنی (هرگز دیدن را گسترده نمی‌کنند): mine (نویسنده یا هم‌نویسنده)، to_me
+    (گیرندهٔ کاربری یا در درخت ارجاع نامه)، date_from/date_to (تاریخ ثبت) و party (طرف بیرونی فرستنده یا گیرنده).
+    """
+    if params.get('mine') in ('1', 'true'):
+        qs = qs.filter(Q(author_id=user.pk)
+                       | Q(pk__in=LetterEditor.objects.filter(user_id=user.pk).values('letter_id')))
+    if params.get('to_me') in ('1', 'true'):
+        _open, referrals, _acted = access._workflow_letter_ids(user)
+        qs = qs.filter(Q(pk__in=LetterRecipient.objects.filter(target_type=LetterRecipient.TARGET_USER,
+                                                              user_id=user.pk).values('letter_id'))
+                       | Q(pk__in=referrals))
+    date_from = _date(params.get('date_from'), 'date_from')
+    date_to = _date(params.get('date_to'), 'date_to')
+    if date_from:
+        qs = qs.filter(registered_at__date__gte=date_from)
+    if date_to:
+        qs = qs.filter(registered_at__date__lte=date_to)
+    if params.get('party'):
+        party = _int(params['party']) or 0
+        qs = qs.filter(Q(sender_party_id=party)
+                       | Q(pk__in=LetterRecipient.objects.filter(party_id=party).values('letter_id')))
+    return qs
+
+
 class LetterListCreateView(ListAPIView):
     permission_classes = (IsAuthenticated, LettersPermission)
     serializer_class = LetterListSerializer
 
     def get_queryset(self):
-        qs = access.visible_letters(self.request.user).select_related('author', 'project', 'edit_locked_by')
+        from django.db.models import Prefetch
+        qs = (access.visible_letters(self.request.user).select_related('author', 'project', 'edit_locked_by')
+              .prefetch_related(Prefetch('recipients',
+                                         queryset=LetterRecipient.objects.select_related('user', 'party'))))
         params = self.request.query_params
         for key in ('kind', 'status', 'confidentiality'):
             if params.get(key):
@@ -220,6 +315,7 @@ class LetterListCreateView(ListAPIView):
         if term:
             qs = qs.filter(Q(subject__icontains=term) | Q(number_display__icontains=term)
                            | Q(external_number__icontains=term))
+        qs = _personal_filters(self.request.user, qs, params)
         due = params.get('due')
         if due in ('overdue', 'today'):
             now = timezone.now()
@@ -238,7 +334,7 @@ class LetterListCreateView(ListAPIView):
             if existing is not None:
                 if not access.visible_letters(user).filter(pk=existing.pk).exists():
                     raise PermissionDenied('دسترسی شما به این نامه برداشته شده است.')
-                return Response(_detail(existing, user, duplicate=True), status=status.HTTP_200_OK)
+                return _replay_create(user, existing, raw)
 
         ser = LetterWriteSerializer(data=raw)
         ser.is_valid(raise_exception=True)
@@ -267,9 +363,37 @@ class LetterListCreateView(ListAPIView):
             existing = Letter.objects.filter(author_id=user.pk, client_temp_id=data.get('client_temp_id')).first()
             if existing is None or not data.get('client_temp_id'):
                 raise
-            return Response(_detail(existing, user, duplicate=True), status=status.HTTP_200_OK)
+            return _replay_create(user, existing, raw)
         _audit(user, letter, 'CREATE', kind=kind)
         return Response(_detail(letter, user), status=status.HTTP_201_CREATED)
+
+
+CREATE_BASE_REVISION = 1
+
+
+def _same_text(letter, raw):
+    try:
+        body = validate_body(raw.get('body')) if 'body' in raw else (letter.body or [])
+    except ValidationError:
+        return False
+    subject = raw['subject'] if 'subject' in raw else letter.subject
+    return subject == letter.subject and body == (letter.body or [])
+
+
+def _replay_create(user, existing, raw):
+    """
+    POST دوباره با همان client_temp_id (پخش دوبارهٔ صف، ل-ز): بدنه مثل PATCH اعمال می‌شود تا متن تازه‌تری که در صف
+    جایگزین شده گم نشود. پایهٔ نسخه، نسخهٔ ساخت (۱) است؛ اگر نامه از آن پس عوض شده، متن رسیده نسخهٔ ناهمگام
+    می‌شود (conflict). پخش دوبارهٔ همان متن بی‌تغییر و بی‌نسخهٔ ناهمگام برمی‌گردد.
+    """
+    base = _int(raw.get('revision')) or CREATE_BASE_REVISION
+    if base != existing.revision and _same_text(existing, raw):
+        return Response(_detail(existing, user, duplicate=True), status=status.HTTP_200_OK)
+    payload = {k: v for k, v in raw.items() if k not in ('company', 'client_temp_id')}
+    payload['revision'] = base
+    response = LetterDetailView().patch_raw(user, existing.pk, payload)
+    response.data['duplicate'] = True
+    return response
 
 
 def _uuid(value):
@@ -293,8 +417,11 @@ class LetterDetailView(APIView):
         return Response(_detail(letter, request.user))
 
     def patch(self, request, pk):
-        user = request.user
         raw = request.data if isinstance(request.data, dict) else {}
+        return self.patch_raw(request.user, pk, raw)
+
+    def patch_raw(self, user, pk, raw):
+        """ویرایش پیش‌نویس؛ در هر رد متن رسیده نسخهٔ ناهمگام می‌شود (ن۱۱). مشترک PATCH و پخش دوبارهٔ ساخت (ل-ز)."""
         with transaction.atomic():
             letter = _visible_or_404(user, pk, for_update=True)
             try:
@@ -442,17 +569,30 @@ class SecretariatRegisterView(APIView):
     permission_classes = (IsAuthenticated, LettersPermission)
 
     def get(self, request):
-        user = request.user
-        company_id = _company_param(request)
-        if not user.is_superuser and (company_id not in access.member_company_ids(user)
-                                      or not access.has_company_perm(user, company_id, access.SECRETARIAT_PERM)):
-            raise PermissionDenied('دفتر دبیرخانهٔ این شرکت برای شما باز نیست.')
-        rows = list(Letter.objects.filter(company_id=company_id)
-                    .filter(Q(registered_at__isnull=False) | Q(kind=Letter.KIND_INCOMING))
-                    .select_related('author').order_by('-registered_at', '-id')[:500])
-        full = set(access.visible_letters(user, Letter.objects.filter(pk__in=[r.pk for r in rows]))
-                   .values_list('pk', flat=True))
-        return Response([register_row(r, r.pk in full) for r in rows])
+        return Response(register_rows(request))
+
+
+def register_rows(request):
+    user = request.user
+    company_id = _company_param(request)
+    if not user.is_superuser and (company_id not in access.member_company_ids(user)
+                                  or not access.has_company_perm(user, company_id, access.SECRETARIAT_PERM)):
+        raise PermissionDenied('دفتر دبیرخانهٔ این شرکت برای شما باز نیست.')
+    rows = list(Letter.objects.filter(company_id=company_id)
+                .filter(Q(registered_at__isnull=False) | Q(kind=Letter.KIND_INCOMING))
+                .select_related('author').order_by('-registered_at', '-id')[:500])
+    full = set(access.visible_letters(user, Letter.objects.filter(pk__in=[r.pk for r in rows]))
+               .values_list('pk', flat=True))
+    return [register_row(r, r.pk in full) for r in rows]
+
+
+class SecretariatRegisterExportView(APIView):
+    """GET /api/letters/register/export/?company= — خروجی اکسل دفتر (ل-ز، AGENTS §3): دو ردیف سربرگ، تاریخ شمسی."""
+    permission_classes = (IsAuthenticated, LettersPermission)
+
+    def get(self, request):
+        from .register_excel import register_workbook_response
+        return register_workbook_response(register_rows(request))
 
 
 class LetterProjectsView(APIView):
@@ -630,7 +770,8 @@ def _referral_tree(letter, user):
     tasks = list(WorkflowTask.objects.filter(instance=instance, track=WorkflowTask.TRACK_REFERRAL)
                  .select_related('target_user', 'referred_by', 'closed_by').order_by('opened_at', 'id'))
     full = access.is_live_superuser(user) or user.pk in (instance.created_by_id, letter.author_id)
-    nodes = [wser.referral_node(t, with_text=full or user.pk in (t.target_user_id, t.referred_by_id)) for t in tasks]
+    nodes = [{**wser.referral_node(t, with_text=full or user.pk in (t.target_user_id, t.referred_by_id)),
+              'can_close': t.is_open and t.target_user_id == user.pk} for t in tasks]
     mine = any(t.is_open and t.target_user_id == user.pk for t in tasks)
     return {'instance_id': instance.pk, 'referrals': nodes, 'can_refer': can_root or mine}
 
@@ -688,7 +829,8 @@ class CircularListView(APIView):
     def get(self, request):
         from .circulars import circulars_for
         qs = (circulars_for(request.user, _company_param(request, required=False))
-              .select_related('author', 'project', 'edit_locked_by').order_by('-registered_at', '-id'))
+              .select_related('author', 'project', 'edit_locked_by')
+              .prefetch_related('recipients__user', 'recipients__party').order_by('-registered_at', '-id'))
         if request.query_params.get('unread') in ('1', 'true'):
             qs = qs.filter(is_read=False)
         rows = list(qs[:self.MAX_ROWS])

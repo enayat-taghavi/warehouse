@@ -1,0 +1,206 @@
+<div class="flex flex-col gap-3 min-w-0 pb-6" dir="rtl">
+  <app-command-center>
+    <div cc-tabs class="flex items-center gap-2 min-w-0">
+      <h1 class="text-sm font-black text-fg truncate">{{ letter()?.number_display || 'نامه' }}</h1>
+      @if (letter(); as l) {
+        <app-status-badge [label]="statusLabels[l.status]" [color]="statusColor()" />
+      }
+      @if (!online()) {
+        <span class="text-[11px] rounded-full bg-amber-50 text-amber-800 px-2 py-0.5 flex items-center gap-1 shrink-0" role="status">
+          <svg appIcon="wifi-off" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+          آفلاین
+        </span>
+      }
+    </div>
+    <div cc-actions class="flex flex-wrap items-center gap-2" data-testid="letter-actions">
+      <button appAction="back" label="فهرست" routerLink="/app/letters"></button>
+      @if (letter()) {
+        @if (can('edit')) {
+          <button appAction="edit" label="ویرایش" data-testid="act-edit" (click)="edit()"></button>
+        }
+        @if (can('submit')) {
+          <button appAction="send" label="ارسال برای امضا" data-testid="act-submit" [disabled]="!online() || acting()" (click)="simple('submit')"></button>
+        }
+        @if (can('sign')) {
+          <button appAction="approve" label="امضا" data-testid="act-sign" [disabled]="!online() || acting()" (click)="sign()"></button>
+        }
+        @if (can('return')) {
+          <button appAction="return" label="عودت" data-testid="act-return" [disabled]="!online() || acting()" (click)="openForm('return')"></button>
+        }
+        @if (can('register')) {
+          <button appAction="confirm" label="ثبت" data-testid="act-register" [disabled]="!online() || acting()" (click)="simple('register')"></button>
+        }
+        @if (can('send')) {
+          <button appAction="send" label="ارسال" data-testid="act-send" [disabled]="!online() || acting()" (click)="openForm('send')"></button>
+        }
+        @if (can('refer')) {
+          <button appAction="forward" label="ارجاع" data-testid="act-refer" [disabled]="!online() || acting()" (click)="openRefer()"></button>
+        }
+        @if (can('archive')) {
+          <button appAction="lock" label="بایگانی" data-testid="act-archive" [disabled]="!online() || acting()" (click)="simple('archive')"></button>
+        }
+        @if (can('unarchive')) {
+          <button appAction="restore" label="بازگردانی" data-testid="act-unarchive" [disabled]="!online() || acting()" (click)="simple('unarchive')"></button>
+        }
+        @if (can('void')) {
+          <button appAction="terminate" label="ابطال" data-testid="act-void" [disabled]="!online() || acting()" (click)="openForm('void')"></button>
+        }
+      }
+    </div>
+  </app-command-center>
+
+  @if (loading()) {
+    <app-loading-skeleton type="form" />
+  } @else if (loadError()) {
+    <div class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2 items-start" role="alert">
+      <p class="text-sm font-bold text-fg">
+        @switch (loadError()) {
+          @case ('offline') { اتصال برقرار نیست؛ نامه روی دستگاه نگه داشته نمی‌شود. }
+          @case ('gone') { این نامه پیدا نشد یا دیگر برای شما دیده نمی‌شود. }
+          @default { بارگذاری نامه ناموفق بود. }
+        }
+      </p>
+      <button appAction="refresh" label="تلاش دوباره" (click)="load()"></button>
+    </div>
+  } @else if (letter(); as l) {
+    @if (!online() && (l.actions?.length || 0) > 0) {
+      <p class="text-xs rounded-xl px-3 py-2 bg-amber-50 text-amber-900" role="status">کنش‌های نامه فقط با اتصال انجام می‌شوند.</p>
+    }
+    @if (actionError()) {
+      <p class="text-xs rounded-xl px-3 py-2 bg-rose-50 text-rose-800" role="alert" data-testid="action-error">{{ actionError() }}</p>
+    }
+
+    @if (formAction(); as fa) {
+      <form class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2" (submit)="$event.preventDefault(); submitForm()" data-testid="action-form">
+        @if (fa === 'send') {
+          <label class="text-xs font-bold text-fg" for="letter-send-method">روش ارسال</label>
+          <select id="letter-send-method" class="rounded-xl border border-line bg-surface px-3 py-2 text-sm" [formControl]="method">
+            @for (m of sendMethods; track m.id) { <option [value]="m.id">{{ m.label }}</option> }
+          </select>
+        } @else {
+          <label class="text-xs font-bold text-fg" for="letter-action-reason">{{ fa === 'return' ? 'دلیل عودت' : 'دلیل ابطال' }}</label>
+          <textarea id="letter-action-reason" rows="2" maxlength="500" class="rounded-xl border border-line bg-surface px-3 py-2 text-sm"
+                    [formControl]="reason" [attr.aria-invalid]="!!actionError()"></textarea>
+        }
+        <div class="flex gap-2 justify-end">
+          <button appAction="close" label="انصراف" type="button" (click)="formAction.set(null)"></button>
+          <button appAction="confirm" label="انجام" type="submit" [disabled]="!online() || acting()"></button>
+        </div>
+      </form>
+    }
+
+    @if (referOpen()) {
+      <app-letter-refer-dialog [letterId]="l.id" [parentTask]="referParent()" (done)="onReferred()" (cancelled)="referOpen.set(false)" />
+    }
+
+    @if (l.draft_copies.length) {
+      <section class="bg-amber-50 rounded-2xl border border-amber-200 p-4 flex flex-col gap-2" data-testid="draft-copies" aria-label="نسخه‌های ناهمگام">
+        <h2 class="text-sm font-black text-amber-900">نسخهٔ ناهمگام</h2>
+        <p class="text-xs text-amber-900">این متن‌ها به سرور رسید ولی جای نسخهٔ نامه ننشست؛ هیچ‌کدام پاک نشده‌اند.</p>
+        @for (c of l.draft_copies; track c.id) {
+          <div class="bg-surface rounded-xl border border-line p-3 flex flex-col gap-1">
+            <div class="flex items-center gap-2 text-[11px] text-fg-muted">
+              <span>{{ c.created_at | persianDate: 'short-time' }}</span>
+              <span class="font-bold text-fg truncate">{{ c.subject || 'بی‌موضوع' }}</span>
+            </div>
+            @if (can('edit')) {
+              <div class="flex justify-end">
+                <button appAction="copy" label="بردن به ویرایشگر" [attr.data-testid]="'copy-' + c.id" (click)="edit(c)"></button>
+              </div>
+            }
+          </div>
+        }
+      </section>
+    }
+
+    <article class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-3 min-w-0" aria-label="برگ نامه">
+      <dl class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+        <div><dt class="text-fg-subtle">نوع</dt><dd class="font-bold text-fg">{{ kindLabels[l.kind] }}</dd></div>
+        <div><dt class="text-fg-subtle">شماره</dt><dd class="font-bold text-fg tabular-nums">{{ l.number_display || '—' }}</dd></div>
+        <div><dt class="text-fg-subtle">تاریخ ثبت</dt><dd class="font-bold text-fg">{{ l.registered_at ? (l.registered_at | persianDate: 'short') : '—' }}</dd></div>
+        <div><dt class="text-fg-subtle">محرمانگی</dt><dd class="font-bold text-fg">{{ confLabels[l.confidentiality] }}</dd></div>
+        @if (l.external_number) {
+          <div><dt class="text-fg-subtle">شمارهٔ بیرونی</dt><dd class="font-bold text-fg">{{ l.external_number }}</dd></div>
+        }
+        @if (l.project_title) {
+          <div><dt class="text-fg-subtle">پروژه</dt><dd class="font-bold text-fg break-words">{{ l.project_title }}</dd></div>
+        }
+      </dl>
+      @if (toRecipients().length || ccRecipients().length) {
+        <div class="text-xs flex flex-col gap-1" data-testid="recipients">
+          @if (toRecipients().length) {
+            <p><span class="text-fg-subtle">گیرنده: </span>@for (r of toRecipients(); track $index) {<span class="font-bold text-fg">{{ recipientName(r) }}</span>@if (!$last) {<span>، </span>}}</p>
+          }
+          @if (ccRecipients().length) {
+            <p><span class="text-fg-subtle">رونوشت: </span>@for (r of ccRecipients(); track $index) {<span class="text-fg">{{ recipientName(r) }}</span>@if (!$last) {<span>، </span>}}</p>
+          }
+        </div>
+      }
+      <h2 class="text-sm font-black text-fg break-words">{{ l.subject || 'بی‌موضوع' }}</h2>
+      <div class="text-sm text-fg leading-7 flex flex-col gap-2 break-words" data-testid="letter-body">
+        @for (b of l.body; track $index) {
+          @switch (b.type) {
+            @case ('paragraph') {
+              <p [style.text-align]="b.align">@for (run of runs(b.runs); track $index) {@if (run.bold) {<strong>{{ run.text }}</strong>} @else {<span>{{ run.text }}</span>}}</p>
+            }
+            @case ('list') {
+              @if (b.style === 'ordered') {
+                <ol class="list-decimal ps-6">@for (it of b.items; track $index) {<li>{{ text(it) }}</li>}</ol>
+              } @else {
+                <ul class="list-disc ps-6">@for (it of b.items; track $index) {<li>{{ text(it) }}</li>}</ul>
+              }
+            }
+            @case ('table') {
+              <div class="overflow-x-auto max-w-full">
+                <table class="text-xs border border-line w-full">
+                  @for (row of b.rows; track $index; let first = $first) {
+                    <tr>
+                      @for (cell of row; track $index) {
+                        @if (first && b.header) {<th class="border border-line p-1 bg-surface-muted">{{ cell }}</th>} @else {<td class="border border-line p-1">{{ cell }}</td>}
+                      }
+                    </tr>
+                  }
+                </table>
+              </div>
+            }
+          }
+        } @empty {
+          <p class="text-fg-subtle text-xs">متنی ندارد.</p>
+        }
+      </div>
+      @if (l.void_reason) {
+        <p class="text-xs rounded-xl px-3 py-2 bg-rose-50 text-rose-800">دلیل ابطال: {{ l.void_reason }}</p>
+      }
+    </article>
+
+    @if (l.signers.length) {
+      <section class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2" aria-label="امضاها" data-testid="signers">
+        <h2 class="text-sm font-black text-fg">امضاها</h2>
+        <ol class="flex flex-col gap-1">
+          @for (s of l.signers; track s.id) {
+            <li class="flex items-center gap-2 text-xs min-w-0">
+              <span class="text-fg-subtle tabular-nums">{{ $index + 1 }}.</span>
+              <span class="font-bold text-fg truncate flex-1 min-w-0">{{ s.user.name }}@if (s.title_text) {<span class="text-fg-muted font-normal"> — {{ s.title_text }}</span>}</span>
+              <app-status-badge [label]="signerStatus(s.status)" [color]="s.status === 'signed' ? 'green' : s.status === 'returned' ? 'rose' : 'slate'" />
+            </li>
+          }
+        </ol>
+      </section>
+    }
+
+    @if (l.registered_at) {
+      <app-letter-referral-tree [letterId]="l.id" [version]="treeVersion()" [online]="online()" (referFrom)="openRefer($event)" />
+    }
+
+    @if (viewers(); as vs) {
+      <section class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2" aria-label="چه کسانی دیدند" data-testid="viewers">
+        <h2 class="text-sm font-black text-fg">چه کسانی دیدند</h2>
+        @for (v of vs; track $index) {
+          <p class="text-xs flex gap-2"><span class="font-bold text-fg flex-1 min-w-0 truncate">{{ v.name }}</span><span class="text-fg-muted">{{ v.at | persianDate: 'short-time' }}</span></p>
+        } @empty {
+          <p class="text-xs text-fg-subtle">هنوز کسی ندیده است.</p>
+        }
+      </section>
+    }
+  }
+</div>

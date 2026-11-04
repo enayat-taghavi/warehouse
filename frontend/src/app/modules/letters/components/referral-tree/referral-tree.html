@@ -1,0 +1,75 @@
+<section class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2 min-w-0" aria-label="درخت ارجاع" data-testid="referral-tree">
+  <h2 class="text-sm font-black text-fg">ارجاع‌ها @if (count()) {<span class="text-fg-muted font-normal tabular-nums">({{ count() }})</span>}</h2>
+  @if (actionError()) {
+    <p class="text-xs rounded-xl px-3 py-2 bg-rose-50 text-rose-800" role="alert">{{ actionError() }}</p>
+  }
+  @if (loading()) {
+    <app-loading-skeleton type="text" />
+  } @else if (error()) {
+    <div class="flex items-center gap-2 text-xs text-fg-muted" role="alert">
+      <span class="flex-1">{{ error() === 'offline' ? 'اتصال برقرار نیست؛ درخت ارجاع بارگذاری نشد.' : 'بارگذاری درخت ارجاع ناموفق بود.' }}</span>
+      <button appAction="refresh" label="تلاش دوباره" (click)="load()"></button>
+    </div>
+  } @else {
+    <ul class="flex flex-col gap-1" role="tree" aria-label="درخت ارجاع">
+      @for (n of roots(); track n.node.task_id) {
+        <ng-container [ngTemplateOutlet]="nodeTpl" [ngTemplateOutletContext]="{ $implicit: n }" />
+      } @empty {
+        <li class="text-xs text-fg-subtle">هنوز ارجاعی نیست.</li>
+      }
+    </ul>
+  }
+</section>
+
+<ng-template #nodeTpl let-n>
+  <li role="treeitem" class="flex flex-col gap-1 min-w-0" [attr.aria-expanded]="n.children.length ? isOpen(n) : null" [attr.data-testid]="'ref-' + n.node.task_id">
+    <div class="rounded-xl border border-line-subtle bg-surface-muted p-2 flex flex-col gap-1 min-w-0">
+      <div class="flex items-center gap-2 min-w-0">
+        @if (n.children.length) {
+          <button type="button" class="btn-icon-sm btn-icon-slate min-w-[40px] min-h-[40px] shrink-0" [attr.data-testid]="'toggle-' + n.node.task_id"
+                  [title]="isOpen(n) ? 'بستن شاخه' : 'باز کردن شاخه'" [attr.aria-label]="isOpen(n) ? 'بستن شاخه' : 'باز کردن شاخه'" (click)="toggle(n)">
+            <svg appIcon="chevron-down" class="w-4 h-4 transition-transform" [class.rotate-90]="!isOpen(n)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+          </button>
+        }
+        <span class="text-xs font-bold text-fg truncate flex-1 min-w-0">{{ n.node.target_user?.name || '—' }}</span>
+        <app-status-badge [label]="n.node.is_open ? n.node.kind_fa : (n.node.outcome_fa || 'بسته')" [color]="n.node.is_open ? 'amber' : 'green'" />
+      </div>
+      <p class="text-[11px] text-fg-muted">
+        از {{ n.node.referred_by?.name || '—' }}
+        @if (n.node.due_at) { · مهلت {{ n.node.due_at | persianDate: 'short' }} }
+      </p>
+      @if (n.node.instruction) {
+        <p class="text-xs text-fg break-words"><span class="text-fg-subtle">دستور: </span>{{ n.node.instruction }}</p>
+      }
+      @if (n.node.reply) {
+        <p class="text-xs text-fg break-words"><span class="text-fg-subtle">پاسخ: </span>{{ n.node.reply }}</p>
+      }
+      @if (n.node.can_close) {
+        <div class="flex flex-wrap gap-2 justify-end">
+          @if (n.node.kind === 'inform') {
+            <button appAction="view" label="رؤیت شد" [attr.data-testid]="'seen-' + n.node.task_id" [disabled]="!online() || busy() !== null" (click)="close(n.node, 'seen')"></button>
+          } @else {
+            <button appAction="forward" label="ارجاع" [attr.data-testid]="'branch-' + n.node.task_id" [disabled]="!online()" (click)="referFrom.emit(n.node.task_id)"></button>
+            <button appAction="approve" label="انجام شد" [attr.data-testid]="'done-' + n.node.task_id" [disabled]="!online() || busy() !== null" (click)="startDone(n.node)"></button>
+          }
+        </div>
+        @if (replyFor() === n.node.task_id) {
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-fg" [for]="'reply-' + n.node.task_id">پاسخ (اختیاری)</label>
+            <textarea [id]="'reply-' + n.node.task_id" rows="2" maxlength="2000" class="rounded-xl border border-line bg-surface px-3 py-2 text-sm" [formControl]="reply"></textarea>
+            <div class="flex justify-end">
+              <button appAction="confirm" label="ثبت" [attr.data-testid]="'done-confirm-' + n.node.task_id" [disabled]="!online() || busy() !== null" (click)="close(n.node, 'done')"></button>
+            </div>
+          </div>
+        }
+      }
+    </div>
+    @if (n.children.length && isOpen(n)) {
+      <ul class="flex flex-col gap-1 ps-3 sm:ps-5 border-s-2 border-line" role="group">
+        @for (c of n.children; track c.node.task_id) {
+          <ng-container [ngTemplateOutlet]="nodeTpl" [ngTemplateOutletContext]="{ $implicit: c }" />
+        }
+      </ul>
+    }
+  </li>
+</ng-template>

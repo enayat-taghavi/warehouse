@@ -84,6 +84,8 @@ export interface LetterRow {
   project: number | null;
   project_title: string | null;
   author: UserBrief | null;
+  /** ل-ز: نام گیرنده‌ها و رونوشت‌ها */
+  recipients_brief?: { role: 'to' | 'cc'; name: string }[];
   edit_lock?: { locked: boolean; by: UserBrief | null; until: string | null };
 }
 
@@ -95,6 +97,8 @@ export interface LetterRecipientRow {
   section_id?: number | null;
   party?: number | null;
   party_name?: string;
+  /** ل-ز: نام نمایشی گیرندهٔ کاربری */
+  user_name?: string;
   name_text?: string;
   title_text?: string;
 }
@@ -153,8 +157,8 @@ export interface LetterWritePayload {
 }
 
 // ─── فیلترهای فهرست (در آدرس صفحه) ─────────────────────────────────────────────────────
-export type LetterTab = 'inbox' | 'sent' | 'drafts' | 'all' | 'projects';
-export const LETTER_TABS: readonly LetterTab[] = ['inbox', 'sent', 'drafts', 'all', 'projects'];
+export type LetterTab = 'inbox' | 'sent' | 'drafts' | 'all' | 'projects' | 'circulars';
+export const LETTER_TABS: readonly LetterTab[] = ['inbox', 'sent', 'drafts', 'all', 'projects', 'circulars'];
 
 export interface LetterFilters {
   tab: LetterTab;
@@ -171,10 +175,104 @@ export const EMPTY_LETTER_FILTERS: LetterFilters = {
   tab: 'inbox', kind: '', status: '', confidentiality: '', q: '', project: null, due: '', page: 1,
 };
 
-/**
- * زیرزبانه ← وضعیت API. بک‌اند هنوز فیلتر «نویسنده/گیرنده» ندارد (مسئلهٔ باز برای ل-ز):
- * «کارتابل» نامه‌های ثبت‌شده، «فرستاده‌ها» ارسال‌شده‌ها و «پیش‌نویس‌ها» پیش‌نویس‌اند.
- */
+/** زیرزبانه ← وضعیت API (فقط «پیش‌نویس‌ها» وضعیت ثابت دارد). */
 export const TAB_STATUS: Record<LetterTab, LetterStatus | ''> = {
-  inbox: 'registered', sent: 'sent', drafts: 'draft', all: '', projects: '',
+  inbox: '', sent: '', drafts: 'draft', all: '', projects: '', circulars: '',
 };
+
+/**
+ * زیرزبانه ← فیلترهای شخصی API (ل-ز): «کارتابل» نامه‌هایی که به من رسیده یا به من ارجاع شده‌اند،
+ * «فرستاده‌ها» و «پیش‌نویس‌ها» نامه‌هایی که نویسنده یا هم‌نویسنده‌شان هستم.
+ */
+export const TAB_PARAMS: Record<LetterTab, Record<string, string>> = {
+  inbox: { to_me: '1' }, sent: { mine: '1' }, drafts: { mine: '1' }, all: {}, projects: {}, circulars: {},
+};
+
+// ─── ل-ز: نمایش نامه، درخت ارجاع، دبیرخانه و بخشنامه ─────────────────────────────────────
+/** کنش‌هایی که سرور برای همین کاربر مجاز می‌داند (`actions` جزئیات نامه) */
+export type LetterAction = 'edit' | 'submit' | 'sign' | 'return' | 'register' | 'send' | 'archive' | 'unarchive' | 'void' | 'refer';
+
+export interface LetterViewDetail extends LetterDetail {
+  actions?: LetterAction[];
+  external_number?: string;
+  external_date?: string | null;
+  void_reason?: string;
+}
+
+export interface ReferralNode {
+  task_id: number;
+  parent_task_id: number | null;
+  kind: string;
+  kind_fa: string;
+  target_user: UserBrief | null;
+  referred_by: UserBrief | null;
+  instruction: string;
+  reply: string;
+  due_at: string | null;
+  is_open: boolean;
+  outcome: string;
+  outcome_fa: string;
+  opened_at: string | null;
+  closed_at: string | null;
+  can_close?: boolean;
+}
+
+export interface ReferralTree { instance_id: number | null; referrals: ReferralNode[]; can_refer: boolean }
+
+/** گره درخت ساخته‌شده در فرانت از فهرست تخت با والد */
+export interface ReferralTreeNode { node: ReferralNode; children: ReferralTreeNode[]; depth: number }
+
+export function buildReferralTree(rows: readonly ReferralNode[]): ReferralTreeNode[] {
+  const byId = new Map<number, ReferralTreeNode>();
+  rows.forEach(r => byId.set(r.task_id, { node: r, children: [], depth: 0 }));
+  const roots: ReferralTreeNode[] = [];
+  rows.forEach(r => {
+    const item = byId.get(r.task_id)!;
+    const parent = r.parent_task_id != null ? byId.get(r.parent_task_id) : undefined;
+    // والد نادیدنی یا ریشه: در بالاترین سطح
+    if (parent && parent !== item) parent.children.push(item);
+    else roots.push(item);
+  });
+  const setDepth = (items: ReferralTreeNode[], depth: number): void =>
+    items.forEach(i => { i.depth = depth; setDepth(i.children, depth + 1); });
+  setDepth(roots, 0);
+  return roots;
+}
+
+export interface ReferPayload {
+  targets: number[];
+  kind: 'refer' | 'inform';
+  instruction: string;
+  due_at: string | null;
+  parent_task?: number | null;
+}
+
+export interface RegisterRow {
+  id: number;
+  kind: LetterKind;
+  status: LetterStatus;
+  number_display: string;
+  registered_at: string | null;
+  confidentiality: LetterConfidentiality;
+  external_number: string;
+  covered: boolean;
+  subject: string;
+  author: UserBrief | null;
+}
+
+export interface CircularRow extends LetterRow { is_read: boolean }
+export interface AudienceEntry { scope: 'company' | 'section'; section_id?: number | null; section_name?: string }
+export interface LetterViewer { id?: number; user?: UserBrief | null; name?: string; viewed_at?: string }
+
+/** پیام خطای API (detail، message یا نخستین خطای فیلد) */
+export function errorText(body: any): string {
+  if (!body) return '';
+  if (typeof body === 'string') return body.length < 300 ? body : '';
+  if (typeof body.detail === 'string') return body.detail;
+  if (typeof body.message === 'string') return body.message;
+  for (const value of Object.values(body)) {
+    if (typeof value === 'string') return value;
+    if (Array.isArray(value) && typeof value[0] === 'string') return value[0];
+  }
+  return '';
+}

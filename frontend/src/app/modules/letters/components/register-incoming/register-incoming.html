@@ -1,0 +1,48 @@
+<form class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-3 min-w-0" (submit)="$event.preventDefault(); submit()" aria-label="ثبت وارده" data-testid="register-incoming">
+  <div class="flex flex-col gap-1">
+    <label class="text-xs font-bold text-fg" for="incoming-subject">موضوع</label>
+    <input id="incoming-subject" type="text" maxlength="500" class="rounded-xl border border-line bg-surface px-3 py-2 text-sm"
+           [formControl]="form.controls.subject" [attr.aria-invalid]="subjectError()" aria-describedby="incoming-error">
+    @if (subjectError()) { <span class="text-[11px] text-rose-700">موضوع لازم است.</span> }
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-bold text-fg" for="incoming-number">شمارهٔ بیرونی</label>
+      <input id="incoming-number" type="text" maxlength="64" class="rounded-xl border border-line bg-surface px-3 py-2 text-sm" [formControl]="form.controls.external_number">
+    </div>
+    <div class="flex flex-col gap-1 relative">
+      <label class="text-xs font-bold text-fg" for="incoming-date">تاریخ نامه</label>
+      <ng-persian-datepicker (dateOnSelect)="onDateSelect($event)" class="w-full to-datepicker">
+        <input id="incoming-date" type="text" [formControl]="form.controls.dateText" placeholder="انتخاب تاریخ" title="تاریخ نامهٔ وارده (تقویم شمسی)"
+               class="w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm cursor-pointer" readonly>
+      </ng-persian-datepicker>
+    </div>
+  </div>
+  <div class="flex flex-col gap-1">
+    <span class="text-xs font-bold text-fg">فرستنده</span>
+    @if (sender(); as s) {
+      <div class="flex items-center gap-2 text-sm">
+        <span class="font-bold text-fg flex-1 min-w-0 truncate">{{ s.name }}</span>
+        <button appAction="close" label="برداشتن" type="button" (click)="sender.set(null)"></button>
+      </div>
+    } @else {
+      <app-letter-party-picker [company]="company()" [disabled]="!online()" (picked)="sender.set($event)" />
+    }
+  </div>
+  <div class="flex flex-col gap-1">
+    <span class="text-xs font-bold text-fg">اسکن نامه</span>
+    <div class="flex flex-wrap items-center gap-2">
+      <label class="rounded-xl border border-line bg-surface-muted px-3 py-2 text-xs font-bold text-fg cursor-pointer min-h-[40px] flex items-center" for="incoming-camera">دوربین</label>
+      <input id="incoming-camera" type="file" accept="image/*" capture="environment" class="sr-only" (change)="onFile($event)" data-testid="incoming-camera">
+      <label class="rounded-xl border border-line bg-surface-muted px-3 py-2 text-xs font-bold text-fg cursor-pointer min-h-[40px] flex items-center" for="incoming-file">فایل</label>
+      <input id="incoming-file" type="file" accept="image/*,application/pdf" class="sr-only" (change)="onFile($event)" data-testid="incoming-file">
+      @if (scan(); as f) { <span class="text-xs text-fg-muted truncate min-w-0" data-testid="incoming-scan-name">{{ f.name }}</span> }
+    </div>
+  </div>
+  <p id="incoming-error" class="text-xs" [class.hidden]="!error()" role="alert">
+    <span class="block rounded-xl px-3 py-2 bg-rose-50 text-rose-800">{{ error() }}</span>
+  </p>
+  <div class="flex justify-end">
+    <button appAction="confirm" label="ثبت وارده" type="submit" data-testid="incoming-submit" [disabled]="busy() || !online()"></button>
+  </div>
+</form>
