@@ -13,6 +13,8 @@
 - بایگانی و ابطال کارهای ارجاع باز را با نتیجهٔ «لغو» می‌بندند؛ هیچ کاری حذف نمی‌شود.
 """
 import logging
+from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import timedelta
 
 from django.db import transaction
@@ -63,10 +65,29 @@ def _engine():
 
 # ─── قلاب ارجاع ریشه ─────────────────────────────────────────────────────────────────────────────
 
+# قلاب هسته فقط (user, entity_id) می‌گیرد و نمونهٔ امضا و نمونهٔ ارجاع یک entity_kind دارند؛ پس ارجاع ریشه فقط
+# از مسیر خود ماژول (refer_letter و ارجاع خودکار) مجاز است، نه از API عمومی گردش روی هر نمونه (یافتهٔ بازبینی ل-ه)
+_ROOT_REFERRAL = ContextVar('letters_root_referral', default=False)
+
+
+@contextmanager
+def _module_referral():
+    token = _ROOT_REFERRAL.set(True)
+    try:
+        yield
+    finally:
+        _ROOT_REFERRAL.reset(token)
+
+
 def can_refer_letter(user, entity_id) -> bool:
+    """قلاب can_refer:letters_letter: همان may_root_refer، ولی فقط درون مسیر ارجاع ماژول."""
+    return _ROOT_REFERRAL.get() and may_root_refer(user, entity_id)
+
+
+def may_root_refer(user, entity_id) -> bool:
     """
-    قلاب can_refer:letters_letter (ن۷): ارجاع ریشهٔ نامهٔ ثبت‌شده و بایگانی‌نشده. نویسنده، امضاکننده‌ها و دبیرخانهٔ
-    همان شرکت (دبیرخانه فقط نامهٔ عادی، همان قاعدهٔ دیدن ل-ج)؛ همیشه با دیدن نامه. مدیر کل هرگز.
+    ارجاع ریشه (ن۷) برای نامهٔ ثبت‌شده و بایگانی‌نشده: نویسنده، امضاکننده‌ها و دبیرخانهٔ همان شرکت (دبیرخانه فقط
+    نامهٔ عادی، همان قاعدهٔ دیدن ل-ج)؛ همیشه با دیدن نامه. مدیر کل هرگز.
     """
     pk = access._letter_pk(entity_id)
     if pk is None or not access._live(user) or user.is_superuser:
@@ -138,14 +159,15 @@ def refer_letter(user, letter, targets, *, kind, instruction='', due_at=None, pa
     root = parent_task is None and (instance is None or not WorkflowTask.objects.filter(
         instance=instance, track=WorkflowTask.TRACK_REFERRAL, is_open=True,
         recipients__user_id=user.pk).exists())
-    if instance is None:
-        if not can_refer_letter(user, letter.pk):
-            raise WorkflowPermissionDenied('refer_not_allowed', 'شما اجازهٔ ارجاع این نامه را ندارید', 403)
-        instance = open_referrals(letter, user)
-    if due_at is None and root:
-        due_at = default_due_at(letter)
-    created = engine.refer(user, instance.pk, targets, kind=kind, instruction=instruction, due_at=due_at,
-                           parent_task=parent_task)
+    with _module_referral():
+        if instance is None:
+            if not may_root_refer(user, letter.pk):
+                raise WorkflowPermissionDenied('refer_not_allowed', 'شما اجازهٔ ارجاع این نامه را ندارید', 403)
+            instance = open_referrals(letter, user)
+        if due_at is None and root:
+            due_at = default_due_at(letter)
+        created = engine.refer(user, instance.pk, targets, kind=kind, instruction=instruction, due_at=due_at,
+                               parent_task=parent_task)
     from .services.lifecycle import audit
     audit(user, letter, 'UPDATE', event='refer', kind=kind, targets=[t.target_user_id for t in created])
     return created
@@ -202,7 +224,7 @@ def auto_refer_in_tx(letter, actor):
         for start in range(0, len(ids), _engine().MAX_REFERRAL_TARGETS):
             chunk = ids[start:start + _engine().MAX_REFERRAL_TARGETS]
             try:
-                with transaction.atomic():
+                with transaction.atomic(), _module_referral():
                     created += _engine().refer(referrer, instance.pk, chunk, kind=kind, due_at=due_at)
             except WorkflowError:
                 logger.warning('letters auto-referral skipped for letter %s', letter.pk, exc_info=True)
@@ -214,18 +236,22 @@ def auto_refer_in_tx(letter, actor):
 def close_open_referrals(letter, user):
     """
     بایگانی و ابطال (ن۳): کارهای ارجاع باز نامه با نتیجهٔ «لغو» بسته می‌شوند، همان رفتار هسته برای رد قطعی و لغو
-    (ر۹)؛ کار و سابقه می‌مانند. ترتیب قفل «نامه ← نمونهٔ ارجاع» است (نامه پیش‌تر قفل شده). خروجی شمار کارها.
+    (ر۹)؛ کار و سابقه می‌مانند. همهٔ نمونه‌های نامه (ارجاع و امضا؛ ارجاعِ ماندهٔ روی نمونهٔ امضا هم)، به ترتیب شناسه.
+    ترتیب قفل «نامه ← نمونه‌ها» است (نامه پیش‌تر قفل شده). خروجی شمار کارها.
     """
-    from workflow.models import WorkflowTask
-    instance = referral_instance(letter)
-    if instance is None:
-        return 0
+    from workflow.models import WorkflowInstance, WorkflowTask
+    ids = list(WorkflowInstance.objects.filter(entity_kind=LETTER_ENTITY, entity_id=letter.pk)
+               .order_by('pk').values_list('pk', flat=True))
     engine = _engine()
+    count = 0
     with transaction.atomic():
-        locked = engine._lock_instance(instance.pk)
-        count = WorkflowTask.objects.filter(instance=locked, is_open=True, track=WorkflowTask.TRACK_REFERRAL).count()
-        if count:
-            engine._close_referrals(locked, user, timezone.now())
+        now = timezone.now()
+        for pk in ids:
+            locked = engine._lock_instance(pk)
+            n = WorkflowTask.objects.filter(instance=locked, is_open=True, track=WorkflowTask.TRACK_REFERRAL).count()
+            if n:
+                engine._close_referrals(locked, user, now)
+                count += n
     return count
 
 
@@ -249,33 +275,41 @@ def involved_user_ids(letter) -> set:
 
 def emit_letter_changed(letter, action='updated'):
     """
-    رویداد «سند تغییر کرد» موجود (۲.۵) پس از commit: نامهٔ عادی از کانال شرکت (`broadcast_document_changed`؛ پی‌لود
-    فقط شناسه و وضعیت)؛ نامهٔ محرمانه و سری فقط به کانال شخصی کاربران درگیر با همان پی‌لود، تا وجودش به بقیهٔ
-    شرکت نرسد. خطا هرگز به فراخوان نمی‌رسد.
+    رویداد «سند تغییر کرد» موجود (۲.۵) پس از commit، فقط به کسانی که نامه را می‌بینند (یافتهٔ بازبینی ل-ه: پیش‌نویس و
+    نامهٔ شخصی به کانال شرکت نمی‌رود). کانال شرکت (`broadcast_document_changed`) فقط برای بخشنامهٔ ثبت‌شدهٔ عادی با
+    مخاطب «همهٔ شرکت»؛ بقیه به کانال شخصی کاربران درگیر (و مخاطب بخشیِ بخشنامهٔ ثبت‌شده) با همان پی‌لود: فقط
+    شناسه و وضعیت. خطا هرگز به فراخوان نمی‌رسد.
     """
-    if letter.is_confidential:
-        user_ids = involved_user_ids(letter)
-        from accounts.middleware import get_current_client_tab_id
-        payload = {
-            'type': 'send_notification', 'type_str': 'document_changed', 'doc_type': LETTER_ENTITY,
-            'doc_id': letter.pk, 'action': action, 'status': letter.status, 'company_id': letter.company_id,
-            'section_id': None, 'client_tab_id': get_current_client_tab_id(), 'sender_id': None,
-        }
-
-        def _send():
-            try:
-                from asgiref.sync import async_to_sync
-                from channels.layers import get_channel_layer
-                layer = get_channel_layer()
-                if layer is None:
-                    return
-                for uid in sorted(user_ids):
-                    async_to_sync(layer.group_send)(f'user_{uid}', payload)
-            except Exception:
-                logger.warning('letters live event failed for letter %s', letter.pk, exc_info=True)
-
-        transaction.on_commit(_send)
+    from .models import CircularAudience
+    circular = (letter.kind == Letter.KIND_CIRCULAR and letter.registered_at is not None
+                and not letter.is_confidential)
+    if circular and CircularAudience.objects.filter(letter_id=letter.pk,
+                                                    scope=CircularAudience.SCOPE_COMPANY).exists():
+        from companies.realtime import broadcast_document_changed
+        broadcast_document_changed(LETTER_ENTITY, letter.pk, company_id=letter.company_id, status=letter.status,
+                                   action=action)
         return
-    from companies.realtime import broadcast_document_changed
-    broadcast_document_changed(LETTER_ENTITY, letter.pk, company_id=letter.company_id, status=letter.status,
-                               action=action)
+    user_ids = involved_user_ids(letter)
+    if circular:
+        from .circulars import audience_user_ids
+        user_ids |= audience_user_ids(letter)
+    from accounts.middleware import get_current_client_tab_id
+    payload = {
+        'type': 'send_notification', 'type_str': 'document_changed', 'doc_type': LETTER_ENTITY,
+        'doc_id': letter.pk, 'action': action, 'status': letter.status, 'company_id': letter.company_id,
+        'section_id': None, 'client_tab_id': get_current_client_tab_id(), 'sender_id': None,
+    }
+
+    def _send():
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            layer = get_channel_layer()
+            if layer is None:
+                return
+            for uid in sorted(user_ids):
+                async_to_sync(layer.group_send)(f'user_{uid}', payload)
+        except Exception:
+            logger.warning('letters live event failed for letter %s', letter.pk, exc_info=True)
+
+    transaction.on_commit(_send)

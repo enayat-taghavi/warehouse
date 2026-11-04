@@ -236,27 +236,74 @@ class CircularTests(ReferralBase):
 
 
 class LiveEventTests(ReferralBase):
-    def test_normal_letter_uses_company_channel_confidential_only_involved(self):
-        d = self.registered()
-        with mock.patch('companies.realtime.broadcast_document_changed') as broadcast:
-            self.refer(self.secretary, d, [self.reader])
-        self.assertTrue(broadcast.called)
-        self.assertEqual(broadcast.call_args.args[:2], ('letters_letter', d.pk))
-
+    def test_live_event_only_to_people_who_see_the_letter(self):
         sent = []
 
         class Layer:
             async def group_send(self, group, payload):
                 sent.append((group, payload['doc_id']))
 
+        def groups_for(action):
+            sent.clear()
+            with mock.patch('channels.layers.get_channel_layer', return_value=Layer()), \
+                    mock.patch('companies.realtime.broadcast_document_changed') as broadcast, \
+                    self.captureOnCommitCallbacks(execute=True):
+                action()
+            return broadcast.called, {g for g, _ in sent}
+
+        # یافتهٔ بازبینی ل-ه: نامهٔ عادی و پیش‌نویس هم به کانال شرکت نمی‌رود
+        d = self.registered()
+        called, groups = groups_for(lambda: self.refer(self.secretary, d, [self.reader]))
+        self.assertFalse(called)
+        self.assertEqual(groups, {f'user_{self.author.pk}', f'user_{self.reader.pk}', f'user_{self.secretary.pk}'})
+        draft = self.letter()
+        called, groups = groups_for(lambda: referral.emit_letter_changed(draft))
+        self.assertFalse(called)
+        self.assertNotIn(f'user_{self.stranger.pk}', groups)
+
         secret = self.registered(confidentiality=Letter.CONF_CONFIDENTIAL)
-        with mock.patch('channels.layers.get_channel_layer', return_value=Layer()), \
-                mock.patch('companies.realtime.broadcast_document_changed') as broadcast, \
-                self.captureOnCommitCallbacks(execute=True):
-            self.assertEqual(self.refer(self.author, secret, [self.reader]).status_code, 201)
-        self.assertFalse(broadcast.called)
-        groups = {g for g, _ in sent}
+        called, groups = groups_for(lambda: self.refer(self.author, secret, [self.reader]))
+        self.assertFalse(called)
         self.assertEqual(groups, {f'user_{self.author.pk}', f'user_{self.reader.pk}'})
+
+        # فقط بخشنامهٔ ثبت‌شده با مخاطب «همهٔ شرکت» از کانال شرکت
+        whole = self.registered(kind=Letter.KIND_CIRCULAR)
+        CircularAudience.objects.create(letter=whole, scope=CircularAudience.SCOPE_COMPANY)
+        called, _groups = groups_for(lambda: referral.emit_letter_changed(whole))
+        self.assertTrue(called)
+
+
+class GenericReferralPathTests(ReferralBase):
+    """یافتهٔ بازبینی ل-ه: ارجاع ریشه فقط از مسیر نامه؛ ارجاعِ روی نمونهٔ امضا دیدن نمی‌دهد و با بایگانی بسته می‌شود."""
+
+    def test_generic_workflow_api_gives_no_root_referral(self):
+        d = self.draft(signers=[self.signer], sign_mode=Letter.SIGN_WET)
+        self.post(self.author, d, 'submit')
+        self.post(self.signer, d, 'sign')
+        d = self.reload(d)
+        self.assertEqual(d.status, Letter.STATUS_REGISTERED)
+        sign = engine.instance_of(LETTER_SIGN_WORKFLOW, d.pk)
+        mine = referral.open_referrals(d, self.fresh(self.secretary))
+        for inst in (sign, mine):
+            res = self.api(self.secretary).post(f'/api/workflow/instances/{inst.pk}/refer/',
+                                                {'targets': [self.reader.pk], 'kind': 'refer'}, format='json')
+            self.assertIn(res.status_code, (403, 404, 409))
+        self.assertFalse(WorkflowTask.objects.filter(track=WorkflowTask.TRACK_REFERRAL,
+                                                     instance__entity_id=d.pk).exists())
+        self.assertEqual(self.refer(self.secretary, d, [self.reader]).status_code, 201)
+
+    def test_sign_instance_referral_gives_no_view_and_closes_on_archive(self):
+        d = self.draft(signers=[self.signer], sign_mode=Letter.SIGN_WET)
+        self.post(self.author, d, 'submit')
+        sign = engine.instance_of(LETTER_SIGN_WORKFLOW, d.pk)
+        # امضاکننده با کار باز امضا از مسیر عمومی هسته ارجاع می‌دهد
+        engine.refer(self.fresh(self.signer), sign.pk, [self.reader.pk], kind='refer')
+        self.assertEqual(self.get(self.reader, d), 404)
+        self.assertEqual(self.post(self.signer, d, 'sign').status_code, 200)
+        self.assertEqual(self.get(self.reader, d), 404)
+        self.assertEqual(self.post(self.secretary, d, 'archive').status_code, 200)
+        task = WorkflowTask.objects.get(instance=sign, track=WorkflowTask.TRACK_REFERRAL)
+        self.assertEqual((task.is_open, task.outcome), (False, WorkflowTask.CANCELLED))
 
 
 class ConfidentialSubstituteTests(ReferralBase):

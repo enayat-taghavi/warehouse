@@ -61,20 +61,25 @@ def secretariat_company_ids(user, company_ids=None) -> set:
 def _workflow_letter_ids(user):
     """زیرکوئری شناسهٔ نامه‌هایی که کاربر در گردش آن‌ها کار باز یا ارجاع دارد (ت۱۱ و ر۱۱ موتور)."""
     from django.utils import timezone
-    from workflow.models import WorkflowTask, WorkflowTaskRecipient
+    from workflow.models import WorkflowStep, WorkflowTask, WorkflowTaskRecipient
+
+    from .referral import LETTER_REFERRAL_WORKFLOW
     today = timezone.localdate()
+    # ارجاع فقط از درخت ارجاع نامه (letters.referral) دیدن می‌دهد؛ ارجاع از مسیر عمومی روی نمونهٔ امضا نه
+    # (یافتهٔ بازبینی ل-ه: آن کارها با بایگانی و ابطال بسته نمی‌شدند و در درخت هم نبودند)
     open_tasks = WorkflowTaskRecipient.objects.filter(
         user_id=user.pk, task__is_open=True, task__instance__entity_kind=LETTER_ENTITY,
-    ).filter(Q(on_behalf_of__isnull=True) | Q(valid_from__lte=today, valid_to__gte=today)
-             ).values('task__instance__entity_id')
-    from workflow.models import WorkflowStep
+    ).filter(Q(task__track=WorkflowTask.TRACK_STEP) | Q(task__instance__workflow_key=LETTER_REFERRAL_WORKFLOW)
+             ).filter(Q(on_behalf_of__isnull=True) | Q(valid_from__lte=today, valid_to__gte=today)
+                      ).values('task__instance__entity_id')
     # ر۱۱ (referral_grants_view): گیرندهٔ کار ارجاع (باز یا بسته)، یا کسی که به جانشینی روی کار ارجاع اقدام کرده
     acted_for = WorkflowStep.objects.filter(
         actor_id=user.pk, on_behalf_of__isnull=False, task__track=WorkflowTask.TRACK_REFERRAL,
-        instance__entity_kind=LETTER_ENTITY,
+        instance__entity_kind=LETTER_ENTITY, instance__workflow_key=LETTER_REFERRAL_WORKFLOW,
     ).values('instance__entity_id')
     referrals = WorkflowTask.objects.filter(
         track=WorkflowTask.TRACK_REFERRAL, instance__entity_kind=LETTER_ENTITY, target_user_id=user.pk,
+        instance__workflow_key=LETTER_REFERRAL_WORKFLOW,
     ).values('instance__entity_id')
     return open_tasks, referrals, acted_for
 

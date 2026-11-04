@@ -622,9 +622,9 @@ def _referral_tree(letter, user):
     from workflow import serializers as wser
     from workflow.models import WorkflowTask
 
-    from .referral import can_refer_letter, referral_instance
+    from .referral import may_root_refer, referral_instance
     instance = referral_instance(letter)
-    can_root = can_refer_letter(user, letter.pk)
+    can_root = may_root_refer(user, letter.pk)
     if instance is None:
         return {'instance_id': None, 'referrals': [], 'can_refer': can_root}
     tasks = list(WorkflowTask.objects.filter(instance=instance, track=WorkflowTask.TRACK_REFERRAL)
