@@ -765,7 +765,7 @@ class MessageViewSet(viewsets.ModelViewSet):
 
         qs = Message.objects.filter(
             conversation=conversation
-        ).select_related('sender', 'reply_to__sender').prefetch_related('attachments', Prefetch('reactions', queryset=MessageReaction.objects.only('id', 'message_id', 'user_id', 'emoji'))).annotate(
+        ).select_related('sender', 'reply_to__sender').prefetch_related('attachments', 'reply_to__attachments', Prefetch('reactions', queryset=MessageReaction.objects.only('id', 'message_id', 'user_id', 'emoji'))).annotate(
             annotated_read_by_count=Count('read_by', distinct=True),
             annotated_is_pinned=Exists(PinnedMessage.objects.filter(message=OuterRef('pk'))),
             annotated_is_delivered=is_delivered_subquery

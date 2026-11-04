@@ -1532,4 +1532,41 @@ describe('ChatDrawerComponent - Phase 8 (Delivery Double Ticks, Bulk Delete, Per
     };
     expect(comp.getMessageAttachmentFallbackLabel(msgWithDoc)).toBe('📎 report.pdf');
   });
+
+  it('playNotificationSound suppresses audio playback when conversation is muted', async () => {
+    await setupPhase8Component();
+    const mutedConv: Conversation = { ...sampleConv, id: 'c801', is_muted: true };
+    const unmutedConv: Conversation = { ...sampleConv, id: 'c802', is_muted: false };
+
+    let audioPlayed = false;
+    const ctx: any = {
+      isMuted: signal(false),
+      conversations$: new BehaviorSubject<Conversation[]>([mutedConv, unmutedConv]),
+      activeConversation$: new BehaviorSubject<Conversation | null>(null),
+      audioCtx: {
+        state: 'running',
+        currentTime: 10,
+        createOscillator: () => ({
+          type: '',
+          frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+          connect: vi.fn(),
+          start: () => { audioPlayed = true; },
+          stop: vi.fn()
+        }),
+        createGain: () => ({
+          gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+          connect: vi.fn()
+        }),
+        destination: {}
+      }
+    };
+
+    // Calling with muted conversation: sound should NOT play
+    CommunicationService.prototype.playNotificationSound.call(ctx, 'c801');
+    expect(audioPlayed).toBe(false);
+
+    // Calling with unmuted conversation: sound SHOULD play
+    CommunicationService.prototype.playNotificationSound.call(ctx, 'c802');
+    expect(audioPlayed).toBe(true);
+  });
 });

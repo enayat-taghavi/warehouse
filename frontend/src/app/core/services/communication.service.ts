@@ -2229,14 +2229,19 @@ export class CommunicationService implements OnDestroy {
 
     this.incomingMessage$.next(msg);
 
-    // مشروط‌سازی پخش صدا تنها برای پیام دیگران و در صورت عدم تکرار (با سقف ۵۰۰ تایی حافظه)
+    // مشروط‌سازی پخش صدا تنها برای پیام دیگران، در صورت عدم تکرار و در صورت بی‌صدا نبودن گفتگو (با سقف ۵۰۰ تایی حافظه)
     if (!msg.is_me && !this.playedMessageIds.has(msgId) && !isDuplicate) {
       if (this.playedMessageIds.size >= 500) {
         const oldest = this.playedMessageIds.values().next().value;
         if (oldest) this.playedMessageIds.delete(oldest);
       }
       this.playedMessageIds.add(msgId);
-      this.playNotificationSound();
+      const conv = this.conversations$.value.find(c => String(c.id) === msgConvId)
+        || (this.activeConversation$.value && String(this.activeConversation$.value.id) === msgConvId ? this.activeConversation$.value : null);
+      const isConvMuted = conv?.is_muted ?? (msg as any).conversation_is_muted ?? false;
+      if (!isConvMuted) {
+        this.playNotificationSound();
+      }
     }
   }
 
@@ -2422,8 +2427,13 @@ export class CommunicationService implements OnDestroy {
     } catch (e) {}
   }
 
-  public playNotificationSound(): void {
+  public playNotificationSound(convId?: string | number): void {
     if (this.isMuted()) return;
+    if (convId !== undefined) {
+      const conv = this.conversations$.value.find(c => String(c.id) === String(convId))
+        || (this.activeConversation$.value && String(this.activeConversation$.value.id) === String(convId) ? this.activeConversation$.value : null);
+      if (conv?.is_muted) return;
+    }
 
     // روش ۱: استفاده از Web Audio API با ملودی سه‌گانه واضح
     try {

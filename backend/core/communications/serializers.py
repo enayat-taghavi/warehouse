@@ -215,9 +215,10 @@ class MessageSerializer(serializers.ModelSerializer):
             return {'id': target.id, 'deleted': True}
         sender = target.sender
         target_text = (target.text or '').strip()
-        has_attachment = target.attachments.exists()
+        target_atts = list(target.attachments.all())
+        has_attachment = len(target_atts) > 0
         if not target_text and has_attachment:
-            first_att = target.attachments.first()
+            first_att = target_atts[0]
             if first_att:
                 ct = (first_att.content_type or '').lower()
                 fn = (first_att.file_name or '').lower()
