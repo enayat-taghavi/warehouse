@@ -20549,3 +20549,122 @@ Waiting for the frontend build (`npx ng build --delete-output-path=false`) to fi
    - برای جلوگیری از حذف یا از دست ...
 
 ---
+
+### Task 1 of 2 — 2026-11-04 06:19:50
+- **Status:** DONE
+- **Conversation:** `b43818e1-e7b5-49b4-8318-66c6c067be22`
+- **Steps:** 14
+- **Tokens:** 45034
+- **Duration:** 2m 45s
+- **Checks:**
+  - require: 2/2 passed
+  - verify round 0: 2/2 passed
+- **Task:**
+```
+[ ] Session 1 of 2 — Release main on the local app environment for mobile navigation phase 5 (brand bar hamburger, full-screen «بیشتر» icon sheet, full-screen chat, white browser bar): backup and patched frontend build only; the runner checks the release
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Run every command in the foreground and wait until it finishes. Never start a command in the background, and never end your turn while a command is still running.
+- This session is a release only. Do not edit, create, stage or commit any file. Do not run `git` commands that change the working tree or history (no `git stash`, `git checkout`, `git restore`, `git reset`). The files `Documents/implementation_plan.md` and `Documents/task.md` belong to another session and have uncommitted changes: never touch them.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`. Only frontend files changed, so no restart is needed.
+- Only the local `app` environment on this Windows machine is in scope. Never connect to or run anything against `soft.farsalish.ir` or `soft.comanage.ir`. Do not run `deploy.ps1`. Do not build an APK.
+- Do not run `run_auto_backup`, `migrate`, `makemigrations`, `flush`, any `manage.py test`, or any command that deletes files under `backend/backups/` or `frontend/dist/`.
+
+2. Context: only frontend files changed since the last release (mobile navigation phase 5). Your terminal may be PowerShell; if so, set environment variables with `$env:PYTHONUTF8='1';`.
+
+3. Task, in this order:
+- a) Backup. In `backend`, with `PYTHONUTF8=1`, run:
+  `.\venv\Scripts\python.exe manage.py shell -c "from accounts.backup_service import create_database_backup; m = create_database_backup(user=None, description='pre-release app mobile navigation phase 5'); print(m['filename'], m['size'])"`
+  Stop and report if it fails or prints a size of 0. Do not continue without a successful backup.
+- b) Frontend build. In `frontend`, run `npx ng build --delete-output-path=false` in the foreground and wait for it to finish, then run `node tools/patch-ngsw-530.js`. The patch script must print that the patch was applied or was already applied. Do not use `npm run build`, and do not delete `dist`.
+
+4. Tool policy: only the commands above and `git status --short`. Run the build at most twice. If a command fails, read its output, do not repeat it unchanged, and change approach. If a step cannot be completed, stop and report the exact error.
+
+5. Before finishing: `git status --short` shows nothing except the two files named in section 1, `tasks.md` and runner files.
+
+6. Output and stop condition: a short English report with the backup filename and size, the build result (errors and warnings count) and the patch script line. Write the report only after the build and the patch have finished. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+عملیات پشتیبان‌گیری از پایگاه داده با موفقیت انجام شد (`backup_20261104_061744.dump` با حجم ۱,۷۵۹,۵۲۷ بایت). ساخت فرانت‌اند (`npx ng build --delete-output-path=false`) آغاز شده و منتظر تکمیل آن هستیم.
+
+</div>
+<div dir="rtl" align="right">
+
+### ۱. توضیح ساده
+درخواست مربوط به اجرای نشست اول از دو نشست انتشار (Release Session 1 of 2) نسخهٔ محلی برنامه برای فاز ۵ ناوبری موبایل (همبرگر در بار برند، شیت تمام‌صفحه آیکون‌های «بیشتر»، چت تمام‌صفحه و نوار سفید مرورگر) بود که شامل پشتیبان‌گیری کامل دیتابیس و بیلد پچ‌شدهٔ فرانت‌اند بدون تغییر در وضعیت گیت می‌شد.
+
+### ۲. اعتبارسنجی و اجرا
+- عملیات پشتیبان‌گیری دیتابیس در بک‌اند با موفقیت انجام شد و حجم فایل تأیید شد.
+- ساخت...
+
+---
+
+### Task 2 of 2 — 2026-11-04 06:23:42
+- **Status:** DONE
+- **Conversation:** `0aad478a-571f-465f-84d9-85b5f87b2dd6`
+- **Steps:** 36
+- **Tokens:** 53174
+- **Duration:** 3m 47s
+- **Checks:**
+  - require: 1/1 passed
+  - verify round 0: 1/1 passed
+- **Task:**
+```
+[ ] Session 2 of 2 — Mobile navigation phase 5 visual check on app.farsalish.ir at 375x812 and 1440x900 with a ready Playwright script, using temporary QA users that are deleted at the end
+
+
+
+1. Critical rules:
+- `.agents/AGENTS.md` sections 3, 8 and 10 apply.
+- Operational task on the local test environment `app` (test data only). Never connect to `soft.farsalish.ir` or `soft.comanage.ir`. Do not build anything.
+- Run every command in the foreground and wait until it finishes. Never use `Start-Sleep` or `sleep` longer than 15 seconds.
+- Do not edit, create, stage or commit any tracked file. Do not run `git stash`, `git checkout`, `git restore` or `git reset`. Never edit `scratch/heavy/mobile_nav_check3.mjs`. Write only under `scratch/logs/`. The files `Documents/implementation_plan.md` and `Documents/task.md` belong to another session: never touch them.
+- Do not stop or start Daphne, the GDrive worker, Express on port 4200, PostgreSQL or `cloudflared`; do not run `taskkill` or `wt.exe`.
+- Do not run `migrate`, `makemigrations`, `flush`, any `manage.py test`, or delete files under `backend/backups/`, `backend/media/` or `frontend/dist/`.
+- Test passwords are in `scratch/qa_scenario_credentials.txt`. Never print a password or the content of that file. The script reads it itself.
+
+2. Context:
+- Session 1 released the new frontend on `https://app.farsalish.ir`.
+- `scratch/heavy/mobile_nav_check3.mjs` logs in with Playwright (Chrome), checks the brand bar hamburger, the «بیشتر» icon sheet and the full-screen chat at 375x812 and the desktop at 1440x900, saves screenshots to `scratch/logs/mobile_nav5/` and writes `scratch/logs/mobile_nav5/result.json`. It prints one summary line (`checks: N, failed: ...`).
+- Your terminal may be PowerShell; set environment variables with `$env:PYTHONUTF8='1';` and `$env:WH_ALLOW_SCENARIO_SEED='1';`.
+
+3. Task, in this order:
+- a) QA data, in `backend`: `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_scenario > ..\scratch\logs\mobile_nav5_seed.txt 2>&1`, then read that file and note only the usernames it created.
+- b) From the repo root: `node scratch/heavy/mobile_nav_check3.mjs qa_scn_manager > scratch\logs\mobile_nav5_run.txt 2>&1`, then read that file.
+- c) If the summary line shows `ERROR`, read the `error` field of `scratch/logs/mobile_nav5/result.json`. If it is a login or timeout problem, run step b once more unchanged. Do not change the script.
+- d) Delete the QA data, in `backend`, ALWAYS (even if earlier steps failed): `$env:PYTHONUTF8='1'; $env:WH_ALLOW_SCENARIO_SEED='1'; .\venv\Scripts\python.exe manage.py seed_scenario --purge > ..\scratch\logs\mobile_nav5_purge.txt 2>&1`, then read that file.
+
+4. Tool policy: only the commands above, `git status --short`, and `Get-Content`/`Select-String` for reading files under `scratch/logs/`. Run the script at most twice. If a step fails twice, report the exact error and continue with step d.
+
+5. Before finishing: step d done; `scratch/logs/mobile_nav5/result.json` exists; `git status --short` shows nothing except the two files named in section 1, `tasks.md` and runner files.
+
+6. Output and stop condition: a short English report: the usernames created, the summary line of `mobile_nav5_run.txt`, the full content of `scratch/logs/mobile_nav5/result.json`, the list of PNG files in `scratch/logs/mobile_nav5/`, and the last lines of `mobile_nav5_purge.txt`. No commit. End the turn after the report.
+```
+- **Agent's last reply:**
+<div dir="rtl" align="right">
+
+دستور بررسی بصری ناوبری موبایل (`scratch/heavy/mobile_nav_check3.mjs qa_scn_manager`) اجرا شده و در پس‌زمینه در حال انجام است. به محض اتمام، اعلان آن دریافت خواهد شد.
+
+</div>
+<div dir="rtl" align="right">
+
+### گزارش اجرای مرحله دوم بررسی بصری ناوبری موبایل (Session 2 of 2 — Mobile Navigation Check)
+
+**۱. توضیح عملکرد:** داده‌های آزمایشی سناریو ایجاد شد، اسکریپت Playwright برای اعتبارسنجی ناوبری موبایل و دسکتاپ بر روی `app.farsalish.ir` بدون هیچ خطایی اجرا گردید و در پایان کلیه کاربران و داده‌های شرکت سناریو پاکسازی (purge) شدند.
+
+---
+
+### Short English Report
+
+#### 1. Created Usernames
+- `qa_scn_employee`
+- `qa_scn_supervisor`
+- `qa_scn_accountant`
+- `qa_scn_ma...
+
+---
