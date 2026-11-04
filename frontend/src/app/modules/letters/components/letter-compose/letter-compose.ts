@@ -34,7 +34,7 @@ const FIELD_ORDER: readonly [string, string][] = [
 
 const userValues = (rows: LetterRecipientRow[] | undefined, role: 'to' | 'cc'): PersonRoleValue[] => (rows || [])
   .filter(r => r.role === role && r.target_type === 'user' && r.user)
-  .map(r => ({ type: 'user', id: r.user as number, label: r.name_text || `کاربر ${r.user}` }));
+  .map(r => ({ type: 'user', id: r.user as number, label: r.user_name || r.name_text || `کاربر ${r.user}` }));
 
 const partyValues = (rows: LetterRecipientRow[] | undefined): PartyRecipient[] => (rows || [])
   .filter(r => r.target_type === 'party' && r.party)
@@ -160,6 +160,7 @@ export class LetterComposePage implements OnInit {
       next: letter => {
         this.applyServer(letter);
         this.loading.set(false);
+        this.applyCopyParam(letter);
       },
       error: err => {
         const status = err?.status ?? 0;
@@ -361,6 +362,15 @@ export class LetterComposePage implements OnInit {
     this.markDirty();
     this.location.replaceState('/app/letters/new');
     this.notice.set({ tone: 'warn', text: 'نامهٔ تازه؛ برای ساختن آن «ذخیره» را بزنید.' });
+  }
+
+  /** «بردن به ویرایشگر» از صفحهٔ نمایش (`?copy=<id>`، ل-ز): متن نسخهٔ ناهمگام در فرم می‌نشیند (ذخیره با کاربر). */
+  private applyCopyParam(letter: LetterDetail): void {
+    const copyId = Number(this.route.snapshot.queryParamMap.get('copy'));
+    const copy = copyId ? (letter.draft_copies || []).find(c => c.id === copyId) : undefined;
+    if (!copy || !letter.can_edit) return;
+    this.useCopy(copy, false);
+    this.notice.set({ tone: 'warn', text: 'متن نسخهٔ ناهمگام در فرم گذاشته شد؛ برای نگه‌داشتن «ذخیره» را بزنید.' });
   }
 
   useCopy(copy: LetterDraftCopy, asNew: boolean): void {

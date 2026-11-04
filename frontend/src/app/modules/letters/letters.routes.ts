@@ -3,6 +3,8 @@ import { CanDeactivateFn, Routes } from '@angular/router';
 import { ConfirmDialogService } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { LetterListPage } from './components/letter-list/letter-list';
 import { LetterComposePage } from './components/letter-compose/letter-compose';
+import { LetterViewPage } from './components/letter-view/letter-view';
+import { SecretariatPage } from './components/secretariat/secretariat';
 
 /** هشدار ترک فرم نیمه‌کاره (ن۱۶، ق۱۱) */
 export const lettersLeaveGuard: CanDeactivateFn<LetterComposePage> = async (page: LetterComposePage) => {
@@ -20,5 +22,7 @@ export const lettersLeaveGuard: CanDeactivateFn<LetterComposePage> = async (page
 export const LETTERS_ROUTES: Routes = [
   { path: '', component: LetterListPage },
   { path: 'new', component: LetterComposePage, canDeactivate: [lettersLeaveGuard] },
+  { path: 'secretariat', component: SecretariatPage },
   { path: ':id/edit', component: LetterComposePage, canDeactivate: [lettersLeaveGuard] },
+  { path: ':id', component: LetterViewPage },
 ];

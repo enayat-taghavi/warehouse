@@ -1,0 +1,39 @@
+<form class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-3 min-w-0" (ngSubmit)="submit()" aria-label="ارجاع نامه" data-testid="refer-dialog">
+  <h2 class="text-sm font-black text-fg">{{ parentTask() ? 'ارجاع از کار من' : 'ارجاع نامه' }}</h2>
+  <div class="flex flex-col gap-1">
+    <span class="text-xs font-bold text-fg" id="refer-targets-label">گیرنده‌ها</span>
+    <app-person-role-picker [formControl]="targets" [allowRoles]="false" [max]="maxTargets" placeholder="جست‌وجوی همکار" aria-labelledby="refer-targets-label" />
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div class="flex flex-col gap-1">
+      <label class="text-xs font-bold text-fg" for="refer-kind">نوع</label>
+      <select id="refer-kind" class="rounded-xl border border-line bg-surface px-3 py-2 text-sm" [formControl]="kind">
+        <option value="refer">ارجاع</option>
+        <option value="inform">برای اطلاع</option>
+      </select>
+    </div>
+    <div class="flex flex-col gap-1 relative">
+      <label class="text-xs font-bold text-fg" for="refer-due">مهلت (اختیاری)</label>
+      <div class="flex items-center gap-1">
+        <ng-persian-datepicker (dateOnSelect)="onDueSelect($event)" class="w-full to-datepicker">
+          <input id="refer-due" type="text" [formControl]="dueText" placeholder="انتخاب تاریخ" title="مهلت پاسخ (تقویم شمسی)"
+                 class="w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm cursor-pointer" readonly>
+        </ng-persian-datepicker>
+        @if (dueAt()) {
+          <button type="button" class="btn-icon-sm btn-icon-slate min-w-[40px] min-h-[40px]" title="پاک کردن مهلت" aria-label="پاک کردن مهلت" (click)="clearDue()">×</button>
+        }
+      </div>
+    </div>
+  </div>
+  <div class="flex flex-col gap-1">
+    <label class="text-xs font-bold text-fg" for="refer-instruction">دستور</label>
+    <textarea id="refer-instruction" rows="2" maxlength="2000" class="rounded-xl border border-line bg-surface px-3 py-2 text-sm" [formControl]="instruction"></textarea>
+  </div>
+  @if (error()) {
+    <p class="text-xs rounded-xl px-3 py-2 bg-rose-50 text-rose-800" role="alert" data-testid="refer-error">{{ error() }}</p>
+  }
+  <div class="flex gap-2 justify-end">
+    <button appAction="close" label="انصراف" type="button" (click)="cancelled.emit()"></button>
+    <button appAction="forward" label="ارجاع" type="submit" data-testid="refer-submit" [disabled]="busy()"></button>
+  </div>
+</form>
