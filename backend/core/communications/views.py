@@ -25,10 +25,10 @@ from accounts.models import AuditLog
 from notifications.models import Notification
 from .models import (
     Conversation, ConversationParticipant, Message,
-    MessageAttachment, GenericComment, ConversationType, ParticipantRole
+    MessageAttachment, MessageReaction, GenericComment, ConversationType, ParticipantRole
 )
 from .serializers import (
-    ConversationSerializer, MessageSerializer,
+    ConversationSerializer, MessageSerializer, MessageReactorSerializer,
     MessageAttachmentSerializer, GenericCommentSerializer, UserShortSerializer,
     ChatUserPolicyWriteSerializer, ChatCompanyPolicyWriteSerializer,
 )
@@ -40,6 +40,7 @@ from .permissions import (
     IsChatEnabled, IsConversationParticipantOrAdmin,
     IsMessageAuthor, IsCommentAuthor
 )
+from .reactions import ALLOWED_REACTION_EMOJI_SET, format_reactions_summary
 from .access import (
     visible_conversations, can_read_conversation, can_post_to_conversation,
     can_modify_message, can_access_comment_target, can_modify_comment,
@@ -47,7 +48,7 @@ from .access import (
 )
 from .broadcast import (
     broadcast_message_ws, broadcast_comment_ws,
-    broadcast_message_updated_ws, broadcast_message_deleted_ws, broadcast_read_receipt_ws,
+    broadcast_message_updated_ws, broadcast_message_deleted_ws, broadcast_read_receipt_ws, broadcast_message_reaction_ws,
     broadcast_membership_ws
 )
 from .membership import (
@@ -587,6 +588,11 @@ class MessageViewSet(viewsets.ModelViewSet):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'chat_message'
 
+    def get_permissions(self):
+        if self.action in ['react', 'reactions']:
+            return [permissions.IsAuthenticated(), IsChatEnabled()]
+        return super().get_permissions()
+
     def get_throttles(self):
         if self.action == 'upload_attachment':
             self.throttle_scope = 'chat_upload'
@@ -596,7 +602,7 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
-            return Message.objects.all().select_related('sender', 'conversation').prefetch_related('attachments')
+            return Message.objects.all().select_related('sender', 'conversation').prefetch_related('attachments', Prefetch('reactions', queryset=MessageReaction.objects.only('id', 'message_id', 'user_id', 'emoji')))
 
         conv_id = self.request.query_params.get('conversation_id')
         if not conv_id:
@@ -613,7 +619,7 @@ class MessageViewSet(viewsets.ModelViewSet):
 
         qs = Message.objects.filter(
             conversation=conversation
-        ).select_related('sender', 'reply_to__sender').prefetch_related('attachments').annotate(
+        ).select_related('sender', 'reply_to__sender').prefetch_related('attachments', Prefetch('reactions', queryset=MessageReaction.objects.only('id', 'message_id', 'user_id', 'emoji'))).annotate(
             annotated_read_by_count=Count('read_by', distinct=True)
         )
 
@@ -772,6 +778,99 @@ class MessageViewSet(viewsets.ModelViewSet):
         # پیش‌نمایش (بندانگشتی، ابعاد، تعداد صفحه) پس از commit؛ شکست آن فایل اصلی را دست نمی‌زند
         schedule_attachment_preview(attachment.pk)
         return Response(MessageAttachmentSerializer(attachment, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='react')
+    def react(self, request, pk=None):
+        try:
+            msg_id = int(pk)
+        except (ValueError, TypeError):
+            return Response({'error': 'شناسه پیام نامعتبر است'}, status=status.HTTP_404_NOT_FOUND)
+
+        emoji = request.data.get('emoji') if isinstance(request.data, dict) else None
+        if not emoji or emoji not in ALLOWED_REACTION_EMOJI_SET:
+            return Response(
+                {'error': 'ایموجی واکنش نامعتبر است'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        msg = Message.objects.filter(id=msg_id, is_deleted=False).select_related('conversation').first()
+        if not msg:
+            return Response({'error': 'پیام یافت نشد'}, status=status.HTTP_404_NOT_FOUND)
+
+        conv = msg.conversation
+        user = request.user
+
+        # امنیت و تفکیک دسترسی (Tenant Scope & Active Membership):
+        if conv.conv_type in (ConversationType.DIRECT, ConversationType.GROUP):
+            is_active_member = ConversationParticipant.objects.filter(
+                conversation=conv, user=user, left_at__isnull=True
+            ).exists()
+            if not is_active_member:
+                raise PermissionDenied('تنها اعضای فعال گفتگو مجاز به ثبت واکنش هستند')
+        elif conv.conv_type == ConversationType.ANNOUNCEMENT:
+            if not can_read_conversation(user, conv):
+                raise PermissionDenied('دسترسی غیرمجاز به این گفتگو')
+
+        with transaction.atomic():
+            existing_reaction = MessageReaction.objects.select_for_update().filter(
+                message=msg, user=user
+            ).first()
+
+            if existing_reaction:
+                if existing_reaction.emoji == emoji:
+                    existing_reaction.delete()
+                else:
+                    existing_reaction.emoji = emoji
+                    existing_reaction.created_at = timezone.now()
+                    existing_reaction.save(update_fields=['emoji', 'created_at'])
+            else:
+                MessageReaction.objects.create(
+                    message=msg,
+                    user=user,
+                    emoji=emoji
+                )
+
+        reactions_list = list(MessageReaction.objects.filter(message=msg).order_by('id'))
+        reactions_summary = format_reactions_summary(reactions_list, current_user_id=user.id)
+
+        transaction.on_commit(lambda: broadcast_message_reaction_ws(msg))
+
+        return Response({
+            'message_id': msg.id,
+            'conversation_id': msg.conversation_id,
+            'reactions': reactions_summary,
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'], url_path='reactions')
+    def reactions(self, request, pk=None):
+        try:
+            msg_id = int(pk)
+        except (ValueError, TypeError):
+            return Response({'error': 'شناسه پیام نامعتبر است'}, status=status.HTTP_404_NOT_FOUND)
+
+        msg = Message.objects.filter(id=msg_id, is_deleted=False).select_related('conversation').first()
+        if not msg:
+            return Response({'error': 'پیام یافت نشد'}, status=status.HTTP_404_NOT_FOUND)
+
+        conv = msg.conversation
+        user = request.user
+
+        if conv.conv_type in (ConversationType.DIRECT, ConversationType.GROUP):
+            is_active_member = ConversationParticipant.objects.filter(
+                conversation=conv, user=user, left_at__isnull=True
+            ).exists()
+            if not is_active_member:
+                raise PermissionDenied('دسترسی غیرمجاز به این گفتگو')
+        elif conv.conv_type == ConversationType.ANNOUNCEMENT:
+            if not can_read_conversation(user, conv):
+                raise PermissionDenied('دسترسی غیرمجاز به این گفتگو')
+
+        reactions_qs = MessageReaction.objects.filter(
+            message=msg
+        ).select_related('user').order_by('-created_at', 'id')
+
+        serializer = MessageReactorSerializer(reactions_qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class GenericCommentViewSet(viewsets.ModelViewSet):

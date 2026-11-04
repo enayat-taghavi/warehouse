@@ -44,6 +44,20 @@ export interface MessageAttachment {
   created_at?: string;
 }
 
+export interface MessageReactionSummary {
+  emoji: string;
+  count: number;
+  mine: boolean;
+  user_ids?: number[];
+}
+
+export interface ReactorItem {
+  user_id: number;
+  full_name: string;
+  emoji: string;
+  created_at: string;
+}
+
 export interface ChatMessage {
   id: string;
   client_temp_id?: string;
@@ -61,6 +75,7 @@ export interface ChatMessage {
   created_at: string;
   updated_at?: string;
   attachments?: MessageAttachment[];
+  reactions?: MessageReactionSummary[];
   is_me?: boolean;
   read_by_count?: number;
   is_pending?: boolean; // برای Optimistic UI
@@ -170,6 +185,8 @@ export class CommunicationService implements OnDestroy {
 
   // وضعیت‌ها و سیگنال‌ها
   public isChatDrawerOpen = signal<boolean>(false);
+  /** آدرس صفحه‌ای که کاربر از آن وارد صفحهٔ تمام‌صفحه چت (/app/chat) شده است */
+  public chatReturnUrl = signal<string | null>(null);
   /** کاربر داخل یک گفت‌وگوی کشوی چت است (نه فهرست)؛ نوار تب‌های پایین موبایل آن وقت پنهان می‌شود */
   public hasActiveConversation = signal<boolean>(false);
   public isMuted = signal<boolean>(typeof localStorage !== 'undefined' ? localStorage.getItem('wh_chat_muted') === 'true' : false);
@@ -551,6 +568,8 @@ export class CommunicationService implements OnDestroy {
             const mid = payload.data?.id;
             const cid = payload.data?.conversation;
             if (mid !== undefined && mid !== null) this.handleDeletedMessage(String(mid), cid !== undefined && cid !== null ? String(cid) : null);
+          } else if (payload.event === 'chat.message_reaction' || payload.event === 'message_reaction') {
+            this.handleMessageReaction(payload.data);
           } else if (payload.event === 'chat.conversation.removed') {
             const cid = payload.data?.conversation_id;
             if (cid !== undefined && cid !== null) this.handleConversationRemoved(String(cid));
@@ -1472,6 +1491,50 @@ export class CommunicationService implements OnDestroy {
       })
     );
     this.handleDeletedMessage(String(messageId), conv !== null ? String(conv) : null);
+  }
+
+  /** ثبت یا تغییر واکنش به پیام (فاز ۴) */
+  public reactToMessage(messageId: string | number, emoji: string): Observable<{ message_id: number; conversation_id: number; reactions: MessageReactionSummary[] }> {
+    return this.http.post<{ message_id: number; conversation_id: number; reactions: MessageReactionSummary[] }>(
+      `/api/communications/messages/${messageId}/react/`,
+      { emoji },
+      { context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true) }
+    );
+  }
+
+  /** دریافت فهرست افراد واکنش‌دهنده به پیام (فاز ۴) */
+  public getMessageReactions(messageId: string | number): Observable<ReactorItem[]> {
+    return this.http.get<ReactorItem[]>(
+      `/api/communications/messages/${messageId}/reactions/`,
+      { context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true) }
+    );
+  }
+
+  /** به‌روزرسانی زنده واکنش‌های پیام در نخ پیام‌های باز */
+  public handleMessageReaction(data: any): void {
+    if (!data) return;
+    const convId = String(data.conversation_id);
+    const msgId = String(data.message_id);
+    const reactions: MessageReactionSummary[] = Array.isArray(data.reactions) ? data.reactions : [];
+
+    const active = this.activeConversation$.value;
+    if (active && String(active.id) === convId) {
+      const current = this.activeMessages$.value;
+      const index = current.findIndex(m => String(m.id) === msgId);
+      if (index !== -1) {
+        const currentUserId = this.getCurrentUserId();
+        const mappedReactions = reactions.map(r => ({
+          ...r,
+          mine: r.user_ids && currentUserId !== null ? r.user_ids.includes(currentUserId) : !!r.mine,
+        }));
+        const updated = [...current];
+        updated[index] = {
+          ...updated[index],
+          reactions: mappedReactions,
+        };
+        this.activeMessages$.next(updated);
+      }
+    }
   }
 
   /** حذف پیام از فهرست باز و تازه‌سازی پیش‌نمایش آخرین پیام گفتگو */

@@ -28,6 +28,11 @@ def _send_message_event(msg, event, recipient_ids):
     if not channel_layer:
         return
     # سریالایز بی‌طرفانه پیام بدون کانتکست اختصاصی کاربر فرستنده تا is_me به صورت اشتباه برای سایرین True نشود
+    if event == "chat.message.new":
+        if not hasattr(msg, '_prefetched_objects_cache'):
+            msg._prefetched_objects_cache = {}
+        if 'reactions' not in msg._prefetched_objects_cache:
+            msg._prefetched_objects_cache['reactions'] = []
     data = MessageSerializer(msg).data
     data['is_me'] = False
     others = sorted(p_id for p_id in recipient_ids if p_id != msg.sender_id)
@@ -259,3 +264,29 @@ def broadcast_read_receipt_ws(conversation, reader_user, last_read_message=None)
     recipient_ids = set(conversation.participants.filter(is_active=True).values_list('id', flat=True))
     recipient_ids.add(reader_user.id)
     _send_to_user_rooms(channel_layer, sorted(recipient_ids), "chat.read_receipt", payload)
+
+def broadcast_message_reaction_ws(message):
+    """
+    برودکست بلادرنگ تغییر واکنش‌های پیام به اعضای گفتگو.
+    رویداد chat.message_reaction با payload شامل conversation_id, message_id و reactions تجمیع‌شده.
+    """
+    from .access import effective_reader_ids
+    from .reactions import format_reactions_summary
+    channel_layer = get_channel_layer()
+    if not channel_layer:
+        return
+
+    recipient_ids = list(effective_reader_ids(message.conversation))
+    reactions_list = list(message.reactions.all())
+    conv_id = str(message.conversation_id)
+    msg_id = str(message.id)
+
+    for p_id in recipient_ids:
+        summary_for_user = format_reactions_summary(reactions_list, current_user_id=p_id)
+        payload = {
+            'conversation_id': conv_id,
+            'message_id': msg_id,
+            'reactions': summary_for_user,
+        }
+        _send_to_user_rooms(channel_layer, [p_id], "chat.message_reaction", payload)
+

@@ -31,6 +31,7 @@
     <div class="relative h-14 sm:h-16 px-2 sm:px-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur shrink-0">
       <div class="flex items-center gap-2">
         <button *ngIf="mode() === 'drawer' && activeTab() === 'conversations'" appAction="close" display="icon" (click)="closeDrawer()"></button>
+        <button *ngIf="mode() === 'page' && activeTab() === 'conversations'" appAction="back" display="icon" (click)="exitFullPage(false)" data-testid="chat-page-back-btn" title="بازگشت به برنامه" aria-label="بازگشت به برنامه"></button>
         <button *ngIf="activeTab() === 'contacts'" appAction="back" display="icon" (click)="activeTab.set('conversations')" title="بازگشت به گفتگوها" aria-label="بازگشت به گفتگوها"></button>
 
         <div *ngIf="activeTab() === 'conversations'" class="flex items-center gap-2">
@@ -63,6 +64,8 @@
 
         <!-- دکمه باز کردن در صفحه کامل (فقط در کشو) -->
         <button *ngIf="mode() === 'drawer'" appAction="expand" display="icon" (click)="expandToPage()" data-testid="drawer-expand-btn" title="باز کردن در صفحه کامل" aria-label="باز کردن در صفحه کامل"></button>
+        <!-- دکمه بازگشت به حالت کشو (فقط در صفحه کامل) -->
+        <button *ngIf="mode() === 'page'" appAction="collapse" display="icon" (click)="exitFullPage(true)" data-testid="chat-page-collapse-btn" title="بازگشت به حالت کشو" aria-label="بازگشت به حالت کشو"></button>
         <button *ngIf="mode() === 'drawer' && activeTab() === 'contacts'" appAction="close" display="icon" (click)="closeDrawer()"></button>
       </div>
     </div>
@@ -331,6 +334,8 @@
 
           <!-- دکمه باز کردن در صفحه کامل (فقط در کشو) -->
           <button *ngIf="mode() === 'drawer'" appAction="expand" display="icon" (click)="expandToPage()" data-testid="drawer-expand-btn" title="باز کردن در صفحه کامل" aria-label="باز کردن در صفحه کامل"></button>
+          <!-- دکمه بازگشت به حالت کشو (فقط در صفحه کامل) -->
+          <button *ngIf="mode() === 'page'" appAction="collapse" display="icon" (click)="exitFullPage(true)" data-testid="chat-thread-collapse-btn" title="بازگشت به حالت کشو" aria-label="بازگشت به حالت کشو"></button>
           <button *ngIf="mode() === 'drawer'" appAction="close" display="icon" (click)="closeDrawer()"></button>
         </div>
       </div>
@@ -728,6 +733,46 @@
                 </button>
               </div>
             </ng-container>
+          </div>
+
+          <!-- قرص‌های واکنش (Reaction Pills - فاز ۴) -->
+          <div *ngIf="msg.reactions && msg.reactions.length > 0"
+               class="flex flex-wrap items-center gap-1 mt-1.5 select-none"
+               data-testid="reaction-pills">
+            <button *ngFor="let r of msg.reactions"
+                    type="button"
+                    data-testid="reaction-pill"
+                    [disabled]="!isOnline()"
+                    (click)="onReactionPillClick(r, msg, $event)"
+                    [title]="isOnline() ? (r.mine ? 'برداشتن واکنش ' + r.emoji : 'واکنش ' + r.emoji) : 'در حالت آفلاین در دسترس نیست'"
+                    [attr.aria-label]="isOnline() ? (r.mine ? 'برداشتن واکنش ' + r.emoji : 'واکنش ' + r.emoji) : 'در حالت آفلاین در دسترس نیست'"
+                    [class.bg-indigo-100]="r.mine"
+                    [class.text-indigo-800]="r.mine"
+                    [class.border-indigo-300]="r.mine"
+                    [class.font-bold]="r.mine"
+                    [class.dark:bg-indigo-900/60]="r.mine"
+                    [class.dark:text-indigo-200]="r.mine"
+                    [class.dark:border-indigo-700]="r.mine"
+                    [class.bg-white/90]="!r.mine"
+                    [class.text-slate-700]="!r.mine"
+                    [class.border-slate-200]="!r.mine"
+                    [class.dark:bg-slate-700/80]="!r.mine"
+                    [class.dark:text-slate-200]="!r.mine"
+                    [class.dark:border-slate-600]="!r.mine"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border shadow-sm transition-all cursor-pointer select-none active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+              <span>{{ r.emoji }}</span>
+              <span class="text-[11px] font-mono">{{ r.count }}</span>
+            </button>
+
+            <!-- دکمه مشاهده افراد واکنش‌دهنده -->
+            <button type="button"
+                    (click)="openReactorsModal(msg, $event)"
+                    data-testid="show-reactors-btn"
+                    title="مشاهده واکنش‌دهندگان"
+                    aria-label="مشاهده واکنش‌دهندگان"
+                    class="inline-flex items-center justify-center w-6 h-6 rounded-full text-slate-400 hover:text-slate-700 hover:bg-black/5 dark:hover:bg-white/10 text-[10px] cursor-pointer">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="eye" aria-hidden="true"></svg>
+            </button>
           </div>
         </div>
 
@@ -1218,6 +1263,81 @@
             {{ ca.kind === 'leave' ? 'ترک گروه' : 'حذف' }}
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- مودال لیست افراد واکنش‌دهنده (فاز ۴) -->
+<div *ngIf="reactorsModalMsg() as rMsg"
+     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm select-none"
+     data-testid="reactors-modal"
+     (click)="closeReactorsModal()">
+  <div class="w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+       (click)="$event.stopPropagation()">
+    <!-- هدر مودال -->
+    <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-sm font-bold text-slate-800 dark:text-slate-100">واکنش‌ها</span>
+        <span class="text-xs text-slate-400 font-mono">({{ reactorsList().length }})</span>
+      </div>
+      <button type="button"
+              (click)="closeReactorsModal()"
+              data-testid="close-reactors-modal-btn"
+              title="بستن"
+              aria-label="بستن"
+              class="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 cursor-pointer">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="x" aria-hidden="true"></svg>
+      </button>
+    </div>
+
+    <!-- تب فیلتر بر اساس ایموجی -->
+    <div *ngIf="rMsg.reactions && rMsg.reactions.length > 1"
+         class="px-3 py-2 border-b border-slate-100 dark:border-slate-700/40 flex items-center gap-1.5 overflow-x-auto">
+      <button type="button"
+              (click)="setReactorEmojiFilter(null)"
+              [class.bg-indigo-50]="selectedReactorEmojiFilter() === null"
+              [class.text-indigo-700]="selectedReactorEmojiFilter() === null"
+              [class.font-bold]="selectedReactorEmojiFilter() === null"
+              [class.text-slate-600]="selectedReactorEmojiFilter() !== null"
+              class="px-2.5 py-1 rounded-full text-xs hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+        همه
+      </button>
+      <button *ngFor="let r of rMsg.reactions"
+              type="button"
+              (click)="setReactorEmojiFilter(r.emoji)"
+              [class.bg-indigo-50]="selectedReactorEmojiFilter() === r.emoji"
+              [class.text-indigo-700]="selectedReactorEmojiFilter() === r.emoji"
+              [class.font-bold]="selectedReactorEmojiFilter() === r.emoji"
+              [class.text-slate-600]="selectedReactorEmojiFilter() !== r.emoji"
+              class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+        <span>{{ r.emoji }}</span>
+        <span class="text-[11px] font-mono">{{ r.count }}</span>
+      </button>
+    </div>
+
+    <!-- لیست کاربران واکنش‌دهنده -->
+    <div class="flex-1 overflow-y-auto p-2 divide-y divide-slate-100 dark:divide-slate-700/30">
+      <div *ngIf="isLoadingReactors()" class="py-8 text-center text-xs text-slate-400">
+        در حال بارگذاری...
+      </div>
+      <div *ngIf="!isLoadingReactors() && filteredReactors().length === 0" class="py-8 text-center text-xs text-slate-400">
+        واکنشی ثبت نشده است
+      </div>
+      <div *ngFor="let item of filteredReactors()"
+           data-testid="reactor-row"
+           class="py-2 px-2 flex items-center justify-between gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/30 rounded-xl">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center text-xs shrink-0 select-none">
+            {{ item.full_name ? item.full_name.charAt(0) : 'ک' }}
+          </div>
+          <span class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+            {{ item.full_name }}
+          </span>
+        </div>
+        <span class="text-lg shrink-0 select-none" [title]="item.emoji">
+          {{ item.emoji }}
+        </span>
       </div>
     </div>
   </div>

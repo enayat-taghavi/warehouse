@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from common.sync_models import SyncModelMixin
+from .reactions import ALLOWED_REACTION_EMOJIS
 
 
 class ConversationType(models.TextChoices):
@@ -171,6 +172,43 @@ class MessageAttachment(SyncModelMixin):
 
     def __str__(self):
         return self.file_name
+
+
+class MessageReaction(models.Model):
+    message = models.ForeignKey(
+        Message,
+        on_delete=models.CASCADE,
+        related_name='reactions',
+        verbose_name="پیام"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='message_reactions',
+        verbose_name="کاربر"
+    )
+    emoji = models.CharField(
+        max_length=16,
+        choices=ALLOWED_REACTION_EMOJIS,
+        verbose_name="ایموجی واکنش"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="زمان ثبت")
+
+    class Meta:
+        verbose_name = "واکنش به پیام"
+        verbose_name_plural = "واکنش‌های پیام"
+        indexes = [
+            models.Index(fields=['message', 'emoji']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['message', 'user'],
+                name='unique_message_user_reaction'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user}: {self.emoji} on Message #{self.message_id}"
 
 
 class ParticipantRole(models.TextChoices):

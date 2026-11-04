@@ -59,6 +59,7 @@ describe('ChatDrawerComponent - Phase 1 (Page mode, expand button, URL sync)', (
 
     comm = {
       isChatDrawerOpen: signal(true),
+      chatReturnUrl: signal<string | null>(null),
       hasActiveConversation: signal(false),
       isMuted: signal(false),
       conversations$: convs$,
@@ -79,7 +80,9 @@ describe('ChatDrawerComponent - Phase 1 (Page mode, expand button, URL sync)', (
       takeComposerDraft: vi.fn().mockReturnValue(null),
       getCurrentUserId: vi.fn().mockReturnValue(1),
       isUserOnline: vi.fn().mockReturnValue(false),
-      toggleMute: vi.fn()
+      toggleMute: vi.fn(),
+      reactToMessage: vi.fn().mockReturnValue(of({ message_id: 1, conversation_id: 'c101', reactions: [{ emoji: '❤️', count: 1, mine: true }] })),
+      getMessageReactions: vi.fn().mockReturnValue(of([{ user_id: 1, full_name: 'من', emoji: '❤️', created_at: new Date().toISOString() }]))
     };
 
     mockRouter = {
@@ -424,6 +427,7 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
   let active$: BehaviorSubject<Conversation | null>;
   let activeMsgs$: BehaviorSubject<ChatMessage[]>;
   let mockToast: any;
+  let mockRouter: any;
 
   const baseDate = '2026-11-04T10:00:00.000Z';
   const sampleConv: Conversation = {
@@ -460,7 +464,7 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
     is_me: false
   };
 
-  async function setupPhase3Component() {
+  async function setupPhase3Component(mode: 'drawer' | 'page' = 'drawer', initialUrl = '/app/launcher') {
     convs$ = new BehaviorSubject<Conversation[]>([sampleConv]);
     active$ = new BehaviorSubject<Conversation | null>(sampleConv);
     activeMsgs$ = new BehaviorSubject<ChatMessage[]>([myMsg, otherMsg]);
@@ -472,8 +476,16 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
       warning: vi.fn()
     };
 
+    mockRouter = {
+      navigate: vi.fn(),
+      navigateByUrl: vi.fn(),
+      url: initialUrl,
+      events: of()
+    };
+
     comm = {
       isChatDrawerOpen: signal(true),
+      chatReturnUrl: signal<string | null>(null),
       hasActiveConversation: signal(true),
       isMuted: signal(false),
       conversations$: convs$,
@@ -496,7 +508,9 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
       isUserOnline: vi.fn().mockReturnValue(true),
       toggleMute: vi.fn(),
       sendMessage: vi.fn().mockResolvedValue(undefined),
-      editMessage: vi.fn().mockResolvedValue(undefined)
+      editMessage: vi.fn().mockResolvedValue(undefined),
+      reactToMessage: vi.fn().mockReturnValue(of({ message_id: 301, conversation_id: 'c101', reactions: [{ emoji: '❤️', count: 1, mine: true }] })),
+      getMessageReactions: vi.fn().mockReturnValue(of([{ user_id: 1, full_name: 'من', emoji: '❤️', created_at: new Date().toISOString() }]))
     };
 
     await TestBed.configureTestingModule({
@@ -509,13 +523,16 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
         { provide: ApiService, useValue: { download: vi.fn() } },
         { provide: ConfigApiService, useValue: { getPublicConfig: () => new Subject<any>() } },
         { provide: FileOutputService, useValue: { canShareFiles: () => false, shareBlob: vi.fn() } },
-        { provide: Router, useValue: { navigate: vi.fn(), navigateByUrl: vi.fn(), url: '/app/launcher', events: of() } },
+        { provide: Router, useValue: mockRouter },
         { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({})) } },
         { provide: HttpClient, useValue: { get: vi.fn(), post: vi.fn() } }
       ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(ChatDrawerComponent);
+    if (mode === 'page') {
+      fixture.componentRef.setInput('mode', 'page');
+    }
     comp = fixture.componentInstance;
     comp.activeConv.set(sampleConv);
     comp.activeTab.set('chat');
@@ -584,14 +601,14 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
     vi.useRealTimers();
   });
 
-  it('clicking a reaction emoji invokes onReaction handler and closes menu', async () => {
+  it('clicking a reaction emoji invokes reactToMessage API, updates reactions in place and closes menu', async () => {
     await setupPhase3Component();
 
     comp.menuFor.set(String(myMsg.id));
     fixture.detectChanges();
 
     comp.onReaction('❤️', myMsg);
-    expect(mockToast.show).toHaveBeenCalledWith('info', expect.stringContaining('❤️'));
+    expect(comm.reactToMessage).toHaveBeenCalledWith(myMsg.id, '❤️');
     expect(comp.menuFor()).toBeNull();
   });
 
@@ -759,5 +776,120 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
     expect(ev.preventDefault).toHaveBeenCalled();
     expect(comp.editing()?.id).toBe(myMsg.id);
     expect(comp.messageInputText).toBe('سلام به همگی');
+  });
+
+  // ─── Phase 4: Message Reactions & Reactors List ───
+  it('offline reaction is rejected with toast and does not call API', async () => {
+    await setupPhase3Component();
+    // Simulate offline
+    vi.spyOn(comp, 'isOnline').mockReturnValue(false);
+
+    comp.onReaction('👍', myMsg);
+    expect(mockToast.show).toHaveBeenCalledWith('info', 'ثبت واکنش نیاز به اتصال به اینترنت دارد');
+    expect(comm.reactToMessage).not.toHaveBeenCalled();
+  });
+
+  it('renders reaction pills with active/inactive styles and toggles on click', async () => {
+    await setupPhase3Component();
+
+    const msgWithReactions: ChatMessage = {
+      ...myMsg,
+      id: '501',
+      reactions: [
+        { emoji: '👍', count: 2, mine: true },
+        { emoji: '❤️', count: 1, mine: false }
+      ]
+    };
+    comp.messages.set([msgWithReactions]);
+    fixture.detectChanges();
+
+    const pillBtns = fixture.nativeElement.querySelectorAll('[data-testid="reaction-pill"]');
+    expect(pillBtns.length).toBe(2);
+
+    // First pill (mine=true) has active styling
+    expect(pillBtns[0].textContent).toContain('👍');
+    expect(pillBtns[0].textContent).toContain('2');
+    expect(pillBtns[0].classList.contains('text-indigo-800')).toBe(true);
+
+    // Second pill (mine=false) has inactive styling
+    expect(pillBtns[1].textContent).toContain('❤️');
+    expect(pillBtns[1].textContent).toContain('1');
+    expect(pillBtns[1].classList.contains('text-slate-700')).toBe(true);
+
+    // Clicking existing pill triggers onReactionPillClick
+    pillBtns[0].click();
+    expect(comm.reactToMessage).toHaveBeenCalledWith('501', '👍');
+  });
+
+  it('opens reactors modal, fetches reactions and displays filtered list, then closes', async () => {
+    await setupPhase3Component();
+
+    const msgWithReactions: ChatMessage = {
+      ...myMsg,
+      id: '502',
+      reactions: [
+        { emoji: '👍', count: 1, mine: true }
+      ]
+    };
+    comp.messages.set([msgWithReactions]);
+    fixture.detectChanges();
+
+    expect(comp.reactorsModalMsg()).toBeNull();
+
+    // Open reactors modal
+    comp.openReactorsModal(msgWithReactions);
+    expect(comp.reactorsModalMsg()?.id).toBe('502');
+    expect(comm.getMessageReactions).toHaveBeenCalledWith('502');
+
+    fixture.detectChanges();
+    const modalEl = fixture.nativeElement.querySelector('[data-testid="reactors-modal"]');
+    expect(modalEl).toBeTruthy();
+
+    const rows = fixture.nativeElement.querySelectorAll('[data-testid="reactor-row"]');
+    expect(rows.length).toBe(1);
+    expect(rows[0].textContent).toContain('من');
+
+    // Close modal
+    comp.closeReactorsModal();
+    fixture.detectChanges();
+    expect(comp.reactorsModalMsg()).toBeNull();
+  });
+
+  // ─── 4. Full-Page Chat Exit & Navigation (Bug Fix) ───
+  it('saves returnUrl when expanding to page and navigates to chat', async () => {
+    await setupPhase3Component('drawer', '/app/warehouse/items');
+    comp.activeConv.set(null);
+    comp.expandToPage();
+    expect(comm.chatReturnUrl()).toBe('/app/warehouse/items');
+    expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/chat');
+  });
+
+  it('renders back button in page mode and exits full page to returnUrl', async () => {
+    await setupPhase3Component('page', '/app/chat');
+    comp.activeTab.set('conversations');
+    comp.activeConv.set(null);
+    comm.chatReturnUrl.set('/app/operations/users');
+    fixture.detectChanges();
+
+    const backBtn = fixture.nativeElement.querySelector('[data-testid="chat-page-back-btn"]') as HTMLButtonElement;
+    expect(backBtn).not.toBeNull();
+
+    backBtn.click();
+    expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/operations/users');
+  });
+
+  it('renders collapse button in page mode and exits full page reopening drawer', async () => {
+    await setupPhase3Component('page', '/app/chat');
+    comp.activeTab.set('conversations');
+    comp.activeConv.set(null);
+    comm.chatReturnUrl.set('/app/warehouse/stock');
+    fixture.detectChanges();
+
+    const collapseBtn = fixture.nativeElement.querySelector('[data-testid="chat-page-collapse-btn"]') as HTMLButtonElement;
+    expect(collapseBtn).not.toBeNull();
+
+    collapseBtn.click();
+    expect(comm.isChatDrawerOpen()).toBe(true);
+    expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/warehouse/stock');
   });
 });

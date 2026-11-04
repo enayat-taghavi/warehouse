@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subscription, firstValueFrom } from 'rxjs';
-import { CommunicationService, Conversation, ChatMessage, UserShort, ConversationMember, ReadStatus, MessageAttachment } from '../../../../../core/services/communication.service';
+import { CommunicationService, Conversation, ChatMessage, UserShort, ConversationMember, ReadStatus, MessageAttachment, MessageReactionSummary, ReactorItem } from '../../../../../core/services/communication.service';
 import { DocumentPreviewComponent, DocumentPreviewSource } from '../../../../../shared/components/document-preview/document-preview.component';
 import { StateService } from '../../../../../core/services/state.service';
 import { AuthService } from '../../../../../core/auth/auth.service';
@@ -156,6 +156,19 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   public addOpen = signal<boolean>(false);
   /** تأیید دومرحله‌ای: حذف عضو یا ترک گروه */
   public confirmAction = signal<{ kind: 'remove'; member: ConversationMember } | { kind: 'leave' } | null>(null);
+
+  // ─── واکنش‌ها (فاز ۴) ───
+  public readonly reactorsModalMsg = signal<ChatMessage | null>(null);
+  public readonly reactorsList = signal<ReactorItem[]>([]);
+  public readonly isLoadingReactors = signal<boolean>(false);
+  public readonly selectedReactorEmojiFilter = signal<string | null>(null);
+
+  public readonly filteredReactors = computed(() => {
+    const list = this.reactorsList();
+    const filter = this.selectedReactorEmojiFilter();
+    if (!filter) return list;
+    return list.filter(item => item.emoji === filter);
+  });
 
   private infoReturnFocus: HTMLElement | null = null;
 
@@ -737,7 +750,54 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       this.toast.show('info', 'ثبت واکنش نیاز به اتصال به اینترنت دارد');
       return;
     }
-    this.toast.show('info', `واکنش ${emoji} ثبت شد`);
+    this.commService.reactToMessage(msg.id, emoji).subscribe({
+      next: (res) => {
+        const current = this.commService.activeMessages$.value;
+        const idx = current.findIndex(m => String(m.id) === String(msg.id));
+        if (idx !== -1) {
+          const updated = [...current];
+          updated[idx] = { ...updated[idx], reactions: res.reactions };
+          this.commService.activeMessages$.next(updated);
+        }
+      },
+      error: (err) => {
+        const errorText = err?.error?.error || 'خطا در ثبت واکنش';
+        this.toast.show('error', errorText);
+      }
+    });
+  }
+
+  public onReactionPillClick(r: MessageReactionSummary, msg: ChatMessage, ev: MouseEvent): void {
+    ev.stopPropagation();
+    this.onReaction(r.emoji, msg);
+  }
+
+  public openReactorsModal(msg: ChatMessage, ev?: MouseEvent): void {
+    if (ev) ev.stopPropagation();
+    this.menuFor.set(null);
+    this.reactorsModalMsg.set(msg);
+    this.selectedReactorEmojiFilter.set(null);
+    this.isLoadingReactors.set(true);
+    this.commService.getMessageReactions(msg.id).subscribe({
+      next: (list) => {
+        this.reactorsList.set(list || []);
+        this.isLoadingReactors.set(false);
+      },
+      error: () => {
+        this.reactorsList.set([]);
+        this.isLoadingReactors.set(false);
+      }
+    });
+  }
+
+  public closeReactorsModal(): void {
+    this.reactorsModalMsg.set(null);
+    this.reactorsList.set([]);
+    this.selectedReactorEmojiFilter.set(null);
+  }
+
+  public setReactorEmojiFilter(emoji: string | null): void {
+    this.selectedReactorEmojiFilter.set(emoji);
   }
 
   public showReadReceipts(msg: ChatMessage): void {
@@ -1720,10 +1780,22 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   }
 
   public expandToPage(): void {
+    if (!this.router.url.startsWith('/app/chat')) {
+      this.commService.chatReturnUrl.set(this.router.url);
+    }
     const cur = this.activeConv();
     const targetUrl = cur ? `/app/chat/${cur.id}` : '/app/chat';
     this.commService.isChatDrawerOpen.set(false);
     this.router.navigateByUrl(targetUrl);
+  }
+
+  public exitFullPage(reopenDrawer = false): void {
+    const rawTarget = this.commService.chatReturnUrl();
+    const target = (rawTarget && !rawTarget.startsWith('/app/chat')) ? rawTarget : '/app/launcher';
+    if (reopenDrawer) {
+      this.commService.isChatDrawerOpen.set(true);
+    }
+    this.router.navigateByUrl(target);
   }
 
   public isOnChatPage(): boolean {

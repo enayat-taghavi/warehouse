@@ -9,7 +9,8 @@ from rest_framework.exceptions import PermissionDenied
 from .access import (  # noqa: F401 (get_allowed_comment_models re-export)
     get_allowed_comment_models, resolve_comment_content_type, can_access_comment_target
 )
-from .models import Conversation, ConversationParticipant, Message, MessageAttachment, GenericComment, ConversationType
+from .models import Conversation, ConversationParticipant, Message, MessageAttachment, MessageReaction, GenericComment, ConversationType
+from .reactions import format_reactions_summary
 from .membership import MAX_GROUP_MEMBERS_PER_REQUEST
 
 User = get_user_model()
@@ -59,6 +60,23 @@ class MessageAttachmentSerializer(serializers.ModelSerializer):
         return f"{reverse('chat_attachment_download', args=[obj.pk])}?thumb=1"
 
 
+
+
+class MessageReactorSerializer(serializers.ModelSerializer):
+    user_id = serializers.IntegerField(read_only=True)
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MessageReaction
+        fields = ['user_id', 'full_name', 'emoji', 'created_at']
+
+    def get_full_name(self, obj):
+        u = getattr(obj, 'user', None)
+        if not u:
+            return ''
+        name = f"{u.first_name or ''} {u.last_name or ''}".strip()
+        return name or u.username
+
 class MessageSerializer(serializers.ModelSerializer):
     sender_details = UserShortSerializer(source='sender', read_only=True)
     attachments = MessageAttachmentSerializer(many=True, read_only=True)
@@ -74,15 +92,27 @@ class MessageSerializer(serializers.ModelSerializer):
     edited_at = serializers.SerializerMethodField()
     editable_until = serializers.SerializerMethodField()
     reply_to_details = serializers.SerializerMethodField()
+    reactions = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
         fields = [
             'id', 'client_temp_id', 'conversation', 'sender', 'sender_details',
             'text', 'reply_to', 'reply_to_details', 'is_system', 'created_at', 'updated_at',
-            'edited_at', 'editable_until', 'attachments', 'is_me', 'read_by_count'
+            'edited_at', 'editable_until', 'attachments', 'is_me', 'read_by_count', 'reactions'
         ]
         read_only_fields = ['id', 'sender', 'sender_details', 'created_at', 'updated_at', 'is_system']
+
+    def get_reactions(self, obj):
+        request = self.context.get('request')
+        current_user_id = request.user.id if request and request.user.is_authenticated else None
+        if hasattr(obj, '_prefetched_objects_cache') and 'reactions' in obj._prefetched_objects_cache:
+            reactions_list = obj._prefetched_objects_cache['reactions']
+        elif hasattr(obj, 'reactions'):
+            reactions_list = list(obj.reactions.all())
+        else:
+            reactions_list = []
+        return format_reactions_summary(reactions_list, current_user_id)
 
     def get_is_me(self, obj):
         request = self.context.get('request')
