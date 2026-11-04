@@ -51,6 +51,17 @@ import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive
           <span>کپی متن</span>
         </button>
 
+        <button type="button"
+                data-testid="menu-forward"
+                (click)="forward.emit()"
+                [disabled]="!isOnline()"
+                [title]="isOnline() ? 'بازارسال' : 'در حالت آفلاین در دسترس نیست'"
+                [attr.aria-label]="isOnline() ? 'بازارسال' : 'در حالت آفلاین در دسترس نیست'"
+                class="w-full min-h-[40px] px-2.5 rounded-lg flex items-center gap-2 text-xs font-bold text-fg hover:bg-surface-muted disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500 cursor-pointer tap-target">
+          <svg class="w-4 h-4 text-fg-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" appIcon="share" aria-hidden="true"></svg>
+          <span>بازارسال</span>
+        </button>
+
         <button *ngIf="canEdit()"
                 type="button"
                 data-testid="menu-edit"
@@ -102,6 +113,7 @@ export class ChatMessageMenuComponent {
 
   public readonly reaction = output<string>();
   public readonly reply = output<void>();
+  public readonly forward = output<void>();
   public readonly edit = output<void>();
   public readonly copy = output<void>();
   public readonly select = output<void>();

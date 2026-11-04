@@ -93,15 +93,21 @@ class MessageSerializer(serializers.ModelSerializer):
     editable_until = serializers.SerializerMethodField()
     reply_to_details = serializers.SerializerMethodField()
     reactions = serializers.SerializerMethodField()
+    forwarded_from_message = serializers.PrimaryKeyRelatedField(read_only=True, allow_null=True)
+    forwarded_from_name = serializers.CharField(read_only=True, allow_null=True)
 
     class Meta:
         model = Message
         fields = [
             'id', 'client_temp_id', 'conversation', 'sender', 'sender_details',
-            'text', 'reply_to', 'reply_to_details', 'is_system', 'created_at', 'updated_at',
+            'text', 'reply_to', 'reply_to_details', 'forwarded_from_message', 'forwarded_from_name',
+            'is_system', 'created_at', 'updated_at',
             'edited_at', 'editable_until', 'attachments', 'is_me', 'read_by_count', 'reactions'
         ]
-        read_only_fields = ['id', 'sender', 'sender_details', 'created_at', 'updated_at', 'is_system']
+        read_only_fields = [
+            'id', 'sender', 'sender_details', 'created_at', 'updated_at', 'is_system',
+            'forwarded_from_message', 'forwarded_from_name'
+        ]
 
     def get_reactions(self, obj):
         request = self.context.get('request')

@@ -68,6 +68,10 @@ export interface ChatMessage {
   reply_to?: string | null;
   /** null، یا پیام اصلی حذف‌شده، یا خلاصهٔ پیام اصلی */
   reply_to_details?: { id: string | number; deleted: true } | { id: string | number; deleted: false; text: string; sender_name: string; has_attachment: boolean } | null;
+  /** شناسهٔ پیام اصلی بازارسال‌شده */
+  forwarded_from_message?: string | number | null;
+  /** نام اسنپ‌شات‌شده فرستنده اصلی بازارسال */
+  forwarded_from_name?: string | null;
   edited_at?: string | null;
   /** فرستنده تا این زمان می‌تواند متن را ویرایش کند */
   editable_until?: string | null;
@@ -1507,6 +1511,18 @@ export class CommunicationService implements OnDestroy {
     return this.http.get<ReactorItem[]>(
       `/api/communications/messages/${messageId}/reactions/`,
       { context: new HttpContext().set(SKIP_OFFLINE, true).set(SKIP_GLOBAL_ERROR_TOAST, true) }
+    );
+  }
+
+  /** بازارسال پیام‌ها به یک یا چند گفتگو (فاز ۵) */
+  public forwardMessages(messageIds: (string | number)[], conversationIds: (string | number)[]): Observable<{ status: string; count: number; conversation_ids: (string | number)[] }> {
+    return this.http.post<{ status: string; count: number; conversation_ids: (string | number)[] }>(
+      '/api/communications/messages/forward/',
+      {
+        message_ids: messageIds.map(id => typeof id === 'string' ? parseInt(id, 10) : id),
+        conversation_ids: conversationIds.map(id => typeof id === 'string' ? parseInt(id, 10) : id),
+      },
+      { context: new HttpContext().set(SKIP_OFFLINE, true) }
     );
   }
 

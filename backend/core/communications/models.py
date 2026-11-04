@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -106,6 +108,20 @@ class Message(SyncModelMixin):
         related_name='replies',
         verbose_name="پاسخ به"
     )
+    forwarded_from_message = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='forwards',
+        verbose_name="بازارسال از پیام"
+    )
+    forwarded_from_name = models.CharField(
+        max_length=150,
+        null=True,
+        blank=True,
+        verbose_name="نام فرستنده اصلی بازارسال"
+    )
     is_system = models.BooleanField(default=False, verbose_name="پیام سیستمی")
     created_at = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name="تاریخ ارسال")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="تاریخ بروزرسانی")
@@ -172,6 +188,64 @@ class MessageAttachment(SyncModelMixin):
 
     def __str__(self):
         return self.file_name
+
+    def delete(self, *args, **kwargs):
+        safe_delete_attachment_files(self)
+        return super().delete(*args, **kwargs)
+
+
+def safe_delete_attachment_files(attachment):
+    """
+    حذف ایمن فایل فیزیکی و بندانگشتی پیوست با شمارش ارجاع (Reference Counting).
+    اگر پیوست دیگری (مثلاً در پیام‌های بازارسال‌شده) به همان فایل یا بندانگشتی
+    اشاره کند، فایل فیزیکی روی دیسک حفظ می‌شود.
+    """
+    if not attachment:
+        return
+    file_name = attachment.file.name if attachment.file else None
+    thumb_name = attachment.thumbnail.name if attachment.thumbnail else None
+
+    if file_name:
+        other_file_exists = MessageAttachment.all_objects.exclude(pk=attachment.pk).filter(file=file_name).exists()
+        if not other_file_exists:
+            try:
+                attachment.file.storage.delete(file_name)
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).warning("[safe_delete_attachment_files] file %s delete failed: %s", file_name, exc)
+
+    if thumb_name:
+        other_thumb_exists = MessageAttachment.all_objects.exclude(pk=attachment.pk).filter(thumbnail=thumb_name).exists()
+        if not other_thumb_exists:
+            try:
+                attachment.thumbnail.storage.delete(thumb_name)
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).warning("[safe_delete_attachment_files] thumbnail %s delete failed: %s", thumb_name, exc)
+
+
+@receiver(post_delete, sender=MessageAttachment)
+def on_message_attachment_post_delete(sender, instance, **kwargs):
+    """
+    هوک پس از حذف پیوست؛ در صورت حذف مستقیم از کوئری‌ست یا حذف آبشاری از Message.delete،
+    تنها در صورتی فایل فیزیکی را از دیسک پاک می‌کند که هیچ پیوست دیگری به آن اشاره نداشته باشد.
+    """
+    file_name = instance.file.name if instance.file else None
+    thumb_name = instance.thumbnail.name if instance.thumbnail else None
+
+    if file_name and not MessageAttachment.all_objects.filter(file=file_name).exists():
+        try:
+            instance.file.storage.delete(file_name)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning("[attachment post_delete] file %s delete failed: %s", file_name, exc)
+
+    if thumb_name and not MessageAttachment.all_objects.filter(thumbnail=thumb_name).exists():
+        try:
+            instance.thumbnail.storage.delete(thumb_name)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning("[attachment post_delete] thumbnail %s delete failed: %s", thumb_name, exc)
 
 
 class MessageReaction(models.Model):

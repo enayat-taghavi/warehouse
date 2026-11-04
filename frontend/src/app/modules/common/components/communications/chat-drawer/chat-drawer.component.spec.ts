@@ -82,7 +82,8 @@ describe('ChatDrawerComponent - Phase 1 (Page mode, expand button, URL sync)', (
       isUserOnline: vi.fn().mockReturnValue(false),
       toggleMute: vi.fn(),
       reactToMessage: vi.fn().mockReturnValue(of({ message_id: 1, conversation_id: 'c101', reactions: [{ emoji: '❤️', count: 1, mine: true }] })),
-      getMessageReactions: vi.fn().mockReturnValue(of([{ user_id: 1, full_name: 'من', emoji: '❤️', created_at: new Date().toISOString() }]))
+      getMessageReactions: vi.fn().mockReturnValue(of([{ user_id: 1, full_name: 'من', emoji: '❤️', created_at: new Date().toISOString() }])),
+      forwardMessages: vi.fn().mockReturnValue(of({ status: 'forwarded', count: 1, conversation_ids: ['c101'] }))
     };
 
     mockRouter = {
@@ -510,7 +511,8 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
       sendMessage: vi.fn().mockResolvedValue(undefined),
       editMessage: vi.fn().mockResolvedValue(undefined),
       reactToMessage: vi.fn().mockReturnValue(of({ message_id: 301, conversation_id: 'c101', reactions: [{ emoji: '❤️', count: 1, mine: true }] })),
-      getMessageReactions: vi.fn().mockReturnValue(of([{ user_id: 1, full_name: 'من', emoji: '❤️', created_at: new Date().toISOString() }]))
+      getMessageReactions: vi.fn().mockReturnValue(of([{ user_id: 1, full_name: 'من', emoji: '❤️', created_at: new Date().toISOString() }])),
+      forwardMessages: vi.fn().mockReturnValue(of({ status: 'forwarded', count: 1, conversation_ids: ['c101'] }))
     };
 
     await TestBed.configureTestingModule({
@@ -891,5 +893,98 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
     collapseBtn.click();
     expect(comm.isChatDrawerOpen()).toBe(true);
     expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/app/warehouse/stock');
+  });
+
+  // ─── Phase 5: Message Forwarding, Badges, and Multi-Destination Modal ───
+  it('renders forwarded badge with original sender name when message is forwarded', async () => {
+    await setupPhase3Component();
+
+    const fwdMsg: ChatMessage = {
+      ...otherMsg,
+      id: '601',
+      forwarded_from_name: 'مدیر انبار ۱',
+      forwarded_from_message: 101,
+      text: 'پیام بازارسال‌شده از انبار مرکزی'
+    };
+    comp.messages.set([fwdMsg]);
+    fixture.detectChanges();
+    await flush(fixture);
+
+    const fwdBadge = fixture.nativeElement.querySelector('[data-testid="forwarded-label"]');
+    expect(fwdBadge).not.toBeNull();
+    expect(fwdBadge.textContent).toContain('بازارسال از مدیر انبار ۱');
+  });
+
+  it('opens forward modal from context menu and single message', async () => {
+    await setupPhase3Component();
+
+    expect(comp.isForwardModalOpen()).toBe(false);
+    comp.openForwardModal([otherMsg]);
+    expect(comp.isForwardModalOpen()).toBe(true);
+    expect(comp.messagesToForward().length).toBe(1);
+    expect(comp.messagesToForward()[0].id).toBe(otherMsg.id);
+
+    fixture.detectChanges();
+    await flush(fixture);
+
+    const modal = fixture.nativeElement.querySelector('[data-testid="forward-modal"]');
+    expect(modal).not.toBeNull();
+  });
+
+  it('opens forward modal from selection bar with multi-selected messages', async () => {
+    await setupPhase3Component();
+
+    // Select both messages
+    comp.startSelection(myMsg);
+    comp.toggleMessageSelection(otherMsg);
+    expect(comp.selectedMessageCount()).toBe(2);
+
+    fixture.detectChanges();
+    await flush(fixture);
+
+    const fwdBtn = fixture.nativeElement.querySelector('[data-testid="selection-forward-btn"]') as HTMLButtonElement;
+    expect(fwdBtn).not.toBeNull();
+    expect(fwdBtn.disabled).toBe(false);
+
+    fwdBtn.click();
+    expect(comp.isForwardModalOpen()).toBe(true);
+    expect(comp.messagesToForward().length).toBe(2);
+  });
+
+  it('selects destination conversations up to 5, submits forward, shows toast, and clears selection', async () => {
+    await setupPhase3Component();
+
+    const extraConv: Conversation = {
+      id: 'c302',
+      title: 'گفتگوی فنی انبار',
+      conv_type: 'group',
+      participants: [1, 2],
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    comp.conversations.set([sampleConv, extraConv]);
+
+    comp.startSelection(myMsg);
+    comp.openForwardModalForSelected();
+    expect(comp.isForwardModalOpen()).toBe(true);
+
+    fixture.detectChanges();
+    await flush(fixture);
+
+    // Call onMessagesForwarded directly simulating modal confirmation
+    comp.onMessagesForwarded({ count: 1, conversationIds: ['c302'] });
+
+    expect(comp.isSelectionMode()).toBe(false);
+    expect(comp.activeConv()?.id).toBe('c302');
+  });
+
+  it('rejects forward action when offline with toast', async () => {
+    await setupPhase3Component();
+    vi.spyOn(comp, 'isOnline').mockReturnValue(false);
+
+    comp.openForwardModal([myMsg]);
+    expect(mockToast.show).toHaveBeenCalledWith('info', 'بازارسال پیام نیاز به اتصال به اینترنت دارد');
+    expect(comp.isForwardModalOpen()).toBe(false);
   });
 });

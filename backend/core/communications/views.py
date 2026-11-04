@@ -589,7 +589,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     throttle_scope = 'chat_message'
 
     def get_permissions(self):
-        if self.action in ['react', 'reactions']:
+        if self.action in ['react', 'reactions', 'forward']:
             return [permissions.IsAuthenticated(), IsChatEnabled()]
         return super().get_permissions()
 
@@ -871,6 +871,128 @@ class MessageViewSet(viewsets.ModelViewSet):
 
         serializer = MessageReactorSerializer(reactions_qs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], url_path='forward')
+    def forward(self, request):
+        """
+        بازارسال چند پیامی به چند مقصد (فاز ۵).
+        ورودی: {"message_ids": [...], "conversation_ids": [...]}
+        محدودیت: ۱ تا ۲۰ پیام، ۱ تا ۵ گفتگوی مقصد.
+        """
+        user = request.user
+        if not chat_allowed(user):
+            raise PermissionDenied('دسترسی شما به پیام‌رسان بسته شده است')
+
+        data = request.data if isinstance(request.data, dict) else {}
+        message_ids = data.get('message_ids')
+        conversation_ids = data.get('conversation_ids')
+
+        if not isinstance(message_ids, list) or not isinstance(conversation_ids, list):
+            return Response({'error': 'قالب داده‌های ارسالی نامعتبر است'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            clean_message_ids = []
+            for mid in message_ids:
+                imid = int(mid)
+                if imid not in clean_message_ids:
+                    clean_message_ids.append(imid)
+
+            clean_conv_ids = []
+            for cid in conversation_ids:
+                icid = int(cid)
+                if icid not in clean_conv_ids:
+                    clean_conv_ids.append(icid)
+        except (ValueError, TypeError):
+            return Response({'error': 'شناسه‌های ارسالی نامعتبر هستند'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not clean_message_ids or len(clean_message_ids) > 20:
+            return Response({'error': 'تعداد پیام‌ها برای بازارسال باید بین ۱ تا ۲۰ باشد'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not clean_conv_ids or len(clean_conv_ids) > 5:
+            return Response({'error': 'تعداد مقصدهای بازارسال باید بین ۱ تا ۵ باشد'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # اعتبارسنجی پیام‌های مبدأ
+        src_messages_qs = Message.objects.filter(
+            id__in=clean_message_ids,
+            is_deleted=False,
+            is_system=False
+        ).select_related('sender', 'conversation', 'forwarded_from_message').prefetch_related('attachments')
+
+        src_messages_by_id = {m.id: m for m in src_messages_qs}
+        if len(src_messages_by_id) != len(clean_message_ids):
+            return Response({'error': 'برخی از پیام‌های درخواستی یافت نشدند'}, status=status.HTTP_404_NOT_FOUND)
+
+        for mid in clean_message_ids:
+            msg = src_messages_by_id[mid]
+            if not can_read_conversation(user, msg.conversation):
+                return Response({'error': 'شما دسترسی مشاهده پیام‌های مبدأ را ندارید'}, status=status.HTTP_403_FORBIDDEN)
+
+        # اعتبارسنجی گفتگوهای مقصد
+        target_convs = list(Conversation.objects.filter(id__in=clean_conv_ids, is_deleted=False))
+        target_convs_by_id = {c.id: c for c in target_convs}
+        if len(target_convs_by_id) != len(clean_conv_ids):
+            return Response({'error': 'برخی از گفتگوهای مقصد یافت نشدند'}, status=status.HTTP_404_NOT_FOUND)
+
+        for cid in clean_conv_ids:
+            conv = target_convs_by_id[cid]
+            if conv.conv_type in (ConversationType.DIRECT, ConversationType.GROUP):
+                is_active = ConversationParticipant.objects.filter(
+                    conversation=conv, user=user, left_at__isnull=True
+                ).exists()
+                if not is_active:
+                    raise PermissionDenied(f'شما عضو فعال گفتگوی مقصد #{conv.id} نیستید')
+            if not can_post_to_conversation(user, conv):
+                raise PermissionDenied(f'شما مجاز به ارسال پیام در گفتگوی مقصد #{conv.id} نیستید')
+
+        # مرتب‌سازی زمانی پیام‌های مبدأ (ترتیب ارسال حفظ شود)
+        ordered_src_messages = [src_messages_by_id[mid] for mid in clean_message_ids]
+        ordered_src_messages.sort(key=lambda m: (m.created_at, m.id))
+
+        created_messages = []
+        with transaction.atomic():
+            for cid in clean_conv_ids:
+                conv = Conversation.objects.select_for_update().filter(id=cid).first()
+                if not conv:
+                    continue
+                for src in ordered_src_messages:
+                    orig_name = src.forwarded_from_name or display_name(src.sender)
+                    orig_msg = src.forwarded_from_message if src.forwarded_from_message_id else src
+
+                    new_msg = Message.objects.create(
+                        conversation=conv,
+                        sender=user,
+                        text=src.text or '',
+                        forwarded_from_message=orig_msg,
+                        forwarded_from_name=orig_name,
+                        is_system=False
+                    )
+
+                    for att in src.attachments.all():
+                        MessageAttachment.objects.create(
+                            message=new_msg,
+                            file=att.file.name,
+                            file_name=att.file_name,
+                            file_size=att.file_size,
+                            content_type=att.content_type,
+                            thumbnail=att.thumbnail.name if att.thumbnail else None,
+                            width=att.width,
+                            height=att.height,
+                            page_count=att.page_count,
+                            duration=att.duration,
+                            preview_status=att.preview_status,
+                        )
+
+                    created_messages.append(new_msg)
+                conv.save(update_fields=['updated_at'])
+
+        for m in created_messages:
+            transaction.on_commit(lambda msg=m: broadcast_message_ws(msg))
+
+        return Response({
+            'status': 'forwarded',
+            'count': len(created_messages),
+            'conversation_ids': clean_conv_ids,
+        }, status=status.HTTP_201_CREATED)
 
 
 class GenericCommentViewSet(viewsets.ModelViewSet):

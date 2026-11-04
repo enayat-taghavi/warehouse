@@ -203,20 +203,25 @@ def build_attachment_preview(attachment):
     new_thumb = attachment.thumbnail.name if attachment.thumbnail else None
     if old_thumb and new_thumb and new_thumb != old_thumb:
         # بندانگشتی قبلی (نه فایل اصلی) پس از ذخیرهٔ موفق جایگزین برداشته می‌شود
-        try:
-            attachment.thumbnail.storage.delete(old_thumb)
-        except Exception as exc:
-            logger.warning("[chat preview] old thumbnail %s not removed: %s", old_thumb, exc)
+        from .models import MessageAttachment
+        if not MessageAttachment.all_objects.exclude(pk=attachment.pk).filter(thumbnail=old_thumb).exists():
+            try:
+                attachment.thumbnail.storage.delete(old_thumb)
+            except Exception as exc:
+                logger.warning("[chat preview] old thumbnail %s not removed: %s", old_thumb, exc)
     return attachment.preview_status
 
 
 def _discard_new_thumbnail(attachment, old_thumb):
     """فقط بندانگشتی تازه‌نوشتهٔ همین اجرا را برمی‌دارد و نام قبلی را برمی‌گرداند؛ فایل اصلی هرگز."""
     if attachment.thumbnail and attachment.thumbnail.name != old_thumb:
-        try:
-            attachment.thumbnail.delete(save=False)
-        except Exception as exc:
-            logger.warning("[chat preview] half-written thumbnail not removed: %s", exc)
+        from .models import MessageAttachment
+        new_thumb = attachment.thumbnail.name
+        if not MessageAttachment.all_objects.exclude(pk=attachment.pk).filter(thumbnail=new_thumb).exists():
+            try:
+                attachment.thumbnail.delete(save=False)
+            except Exception as exc:
+                logger.warning("[chat preview] half-written thumbnail not removed: %s", exc)
     attachment.thumbnail = old_thumb
 
 

@@ -13,6 +13,7 @@ import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive
 import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
 import { ChatEmojiPickerComponent } from '../chat-emoji-picker/chat-emoji-picker.component';
 import { ChatMessageMenuComponent } from '../chat-message-menu/chat-message-menu.component';
+import { ChatForwardModalComponent } from '../chat-forward-modal/chat-forward-modal.component';
 import { ApiService } from '../../../../../core/api/api.service';
 import { saveBlob, FileOutputService } from '../../../../../core/platform/file-output';
 import { ConfigApiService } from '../../../../../core/api/config-api.service';
@@ -58,7 +59,7 @@ export const CHAT_DEFAULT_MAX_FILE_MB = 100;
 @Component({
   selector: 'app-chat-drawer',
   standalone: true,
-  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, DocumentPreviewComponent, ChatEmojiPickerComponent, ChatMessageMenuComponent],
+  imports: [CommonModule, FormsModule, SvgIconDirective, ActionButtonComponent, DocumentPreviewComponent, ChatEmojiPickerComponent, ChatMessageMenuComponent, ChatForwardModalComponent],
   templateUrl: './chat-drawer.component.html',
   styleUrls: ['./chat-drawer.component.css']
 })
@@ -203,6 +204,10 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   public swipingMsgId = signal<string | null>(null);
   public swipeDelta = signal<number>(0);
   public draftVersion = signal<number>(0);
+
+  // ─── بازارسال (فاز ۵) ───
+  public isForwardModalOpen = signal<boolean>(false);
+  public messagesToForward = signal<ChatMessage[]>([]);
 
   private pointerStartX = 0;
   private pointerStartY = 0;
@@ -719,6 +724,11 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   /** Escape لغو حالت انتخاب، بستن منو، بستن ایموجی یا لغو پاسخ/ویرایش */
   @HostListener('document:keydown.escape', ['$event'])
   onEscapeKey(ev?: Event): void {
+    if (this.isForwardModalOpen()) {
+      ev?.preventDefault();
+      this.isForwardModalOpen.set(false);
+      return;
+    }
     if (this.isSelectionMode()) {
       ev?.preventDefault();
       this.clearSelection();
@@ -848,6 +858,43 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       this.toast.error('کپی انجام نشد');
     }
     this.clearSelection();
+  }
+
+  // ─── بازارسال (فاز ۵) ───
+  public openForwardModal(msgs: ChatMessage[]): void {
+    if (!this.isOnline()) {
+      this.toast.show('info', 'بازارسال پیام نیاز به اتصال به اینترنت دارد');
+      return;
+    }
+    if (!msgs || msgs.length === 0) return;
+    if (msgs.length > 20) {
+      this.toast.show('warning', 'حداکثر ۲۰ پیام را می‌توانید بازارسال کنید');
+      return;
+    }
+    this.closeMenu();
+    this.messagesToForward.set(msgs);
+    this.isForwardModalOpen.set(true);
+  }
+
+  public openForwardModalForSelected(): void {
+    const selected = Array.from(this.selectedMessageIds())
+      .map(id => this.messages().find(m => String(m.id) === String(id)))
+      .filter((m): m is ChatMessage => !!m);
+    selected.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    this.openForwardModal(selected);
+  }
+
+  public onMessagesForwarded(ev: { count: number; conversationIds: (string | number)[] }): void {
+    if (this.isSelectionMode()) {
+      this.clearSelection();
+    }
+    if (ev.conversationIds.length === 1) {
+      const destId = String(ev.conversationIds[0]);
+      const found = this.conversations().find(c => String(c.id) === destId);
+      if (found) {
+        this.selectConversation(found);
+      }
+    }
   }
 
   // ─── شکلک‌ها (Emoji Picker) ───
