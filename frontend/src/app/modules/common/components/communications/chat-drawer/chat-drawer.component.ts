@@ -519,7 +519,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   }
 
   // ─── جداکنندهٔ روز ───
-  private dayKey(iso?: string): string {
+  public dayKey(iso?: string): string {
     if (!iso) return '';
     const d = new Date(iso);
     if (isNaN(d.getTime())) return '';
@@ -535,6 +535,75 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     const y = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
     if (this.dayKey(iso) === this.dayKey(y.toISOString())) return 'دیروز';
     return new Intl.DateTimeFormat('fa-IR-u-ca-persian', { year: 'numeric', month: 'long', day: 'numeric' }).format(d);
+  }
+
+  // ─── فاز ۲: ارزیابی پیام خودی، آخرین پیام و دسته‌بندی پیام‌های پشت سر هم ───
+  public isOwnMessage(msg: ChatMessage): boolean {
+    return !!msg.is_me;
+  }
+
+  public isLastMessageMine(conv: Conversation): boolean {
+    const lm = conv.last_message;
+    if (!lm) return false;
+    if (lm.sender_name === 'شما') return true;
+    const user = this.auth.user();
+    if (!user) return false;
+    const myName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
+    return lm.sender_name === myName || lm.sender_name === user.username;
+  }
+
+  private extractMsg(item: ChatItem | ChatMessage | undefined): ChatMessage | null {
+    if (!item) return null;
+    if ('kind' in item) {
+      return item.kind === 'msg' ? item.msg : null;
+    }
+    return item as ChatMessage;
+  }
+
+  /** پیام اول در یک گروه از پیام‌های پیاپی فرستنده (فاصله زمانی کمتر از ۵ دقیقه در همان روز) */
+  public isFirstInGroup(list: (ChatItem | ChatMessage)[], index: number): boolean {
+    if (!list || index < 0 || index >= list.length) return false;
+    const current = this.extractMsg(list[index]);
+    if (!current || current.is_system) return false;
+
+    if (index === 0) return true;
+    const prev = this.extractMsg(list[index - 1]);
+    if (!prev || prev.is_system) return true;
+
+    const currSender = current.sender !== undefined ? String(current.sender) : (current.is_me ? 'me' : '');
+    const prevSender = prev.sender !== undefined ? String(prev.sender) : (prev.is_me ? 'me' : '');
+    if (!currSender || currSender !== prevSender) return true;
+    if (!!current.is_me !== !!prev.is_me) return true;
+
+    if (this.dayKey(current.created_at) !== this.dayKey(prev.created_at)) return true;
+
+    const tCurr = new Date(current.created_at).getTime();
+    const tPrev = new Date(prev.created_at).getTime();
+    if (isNaN(tCurr) || isNaN(tPrev)) return true;
+    return Math.abs(tCurr - tPrev) >= 5 * 60 * 1000;
+  }
+
+  /** پیام آخر در یک گروه از پیام‌های پیاپی فرستنده (حباب دم‌دار و آواتار) */
+  public isLastInGroup(list: (ChatItem | ChatMessage)[], index: number): boolean {
+    if (!list || index < 0 || index >= list.length) return false;
+    const current = this.extractMsg(list[index]);
+    if (!current || current.is_system) return false;
+
+    if (index === list.length - 1) return true;
+    const next = this.extractMsg(list[index + 1]);
+    if (!next || next.is_system) return true;
+
+    const currSender = current.sender !== undefined ? String(current.sender) : (current.is_me ? 'me' : '');
+    const nextSender = next.sender !== undefined ? String(next.sender) : (next.is_me ? 'me' : '');
+    if (!currSender || currSender !== nextSender) return true;
+    if (!!current.is_me !== !!next.is_me) return true;
+
+    if (this.dayKey(current.created_at) !== this.dayKey(next.created_at)) return true;
+
+    const tCurr = new Date(current.created_at).getTime();
+    const tNext = new Date(next.created_at).getTime();
+    if (isNaN(tCurr) || isNaN(tNext)) return true;
+    return Math.abs(tNext - tCurr) >= 5 * 60 * 1000;
   }
 
   // ─── منوی پیام ───

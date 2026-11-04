@@ -24,3 +24,34 @@
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #334155;
 }
+
+/* Telegram-Style Chat Thread Pattern Wallpaper */
+.chat-thread-bg {
+  background-color: #f1f5f9;
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%2364748b' fill-opacity='0.05' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+:host-context(.dark) .chat-thread-bg,
+.dark .chat-thread-bg {
+  background-color: #0f172a;
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%2394a3b8' fill-opacity='0.04' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Bubble Tail Corner Adjustments */
+.rounded-br-xs {
+  border-bottom-right-radius: 4px !important;
+}
+
+.rounded-bl-xs {
+  border-bottom-left-radius: 4px !important;
+}
+
+/* Telegram Date Chip and Utility Classes */
+.backdrop-blur-xs {
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.shadow-2xs {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
