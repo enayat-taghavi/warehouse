@@ -1,4 +1,4 @@
-<form class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-3 min-w-0" (ngSubmit)="submit()" aria-label="ثبت وارده" data-testid="register-incoming">
+<form class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-3 min-w-0" (submit)="$event.preventDefault(); submit()" aria-label="ثبت وارده" data-testid="register-incoming">
   <div class="flex flex-col gap-1">
     <label class="text-xs font-bold text-fg" for="incoming-subject">موضوع</label>
     <input id="incoming-subject" type="text" maxlength="500" class="rounded-xl border border-line bg-surface px-3 py-2 text-sm"

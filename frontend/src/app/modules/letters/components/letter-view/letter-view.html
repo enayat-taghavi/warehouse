@@ -71,7 +71,7 @@
     }
 
     @if (formAction(); as fa) {
-      <form class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-2" (ngSubmit)="submitForm()" data-testid="action-form">
+      <form class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2" (submit)="$event.preventDefault(); submitForm()" data-testid="action-form">
         @if (fa === 'send') {
           <label class="text-xs font-bold text-fg" for="letter-send-method">روش ارسال</label>
           <select id="letter-send-method" class="rounded-xl border border-line bg-surface px-3 py-2 text-sm" [formControl]="method">
@@ -113,7 +113,7 @@
       </section>
     }
 
-    <article class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-3 min-w-0" aria-label="برگ نامه">
+    <article class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-3 min-w-0" aria-label="برگ نامه">
       <dl class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
         <div><dt class="text-fg-subtle">نوع</dt><dd class="font-bold text-fg">{{ kindLabels[l.kind] }}</dd></div>
         <div><dt class="text-fg-subtle">شماره</dt><dd class="font-bold text-fg tabular-nums">{{ l.number_display || '—' }}</dd></div>
@@ -174,7 +174,7 @@
     </article>
 
     @if (l.signers.length) {
-      <section class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-2" aria-label="امضاها" data-testid="signers">
+      <section class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2" aria-label="امضاها" data-testid="signers">
         <h2 class="text-sm font-black text-fg">امضاها</h2>
         <ol class="flex flex-col gap-1">
           @for (s of l.signers; track s.id) {
@@ -193,7 +193,7 @@
     }
 
     @if (viewers(); as vs) {
-      <section class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-2" aria-label="چه کسانی دیدند" data-testid="viewers">
+      <section class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2" aria-label="چه کسانی دیدند" data-testid="viewers">
         <h2 class="text-sm font-black text-fg">چه کسانی دیدند</h2>
         @for (v of vs; track $index) {
           <p class="text-xs flex gap-2"><span class="font-bold text-fg flex-1 min-w-0 truncate">{{ v.name }}</span><span class="text-fg-muted">{{ v.at | persianDate: 'short-time' }}</span></p>

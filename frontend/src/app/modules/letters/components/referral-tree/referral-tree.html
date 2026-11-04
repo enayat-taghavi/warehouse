@@ -1,10 +1,10 @@
-<section class="bg-surface rounded-2xl border border-line shadow-xs p-4 flex flex-col gap-2 min-w-0" aria-label="درخت ارجاع" data-testid="referral-tree">
+<section class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2 min-w-0" aria-label="درخت ارجاع" data-testid="referral-tree">
   <h2 class="text-sm font-black text-fg">ارجاع‌ها @if (count()) {<span class="text-fg-muted font-normal tabular-nums">({{ count() }})</span>}</h2>
   @if (actionError()) {
     <p class="text-xs rounded-xl px-3 py-2 bg-rose-50 text-rose-800" role="alert">{{ actionError() }}</p>
   }
   @if (loading()) {
-    <app-loading-skeleton type="list" />
+    <app-loading-skeleton type="text" />
   } @else if (error()) {
     <div class="flex items-center gap-2 text-xs text-fg-muted" role="alert">
       <span class="flex-1">{{ error() === 'offline' ? 'اتصال برقرار نیست؛ درخت ارجاع بارگذاری نشد.' : 'بارگذاری درخت ارجاع ناموفق بود.' }}</span>
