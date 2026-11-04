@@ -48,13 +48,13 @@ from .permissions import (
 from .reactions import ALLOWED_REACTION_EMOJI_SET, format_reactions_summary
 from .access import (
     visible_conversations, can_read_conversation, can_post_to_conversation,
-    can_modify_message, can_access_comment_target, can_modify_comment,
+    can_modify_message, can_delete_message, can_access_comment_target, can_modify_comment,
     is_chat_group_manager, resolve_comment_content_type
 )
 from .broadcast import (
     broadcast_message_ws, broadcast_comment_ws,
     broadcast_message_updated_ws, broadcast_message_deleted_ws, broadcast_read_receipt_ws, broadcast_message_reaction_ws,
-    broadcast_membership_ws, broadcast_pinned_messages_ws
+    broadcast_membership_ws, broadcast_pinned_messages_ws, broadcast_message_delivered_ws
 )
 from .membership import (
     add_member, add_members, remove_member, leave_conversation, member_role, active_member_records,
@@ -265,6 +265,62 @@ class ConversationViewSet(viewsets.ModelViewSet):
         qs = qs.exclude(conv_type=ConversationType.DIRECT, messages__isnull=True)
 
         return qs.order_by('-annotated_is_pinned', F('annotated_pinned_at').desc(nulls_last=True), '-updated_at')
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        user = request.user
+        if user and user.is_authenticated:
+            self._sync_delivered_for_user(user)
+        return response
+
+    def _sync_delivered_for_user(self, user):
+        latest_msg_subquery = Subquery(
+            Message.objects.filter(conversation_id=OuterRef('conversation_id')).order_by('-id').values('id')[:1]
+        )
+        needs_delivery = list(
+            ConversationParticipant.objects.filter(
+                user=user, left_at__isnull=True
+            ).annotate(
+                latest_msg_id=latest_msg_subquery
+            ).filter(
+                latest_msg_id__isnull=False
+            ).filter(
+                Q(last_delivered_message__isnull=True) | Q(last_delivered_message_id__lt=F('latest_msg_id'))
+            )
+        )
+        if not needs_delivery:
+            return
+
+        updates = []
+        broadcasts = []
+        for part in needs_delivery:
+            part.last_delivered_message_id = part.latest_msg_id
+            updates.append(part)
+            broadcasts.append((part.conversation_id, user.id, part.latest_msg_id))
+
+        ConversationParticipant.objects.bulk_update(updates, ['last_delivered_message'])
+
+        def _do_broadcasts(b_list=broadcasts):
+            conv_ids = [b[0] for b in b_list]
+            participants_by_conv = {}
+            for c_id, u_id in ConversationParticipant.objects.filter(
+                conversation_id__in=conv_ids, left_at__isnull=True
+            ).values_list('conversation_id', 'user_id'):
+                participants_by_conv.setdefault(c_id, set()).add(u_id)
+
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                from .broadcast import _send_to_user_rooms
+                for c_id, usr_id, mid in b_list:
+                    recipients = participants_by_conv.get(c_id, set()) | {usr_id}
+                    payload = {
+                        "conversation_id": str(c_id),
+                        "user_id": usr_id,
+                        "last_delivered_message_id": str(mid),
+                    }
+                    _send_to_user_rooms(channel_layer, sorted(recipients), "chat.message_delivered", payload)
+
+        transaction.on_commit(_do_broadcasts)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -581,7 +637,12 @@ class ConversationViewSet(viewsets.ModelViewSet):
             if advanced:
                 rec.last_read_message = ref_msg
             rec.last_read_at = now
-            rec.save(update_fields=['last_read_message', 'last_read_at', 'updated_at'])
+            cur_del = rec.last_delivered_message_id or 0
+            update_fields = ['last_read_message', 'last_read_at', 'updated_at']
+            if ref_msg and ref_msg.id > cur_del:
+                rec.last_delivered_message = ref_msg
+                update_fields.append('last_delivered_message')
+            rec.save(update_fields=update_fields)
             effective = rec.last_read_message
 
             # Dual-write جهت سازگاری عقبروی به صورت Bulk Create در یک کوئری سریع دیتابیسی
@@ -659,7 +720,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     throttle_scope = 'chat_message'
 
     def get_permissions(self):
-        if self.action in ['react', 'reactions', 'forward', 'pin']:
+        if self.action in ['react', 'reactions', 'forward', 'pin', 'bulk_delete']:
             return [permissions.IsAuthenticated(), IsChatEnabled()]
         return super().get_permissions()
 
@@ -689,11 +750,25 @@ class MessageViewSet(viewsets.ModelViewSet):
         if not can_read_conversation(self.request.user, conversation):
             return Message.objects.none()
 
+        is_delivered_subquery = Exists(
+            ConversationParticipant.objects.filter(
+                conversation_id=OuterRef('conversation_id'),
+                left_at__isnull=True,
+                is_deleted=False
+            ).exclude(
+                user_id=OuterRef('sender_id')
+            ).filter(
+                Q(last_delivered_message_id__gte=OuterRef('pk')) |
+                Q(last_read_message_id__gte=OuterRef('pk'))
+            )
+        )
+
         qs = Message.objects.filter(
             conversation=conversation
         ).select_related('sender', 'reply_to__sender').prefetch_related('attachments', Prefetch('reactions', queryset=MessageReaction.objects.only('id', 'message_id', 'user_id', 'emoji'))).annotate(
             annotated_read_by_count=Count('read_by', distinct=True),
-            annotated_is_pinned=Exists(PinnedMessage.objects.filter(message=OuterRef('pk')))
+            annotated_is_pinned=Exists(PinnedMessage.objects.filter(message=OuterRef('pk'))),
+            annotated_is_delivered=is_delivered_subquery
         )
 
         since_id = self.request.query_params.get('since_id')
@@ -799,6 +874,73 @@ class MessageViewSet(viewsets.ModelViewSet):
         transaction.on_commit(lambda: broadcast_message_deleted_ws(conversation, message_id))
         if was_pinned:
             transaction.on_commit(lambda: broadcast_pinned_messages_ws(conversation, message_id, event="chat.message_unpinned"))
+
+    @action(detail=False, methods=['post'], url_path='bulk-delete')
+    def bulk_delete(self, request):
+        user = request.user
+        raw_ids = request.data.get('message_ids')
+        if not isinstance(raw_ids, list) or len(raw_ids) == 0:
+            return Response({'error': 'شناسه پیام‌ها باید یک آرایه غیرخالی باشد'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(raw_ids) > 20:
+            return Response({'error': 'حداکثر ۲۰ پیام مجاز است'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            message_ids = [int(mid) for mid in raw_ids]
+        except (ValueError, TypeError):
+            return Response({'error': 'شناسه پیام نامعتبر است'}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            messages = list(
+                Message.objects.select_for_update().filter(
+                    id__in=message_ids, is_deleted=False, is_system=False
+                ).select_related('conversation', 'sender').prefetch_related('attachments')
+            )
+
+            if len(messages) != len(set(message_ids)):
+                return Response({'error': 'برخی از پیام‌های درخواستی یافت نشدند یا قبلاً حذف شده‌اند'}, status=status.HTTP_400_BAD_REQUEST)
+
+            for msg in messages:
+                if not can_delete_message(user, msg):
+                    return Response({'error': f'مجوز حذف پیام #{msg.id} را ندارید'}, status=status.HTTP_403_FORBIDDEN)
+
+            deleted_info = []
+            for msg in messages:
+                record_audit_log(
+                    user=user,
+                    warehouse=msg.conversation.warehouse if msg.conversation else None,
+                    module='docs',
+                    action='DELETE',
+                    severity='warning',
+                    target_model='Message',
+                    target_id=msg.id,
+                    target_repr=f"حذف گروهی پیام #{msg.id} توسط {user}",
+                    before_state={'id': str(msg.id), 'text': msg.text}
+                )
+
+                # حذف پیوست‌ها با ایمنی شمارش ارجاع (Phase 5 refcount)
+                for att in msg.attachments.all():
+                    att.delete()
+
+                # حذف سنجاق‌ها و واکنش‌ها
+                was_pinned = PinnedMessage.objects.filter(message=msg).exists()
+                if was_pinned:
+                    PinnedMessage.objects.filter(message=msg).delete()
+                MessageReaction.objects.filter(message=msg).delete()
+
+                # soft delete پیام و خالی کردن متن
+                msg.text = ''
+                msg.is_deleted = True
+                msg.save(update_fields=['is_deleted', 'text', 'updated_at'])
+
+                deleted_info.append((msg.conversation, msg.id, was_pinned))
+
+        # برودکست‌ها پس از Commit امن تراکنش
+        for conv, mid, was_pin in deleted_info:
+            transaction.on_commit(lambda c=conv, m_id=mid: broadcast_message_deleted_ws(c, m_id))
+            if was_pin:
+                transaction.on_commit(lambda c=conv, m_id=mid: broadcast_pinned_messages_ws(c, m_id, event="chat.message_unpinned"))
+
+        return Response({'status': 'deleted', 'count': len(messages)}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'], url_path='upload')
     def upload_attachment(self, request):

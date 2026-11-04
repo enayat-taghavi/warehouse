@@ -105,6 +105,8 @@ class MessageSerializer(serializers.ModelSerializer):
     reply_to_details = serializers.SerializerMethodField()
     reactions = serializers.SerializerMethodField()
     is_pinned = serializers.SerializerMethodField()
+    is_delivered = serializers.SerializerMethodField()
+    delivered_count = serializers.SerializerMethodField()
     forwarded_from_message = serializers.PrimaryKeyRelatedField(read_only=True, allow_null=True)
     forwarded_from_name = serializers.CharField(read_only=True, allow_null=True)
 
@@ -114,7 +116,7 @@ class MessageSerializer(serializers.ModelSerializer):
             'id', 'client_temp_id', 'conversation', 'sender', 'sender_details',
             'text', 'reply_to', 'reply_to_details', 'forwarded_from_message', 'forwarded_from_name',
             'is_system', 'created_at', 'updated_at',
-            'edited_at', 'editable_until', 'attachments', 'is_me', 'read_by_count', 'reactions', 'is_pinned'
+            'edited_at', 'editable_until', 'attachments', 'is_me', 'read_by_count', 'is_delivered', 'delivered_count', 'reactions', 'is_pinned'
         ]
         read_only_fields = [
             'id', 'sender', 'sender_details', 'created_at', 'updated_at', 'is_system',
@@ -150,6 +152,50 @@ class MessageSerializer(serializers.ModelSerializer):
             return obj.annotated_read_by_count
         return obj.read_by.count()
 
+    def _get_delivery_info(self, obj):
+        if hasattr(obj, '_cached_delivery_info'):
+            return obj._cached_delivery_info
+
+        memberships = self.context.get('participant_memberships')
+        if memberships is None:
+            conv = getattr(obj, 'conversation', None)
+            if conv and hasattr(conv, '_prefetched_objects_cache') and 'participant_memberships' in conv._prefetched_objects_cache:
+                memberships = [m for m in conv._prefetched_objects_cache['participant_memberships'] if getattr(m, 'left_at', None) is None and not getattr(m, 'is_deleted', False)]
+            elif conv and hasattr(conv, 'participant_memberships'):
+                memberships = list(conv.participant_memberships.filter(left_at__isnull=True, is_deleted=False))
+            else:
+                memberships = []
+
+        delivered_count = 0
+        for m in memberships:
+            if m.user_id == obj.sender_id:
+                continue
+            last_del_id = getattr(m, 'last_delivered_message_id', None)
+            last_read_id = getattr(m, 'last_read_message_id', None)
+            if (last_del_id and last_del_id >= obj.id) or (last_read_id and last_read_id >= obj.id):
+                delivered_count += 1
+
+        read_count = self.get_read_by_count(obj)
+        if read_count and read_count > 0:
+            delivered_count = max(delivered_count, read_count)
+
+        is_delivered = delivered_count > 0
+        info = (is_delivered, delivered_count)
+        obj._cached_delivery_info = info
+        return info
+
+    def get_is_delivered(self, obj):
+        if hasattr(obj, 'annotated_is_delivered'):
+            return bool(obj.annotated_is_delivered)
+        return self._get_delivery_info(obj)[0]
+
+    def get_delivered_count(self, obj):
+        if hasattr(obj, 'annotated_is_delivered'):
+            if obj.annotated_is_delivered:
+                return max(1, self.get_read_by_count(obj))
+            return 0
+        return self._get_delivery_info(obj)[1]
+
     def get_edited_at(self, obj):
         # بدون فیلد جدید: پیامی که دیرتر از ساختش ذخیره شده ویرایش‌شده است (فقط مسیر ویرایش متن، پیام را دوباره ذخیره می‌کند)
         if obj.created_at and obj.updated_at and obj.updated_at - obj.created_at > _EDITED_THRESHOLD:
@@ -168,12 +214,25 @@ class MessageSerializer(serializers.ModelSerializer):
         if target.is_deleted or target.conversation_id != obj.conversation_id:
             return {'id': target.id, 'deleted': True}
         sender = target.sender
+        target_text = (target.text or '').strip()
+        has_attachment = target.attachments.exists()
+        if not target_text and has_attachment:
+            first_att = target.attachments.first()
+            if first_att:
+                ct = (first_att.content_type or '').lower()
+                fn = (first_att.file_name or '').lower()
+                if ct.startswith('image/') or fn.endswith(('.png', '.jpg', '.jpeg', '.webp', '.gif')):
+                    target_text = '📷 تصویر'
+                elif ct.startswith('audio/') or fn.endswith(('.mp3', '.ogg', '.wav', '.m4a', '.webm')):
+                    target_text = '🎤 پیام صوتی'
+                else:
+                    target_text = f"📎 {first_att.file_name}" if first_att.file_name else "📎 فایل پیوست"
         return {
             'id': target.id,
             'deleted': False,
-            'text': (target.text or '')[:200],
+            'text': target_text[:200],
             'sender_name': (sender.get_full_name() or sender.username) if sender else '',
-            'has_attachment': target.attachments.exists(),
+            'has_attachment': has_attachment,
         }
 
     def validate(self, attrs):
@@ -396,8 +455,8 @@ class ConversationSerializer(serializers.ModelSerializer):
         ).exists()
 
     def get_pinned_at(self, obj):
-        if hasattr(obj, 'annotated_pinned_at') and obj.annotated_pinned_at:
-            return obj.annotated_pinned_at.isoformat()
+        if hasattr(obj, 'annotated_pinned_at'):
+            return obj.annotated_pinned_at.isoformat() if obj.annotated_pinned_at else None
         request = self.context.get('request')
         if not request or not request.user.is_authenticated:
             return None

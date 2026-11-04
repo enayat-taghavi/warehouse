@@ -94,6 +94,8 @@ export interface ChatMessage {
   reactions?: MessageReactionSummary[];
   is_me?: boolean;
   read_by_count?: number;
+  is_delivered?: boolean;
+  delivered_count?: number;
   is_pending?: boolean; // برای Optimistic UI
   delivery_status?: 'pending' | 'sent' | 'failed';
   /** نام فایلی که هنوز آپلود نشده (فقط سمت کاربر) */
@@ -621,6 +623,8 @@ export class CommunicationService implements OnDestroy {
           } else if (payload.event === 'chat.conversation.updated') {
             const cid = payload.data?.conversation_id;
             if (cid !== undefined && cid !== null) void this.handleConversationUpdated(String(cid));
+          } else if (payload.event === 'chat.message_delivered' || payload.event === 'message_delivered') {
+            this.handleMessageDelivered(payload.data);
           } else if (payload.event === 'chat.read_receipt') {
             this.handleReadReceipt(payload.data);
           } else if (payload.event === 'chat.typing') {
@@ -2086,6 +2090,52 @@ export class CommunicationService implements OnDestroy {
     }
   }
 
+  public sendDeliveryAck(conversationId: string | number, messageId: string | number): void {
+    if (this.chatWs && this.chatWs.readyState === WebSocket.OPEN) {
+      this.chatWs.send(JSON.stringify({
+        action: 'delivery_ack',
+        type: 'delivery_ack',
+        conversation_id: String(conversationId),
+        message_id: Number(messageId)
+      }));
+    }
+  }
+
+  private handleMessageDelivered(data: { conversation_id: string; user_id: number; last_delivered_message_id?: string | number | null }): void {
+    const currentUserId = this.getCurrentUserId();
+    if (currentUserId !== null && Number(data.user_id) === currentUserId) {
+      return;
+    }
+    const lastDelivered = data.last_delivered_message_id;
+    if (lastDelivered === null || lastDelivered === undefined || lastDelivered === '') return;
+    const limit = Number(lastDelivered);
+    if (!Number.isFinite(limit)) return;
+
+    const active = this.activeConversation$.value;
+    if (active && String(active.id) === String(data.conversation_id)) {
+      const currentMsgs = this.activeMessages$.value;
+      const updated = currentMsgs.map(m => {
+        const mid = Number(m.id);
+        if (m.is_me && Number.isFinite(mid) && mid <= limit) {
+          return {
+            ...m,
+            is_delivered: true,
+            delivered_count: Math.max(m.delivered_count || 0, 1)
+          };
+        }
+        return m;
+      });
+      this.activeMessages$.next(updated);
+    }
+  }
+
+  public async bulkDeleteMessages(messageIds: (string | number)[]): Promise<any> {
+    const ids = messageIds.map(id => Number(id)).filter(id => !isNaN(id));
+    return firstValueFrom(
+      this.http.post<any>('/api/communications/messages/bulk-delete/', { message_ids: ids })
+    );
+  }
+
   private handleNewMessage(rawMsg: ChatMessage): void {
     const msgId = String(rawMsg.id || rawMsg.client_temp_id || '');
     const isDuplicate = msgId ? this.processedIncomingMessageIds.has(msgId) : false;
@@ -2104,6 +2154,11 @@ export class CommunicationService implements OnDestroy {
       ...rawMsg,
       is_me: isMe
     };
+
+    // به محض دریافت پیام جدید برای کاربر، اعلان تحویل پیام (دو تیک خاکستری) ارسال می‌شود
+    if (!isMe && rawMsg.id && rawMsg.conversation) {
+      this.sendDeliveryAck(rawMsg.conversation, rawMsg.id);
+    }
 
     const msgConvId = String(msg.conversation);
     // فقط وقتی کشو باز است و صفحه واقعاً دیده می‌شود (تب پنهان یا گوشی قفل نیست) پیام خوانده‌شده حساب می‌شود

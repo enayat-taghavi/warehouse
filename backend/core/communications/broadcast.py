@@ -33,6 +33,10 @@ def _send_message_event(msg, event, recipient_ids):
             msg._prefetched_objects_cache = {}
         if 'reactions' not in msg._prefetched_objects_cache:
             msg._prefetched_objects_cache['reactions'] = []
+        if 'attachments' not in msg._prefetched_objects_cache:
+            msg._prefetched_objects_cache['attachments'] = []
+        msg._cached_delivery_info = (False, 0)
+        msg.annotated_read_by_count = 0
     data = MessageSerializer(msg).data
     data['is_me'] = False
     others = sorted(p_id for p_id in recipient_ids if p_id != msg.sender_id)
@@ -314,5 +318,25 @@ def broadcast_pinned_messages_ws(conversation, message_id, event="chat.message_p
         'pinned_messages': pinned_list,
     }
     _send_to_user_rooms(channel_layer, recipient_ids, event, payload)
+
+
+def broadcast_message_delivered_ws(conversation, user, last_delivered_message_id):
+    """
+    برودکست بلادرنگ تحویل پیام (دو تیک خاکستری) به اعضای گفتگو.
+    رویداد chat.message_delivered با payload شامل conversation_id, user_id و last_delivered_message_id.
+    """
+    channel_layer = get_channel_layer()
+    if not channel_layer:
+        return
+
+    payload = {
+        "conversation_id": str(conversation.id),
+        "user_id": user.id,
+        "last_delivered_message_id": str(last_delivered_message_id),
+    }
+    recipient_ids = set(conversation.participants.filter(is_active=True).values_list('id', flat=True))
+    recipient_ids.add(user.id)
+    _send_to_user_rooms(channel_layer, sorted(recipient_ids), "chat.message_delivered", payload)
+
 
 

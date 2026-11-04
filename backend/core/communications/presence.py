@@ -81,6 +81,13 @@ def get_user_last_seen_iso(user_or_id) -> str | None:
         return None
 
     # ۱. بررسی پیش‌واکشی (Prefetch / select_related)
+    fields_cache = getattr(getattr(user_or_id, '_state', None), 'fields_cache', {})
+    if 'chat_presence' in fields_cache:
+        presence = fields_cache['chat_presence']
+        return presence.last_seen_at.isoformat() if (presence and presence.last_seen_at) else None
+    if hasattr(user_or_id, '_prefetched_objects_cache') and 'chat_presence' in user_or_id._prefetched_objects_cache:
+        presence = user_or_id._prefetched_objects_cache['chat_presence']
+        return presence.last_seen_at.isoformat() if (presence and presence.last_seen_at) else None
     if hasattr(user_or_id, 'chat_presence'):
         try:
             presence = getattr(user_or_id, 'chat_presence', None)
@@ -92,6 +99,8 @@ def get_user_last_seen_iso(user_or_id) -> str | None:
     # ۲. بررسی کش
     try:
         cached = cache.get(_last_seen_cache_key(user_id))
+        if cached == 'none':
+            return None
         if cached and isinstance(cached, str):
             return cached
     except Exception:
@@ -108,6 +117,11 @@ def get_user_last_seen_iso(user_or_id) -> str | None:
             except Exception:
                 pass
             return iso
+        else:
+            try:
+                cache.set(_last_seen_cache_key(user_id), 'none', 300)
+            except Exception:
+                pass
     except Exception as e:
         logger.debug(f"[PresenceCache] get_user_last_seen_iso error for {user_id}: {e}")
 

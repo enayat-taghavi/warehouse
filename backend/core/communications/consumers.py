@@ -114,6 +114,35 @@ def check_is_chat_enabled(wh_id=None):
     return bool(get_setting('chat_enabled', warehouse_id=wh_id_int))
 
 
+@database_sync_to_async
+def record_delivery_ack(user, conv_id, msg_id):
+    from .models import ConversationParticipant, Conversation, Message
+    from django.db import transaction
+    try:
+        msg_id_int = int(msg_id)
+        conv = Conversation.objects.get(id=conv_id)
+        if not can_read_conversation(user, conv):
+            return False, None, None
+        with transaction.atomic():
+            part, _ = ConversationParticipant.all_objects.select_for_update().get_or_create(
+                conversation=conv, user=user
+            )
+            cur_id = part.last_delivered_message_id or 0
+            if msg_id_int > cur_id:
+                # اطمینان از وجود پیام در همین گفتگو
+                msg_exists = Message.objects.filter(id=msg_id_int, conversation=conv).exists()
+                if not msg_exists:
+                    return False, None, None
+                part.last_delivered_message_id = msg_id_int
+                part.save(update_fields=['last_delivered_message'])
+                return True, msg_id_int, conv
+            return False, cur_id, conv
+    except Exception as exc:
+        logger.debug(f"[delivery_ack error]: {exc}")
+        return False, None, None
+
+
+
 class WsAuthLifecycleMixin:
     """
     چرخهٔ عمر احراز هویت وب‌سوکت (E9):
@@ -411,6 +440,16 @@ class ChatConsumer(WsAuthLifecycleMixin, AsyncWebsocketConsumer):
                             'code': 4003,
                             'message': 'دسترسی غیرمجاز به رویدادهای این گفتگو'
                         }))
+
+            elif msg_type == 'delivery_ack' or payload.get('action') == 'delivery_ack':
+                conv_id = payload.get('conversation_id')
+                msg_id = payload.get('message_id')
+                if conv_id and msg_id:
+                    updated, effective_id, conv = await record_delivery_ack(self.user, conv_id, msg_id)
+                    if updated and conv:
+                        from .broadcast import broadcast_message_delivered_ws
+                        broadcast_message_delivered_ws(conv, self.user, effective_id)
+
 
         except Exception as e:
             logger.error(f"[ChatConsumer] receive error: {e}")

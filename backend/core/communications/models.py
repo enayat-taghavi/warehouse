@@ -314,6 +314,14 @@ class ConversationParticipant(SyncModelMixin):
         related_name='read_by_participants',
         verbose_name="آخرین پیام خوانده‌شده"
     )
+    last_delivered_message = models.ForeignKey(
+        Message,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='+',
+        verbose_name="آخرین پیام تحویل‌شده"
+    )
     last_read_at = models.DateTimeField(null=True, blank=True, verbose_name="زمان آخرین خواندن")
     is_muted = models.BooleanField(default=False, verbose_name="بی‌صدا")
     # نقش در گروه؛ عضو حذف‌شده یا خارج‌شده پاک نمی‌شود، فقط left_at می‌گیرد (U1)

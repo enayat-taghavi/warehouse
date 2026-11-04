@@ -87,7 +87,9 @@ describe('ChatDrawerComponent - Phase 1 (Page mode, expand button, URL sync)', (
       getMessageReactions: vi.fn().mockReturnValue(of([{ user_id: 1, full_name: 'من', emoji: '❤️', created_at: new Date().toISOString() }])),
       forwardMessages: vi.fn().mockReturnValue(of({ status: 'forwarded', count: 1, conversation_ids: ['c101'] })),
       togglePinConversation: vi.fn().mockReturnValue(of({ is_pinned: true, pinned_at: new Date().toISOString() })),
-      togglePinMessage: vi.fn().mockReturnValue(of({ is_pinned: true, pinned_at: new Date().toISOString() }))
+      togglePinMessage: vi.fn().mockReturnValue(of({ is_pinned: true, pinned_at: new Date().toISOString() })),
+      bulkDeleteMessages: vi.fn().mockResolvedValue({ status: 'deleted', count: 1 }),
+      sendDeliveryAck: vi.fn()
     };
 
     mockRouter = {
@@ -520,7 +522,9 @@ describe('ChatDrawerComponent - Phase 3 (Telegram Interactions, Emoji Picker, Dr
       getMessageReactions: vi.fn().mockReturnValue(of([{ user_id: 1, full_name: 'من', emoji: '❤️', created_at: new Date().toISOString() }])),
       forwardMessages: vi.fn().mockReturnValue(of({ status: 'forwarded', count: 1, conversation_ids: ['c101'] })),
       togglePinConversation: vi.fn().mockReturnValue(of({ is_pinned: true, pinned_at: new Date().toISOString() })),
-      togglePinMessage: vi.fn().mockReturnValue(of({ is_pinned: true, pinned_at: new Date().toISOString() }))
+      togglePinMessage: vi.fn().mockReturnValue(of({ is_pinned: true, pinned_at: new Date().toISOString() })),
+      bulkDeleteMessages: vi.fn().mockResolvedValue({ status: 'deleted', count: 1 }),
+      sendDeliveryAck: vi.fn()
     };
 
     await TestBed.configureTestingModule({
@@ -1297,5 +1301,235 @@ describe('ChatDrawerComponent - Phase 7 (Approximate Last Seen & Presence)', () 
     const onlineEl = fixture.nativeElement.querySelector('.text-\\[10px\\].text-emerald-500') as HTMLElement;
     expect(onlineEl).not.toBeNull();
     expect(onlineEl.textContent).toContain('آنلاین');
+  });
+});
+
+describe('ChatDrawerComponent - Phase 8 (Delivery Double Ticks, Bulk Delete, Performance and Polish)', () => {
+  const sampleConv: Conversation = {
+    id: 'c800',
+    conv_type: 'direct',
+    title: 'تست فاز ۸',
+    participants: [1, 2],
+    is_active: true,
+    created_at: '',
+    updated_at: ''
+  };
+
+  let fixture: ComponentFixture<ChatDrawerComponent>;
+  let comp: ChatDrawerComponent;
+  let comm: any;
+  let activeMessages$: BehaviorSubject<ChatMessage[]>;
+
+  async function setupPhase8Component() {
+    TestBed.resetTestingModule();
+    activeMessages$ = new BehaviorSubject<ChatMessage[]>([]);
+    const convs$ = new BehaviorSubject<Conversation[]>([sampleConv]);
+    const active$ = new BehaviorSubject<Conversation | null>(sampleConv);
+
+    comm = {
+      isChatDrawerOpen: signal(true),
+      chatReturnUrl: signal<string | null>(null),
+      hasActiveConversation: signal(true),
+      isMuted: signal(false),
+      conversations$: convs$,
+      activeConversation$: active$,
+      activeMessages$: activeMessages$,
+      typingUser$: new Subject<any>(),
+      membershipEvents$: new Subject<any>(),
+      ensureConnected: vi.fn(),
+      refreshPresence: vi.fn(),
+      loadConversations: vi.fn().mockResolvedValue(undefined),
+      getContacts: vi.fn().mockResolvedValue([]),
+      getCapabilities: vi.fn().mockResolvedValue({ can_create_group: true }),
+      getMembers: vi.fn().mockResolvedValue([]),
+      openConversation: vi.fn(),
+      leaveConversation: vi.fn(),
+      closeDrawer: vi.fn(),
+      stashComposerDraft: vi.fn(),
+      takeComposerDraft: vi.fn().mockReturnValue(null),
+      getCurrentUserId: vi.fn().mockReturnValue(1),
+      isUserOnline: vi.fn().mockReturnValue(false),
+      getLastSeen: vi.fn().mockReturnValue(null),
+      setLastSeen: vi.fn(),
+      toggleMute: vi.fn(),
+      togglePinMessage: vi.fn().mockResolvedValue({}),
+      bulkDeleteMessages: vi.fn().mockResolvedValue({ status: 'ok', deleted_count: 2 })
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [ChatDrawerComponent],
+      providers: [
+        { provide: CommunicationService, useValue: comm },
+        { provide: StateService, useValue: { appState: { activeWarehouseId: 'ALL' } } },
+        { provide: AuthService, useValue: { user: () => ({ id: 1, username: 'me', first_name: 'من', last_name: '' }) } },
+        { provide: ToastService, useValue: { show: vi.fn(), success: vi.fn(), error: vi.fn(), warning: vi.fn() } },
+        { provide: ApiService, useValue: { download: vi.fn() } },
+        { provide: ConfigApiService, useValue: { getPublicConfig: () => new Subject<any>() } },
+        { provide: FileOutputService, useValue: { canShareFiles: () => false, shareBlob: vi.fn() } },
+        { provide: Router, useValue: { navigate: vi.fn(), navigateByUrl: vi.fn(), url: '/app/launcher', events: of() } },
+        { provide: ActivatedRoute, useValue: { paramMap: new BehaviorSubject(convertToParamMap({})) } },
+        { provide: HttpClient, useValue: { get: vi.fn(), post: vi.fn() } }
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ChatDrawerComponent);
+    comp = fixture.componentInstance;
+    comp.activeTab.set('chat');
+    comp.activeConv.set(sampleConv);
+    fixture.detectChanges();
+    await flush(fixture);
+  }
+
+  it('renders tick-sent, tick-delivered, and tick-read based on message status', async () => {
+    await setupPhase8Component();
+
+    // 1) Single grey tick: sent, not yet delivered, not yet read
+    const msgSent: ChatMessage = {
+      id: '801',
+      conversation: 'c800',
+      sender: 1,
+      is_me: true,
+      text: 'پیام ارسال شده',
+      created_at: '2026-01-01T10:00:00Z',
+      is_delivered: false,
+      delivered_count: 0,
+      read_by_count: 0
+    };
+    activeMessages$.next([msgSent]);
+    fixture.detectChanges();
+    await flush(fixture);
+
+    const tickSent = fixture.nativeElement.querySelector('[data-testid="tick-sent"]');
+    expect(tickSent).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="tick-delivered"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="tick-read"]')).toBeNull();
+
+    // 2) Double grey tick: delivered to recipient client
+    const msgDelivered: ChatMessage = {
+      ...msgSent,
+      is_delivered: true,
+      delivered_count: 1,
+      read_by_count: 0
+    };
+    activeMessages$.next([msgDelivered]);
+    fixture.detectChanges();
+    await flush(fixture);
+
+    const tickDelivered = fixture.nativeElement.querySelector('[data-testid="tick-delivered"]');
+    expect(tickDelivered).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="tick-sent"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="tick-read"]')).toBeNull();
+
+    // 3) Double blue tick: read by recipient
+    const msgRead: ChatMessage = {
+      ...msgSent,
+      is_delivered: true,
+      delivered_count: 1,
+      read_by_count: 1
+    };
+    activeMessages$.next([msgRead]);
+    fixture.detectChanges();
+    await flush(fixture);
+
+    const tickRead = fixture.nativeElement.querySelector('[data-testid="tick-read"]');
+    expect(tickRead).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="tick-sent"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="tick-delivered"]')).toBeNull();
+  });
+
+  it('multi-select mode renders delete button and executes bulk delete workflow', async () => {
+    await setupPhase8Component();
+
+    const m1: ChatMessage = { id: '811', conversation: 'c800', sender: 1, is_me: true, text: 'پیام اول', created_at: '' };
+    const m2: ChatMessage = { id: '812', conversation: 'c800', sender: 1, is_me: true, text: 'پیام دوم', created_at: '' };
+    activeMessages$.next([m1, m2]);
+    fixture.detectChanges();
+    await flush(fixture);
+
+    // Select both messages
+    comp.startSelection(m1);
+    comp.toggleMessageSelection(m2);
+    fixture.detectChanges();
+    await flush(fixture);
+
+    expect(comp.isSelectionMode()).toBe(true);
+    expect(comp.selectedMessageCount()).toBe(2);
+    expect(comp.canDeleteSelectedMessages()).toBe(true);
+
+    const deleteBtn = fixture.nativeElement.querySelector('[data-testid="selection-delete-btn"]') as HTMLButtonElement;
+    expect(deleteBtn).not.toBeNull();
+    expect(deleteBtn.disabled).toBe(false);
+
+    // Click delete opens bulk delete modal
+    deleteBtn.click();
+    fixture.detectChanges();
+    await flush(fixture);
+
+    expect(comp.isBulkDeleteOpen()).toBe(true);
+    const deleteDialog = fixture.nativeElement.querySelector('[data-testid="delete-dialog"]');
+    expect(deleteDialog).not.toBeNull();
+    expect(deleteDialog.textContent).toContain('حذف گروهی');
+
+    // Confirm deletion
+    const confirmBtn = fixture.nativeElement.querySelector('[data-testid="delete-confirm"]') as HTMLButtonElement;
+    confirmBtn.click();
+    fixture.detectChanges();
+    await flush(fixture);
+
+    expect(comm.bulkDeleteMessages).toHaveBeenCalledWith(['811', '812']);
+    expect(comp.isBulkDeleteOpen()).toBe(false);
+    expect(comp.isSelectionMode()).toBe(false);
+  });
+
+  it('scrollToMessage sets highlightedMessageId and applies visual highlight ring', async () => {
+    await setupPhase8Component();
+
+    const m: ChatMessage = { id: '820', conversation: 'c800', sender: 2, is_me: false, text: 'پیام مقصد', created_at: '' };
+    activeMessages$.next([m]);
+    fixture.detectChanges();
+    await flush(fixture);
+
+    comp.scrollToMessage('820');
+    fixture.detectChanges();
+    await flush(fixture);
+
+    expect(comp.highlightedMessageId()).toBe('820');
+    const bubble = fixture.nativeElement.querySelector('[data-testid="msg-bubble"]') as HTMLElement;
+    expect(bubble).not.toBeNull();
+    expect(bubble.classList.contains('ring-2')).toBe(true);
+    expect(bubble.classList.contains('ring-indigo-500')).toBe(true);
+  });
+
+  it('reply quote attachment fallback label displays correct placeholder for image/audio/file', async () => {
+    await setupPhase8Component();
+    const msgWithImg: ChatMessage = {
+      id: '831',
+      conversation: 'c800',
+      sender: 2,
+      text: '',
+      created_at: '',
+      attachments: [{ id: '1', file: '', file_name: 'test.png', file_size: 100, content_type: 'image/png' }]
+    };
+    expect(comp.getMessageAttachmentFallbackLabel(msgWithImg)).toBe('📷 تصویر');
+
+    const msgWithAudio: ChatMessage = {
+      id: '832',
+      conversation: 'c800',
+      sender: 2,
+      text: '',
+      created_at: '',
+      attachments: [{ id: '2', file: '', file_name: 'voice.ogg', file_size: 100, content_type: 'audio/ogg' }]
+    };
+    expect(comp.getMessageAttachmentFallbackLabel(msgWithAudio)).toBe('🎤 پیام صوتی');
+
+    const msgWithDoc: ChatMessage = {
+      id: '833',
+      conversation: 'c800',
+      sender: 2,
+      text: '',
+      created_at: '',
+      attachments: [{ id: '3', file: '', file_name: 'report.pdf', file_size: 100, content_type: 'application/pdf' }]
+    };
+    expect(comp.getMessageAttachmentFallbackLabel(msgWithDoc)).toBe('📎 report.pdf');
   });
 });

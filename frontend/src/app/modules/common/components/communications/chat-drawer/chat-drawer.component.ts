@@ -263,6 +263,18 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   public selectedMessageIds = signal<string[]>([]);
   public isSelectionMode = computed(() => this.selectedMessageIds().length > 0);
   public selectedMessageCount = computed(() => this.selectedMessageIds().length);
+  public isBulkDeleteOpen = signal<boolean>(false);
+  public canDeleteSelectedMessages = computed(() => {
+    if (!this.isOnline()) return false;
+    const selectedIds = this.selectedMessageIds();
+    if (!selectedIds.length || selectedIds.length > 20) return false;
+    const allMsgs = this.messages();
+    const selectedMsgs = allMsgs.filter(m => selectedIds.includes(String(m.id)));
+    if (selectedMsgs.length !== selectedIds.length) return false;
+    return selectedMsgs.every(m => this.canDelete(m));
+  });
+  public highlightedMessageId = signal<string | null>(null);
+  private highlightTimer: any = null;
   public swipingMsgId = signal<string | null>(null);
   public swipeDelta = signal<number>(0);
   public draftVersion = signal<number>(0);
@@ -585,15 +597,17 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.isLoadingOlder.set(true);
     const el = this.messagesScrollContainer?.nativeElement as HTMLElement | undefined;
     if (el) this.restoreScroll = { height: el.scrollHeight, top: el.scrollTop };
+    let addedCount = 0;
     try {
       const older = await this.commService.loadOlderMessages(conv.id, beforeId, 30);
+      addedCount = older.length;
       if (older.length < 30) {
         this.hasMoreMessages.set(false);
       }
     } finally {
       this.isLoadingOlder.set(false);
-      // اگر چیزی اضافه نشد، جای اسکرول بدون تغییر می‌ماند
-      if (this.restoreScroll && el && el.scrollHeight === this.restoreScroll.height) this.restoreScroll = null;
+      // فقط در صورتی که پیامی اضافه نشده باشد، restoreScroll باطل می‌شود؛ در غیر اینصورت تا ngAfterViewChecked حفظ می‌شود
+      if (addedCount === 0) this.restoreScroll = null;
     }
   }
 
@@ -1228,6 +1242,36 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   public cancelRemoveMsg(): void {
     this.deleteTarget.set(null);
+    this.isBulkDeleteOpen.set(false);
+  }
+
+  public openBulkDeleteModal(): void {
+    if (!this.canDeleteSelectedMessages()) return;
+    this.isBulkDeleteOpen.set(true);
+    setTimeout(() => document.getElementById('msg-delete-cancel')?.focus(), 0);
+  }
+
+  public async runBulkDelete(): Promise<void> {
+    const ids = this.selectedMessageIds();
+    if (!ids.length || this.deleteBusy()) {
+      this.isBulkDeleteOpen.set(false);
+      return;
+    }
+    this.deleteBusy.set(true);
+    try {
+      await this.commService.bulkDeleteMessages(ids);
+      const currentMsgs = this.commService.activeMessages$.value;
+      const updated = currentMsgs.filter(m => !ids.includes(String(m.id)));
+      this.commService.activeMessages$.next(updated);
+      this.clearSelection();
+      this.isBulkDeleteOpen.set(false);
+      this.toast.success('پیام‌های انتخاب‌شده حذف شدند');
+    } catch (e: any) {
+      this.isBulkDeleteOpen.set(false);
+      this.toast.error(e?.status === 403 ? 'اجازهٔ حذف برخی یا همه پیام‌های انتخاب‌شده را ندارید' : 'حذف پیام‌ها انجام نشد');
+    } finally {
+      this.deleteBusy.set(false);
+    }
   }
 
   public async runRemoveMsg(): Promise<void> {
@@ -1247,15 +1291,44 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     }
   }
 
+  public getAttachmentFallbackLabel(att?: MessageAttachment): string {
+    if (!att) return '📎 فایل پیوست';
+    const kind = this.attachmentKind(att);
+    if (kind === 'image') return '📷 تصویر';
+    if (kind === 'audio') return '🎤 پیام صوتی';
+    return att.file_name ? `📎 ${att.file_name}` : '📎 فایل پیوست';
+  }
+
+  public getMessageAttachmentFallbackLabel(msg?: ChatMessage | null): string {
+    if (!msg) return '';
+    if (msg.text?.trim()) return msg.text;
+    if (msg.attachments && msg.attachments.length > 0) {
+      return this.getAttachmentFallbackLabel(msg.attachments[0]);
+    }
+    return '';
+  }
+
   /** خلاصهٔ پیام اصلی برای پاسخ: از جزئیات سرور، وگرنه از پیام‌های بارگذاری‌شده */
   public replyInfo(msg: ChatMessage): { deleted: boolean; id: string; sender: string; text: string; hasAttachment: boolean } | null {
     if (!msg.reply_to && !msg.reply_to_details) return null;
     const d = msg.reply_to_details;
     const id = String(d?.id ?? msg.reply_to);
     if (d && d.deleted) return { deleted: true, id, sender: '', text: '', hasAttachment: false };
-    if (d && !d.deleted) return { deleted: false, id, sender: d.sender_name, text: d.text, hasAttachment: d.has_attachment };
     const orig = this.messages().find(m => String(m.id) === id);
-    if (orig) return { deleted: false, id, sender: orig.sender_details?.full_name || '', text: orig.text || '', hasAttachment: !!orig.attachments?.length };
+    if (d && !d.deleted) {
+      let text = (d.text || '').trim();
+      if (!text && d.has_attachment) {
+        text = orig ? this.getMessageAttachmentFallbackLabel(orig) : '📎 فایل پیوست';
+      }
+      return { deleted: false, id, sender: d.sender_name, text, hasAttachment: d.has_attachment };
+    }
+    if (orig) {
+      let text = (orig.text || '').trim();
+      if (!text && orig.attachments?.length) {
+        text = this.getMessageAttachmentFallbackLabel(orig);
+      }
+      return { deleted: false, id, sender: orig.sender_details?.full_name || '', text, hasAttachment: !!orig.attachments?.length };
+    }
     return { deleted: false, id, sender: '', text: '', hasAttachment: false };
   }
 
@@ -1263,9 +1336,18 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     if (!ri.deleted) this.scrollToMessage(ri.id);
   }
 
-  public scrollToMessage(id: string): void {
+  public scrollToMessage(id: string | number): void {
+    const idStr = String(id);
+    this.highlightedMessageId.set(idStr);
+    if (this.highlightTimer) clearTimeout(this.highlightTimer);
+    this.highlightTimer = setTimeout(() => {
+      if (this.highlightedMessageId() === idStr) {
+        this.highlightedMessageId.set(null);
+      }
+    }, 1600);
+
     const root = this.messagesScrollContainer?.nativeElement as HTMLElement | undefined;
-    const el = root?.querySelector(`[data-msg-id="${String(id).replace(/[^0-9a-zA-Z_-]/g, '')}"]`) as HTMLElement | null;
+    const el = root?.querySelector(`[data-msg-id="${idStr.replace(/[^0-9a-zA-Z_-]/g, '')}"]`) as HTMLElement | null;
     el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
   }
 
