@@ -74,15 +74,30 @@ describe('SecretariatPage — دبیرخانه', () => {
   });
 
   it('فوکوس پنجره و رویداد «سند تغییر کرد» دفتر را دوباره می‌خوانند', () => {
-    window.dispatchEvent(new Event('focus'));
-    expect(api.register).toHaveBeenCalledTimes(2);
-    changes$.next({ type: 'document_changed', doc_type: 'letters_letter', doc_id: 50, action: 'updated' });
-    expect(api.register).toHaveBeenCalledTimes(3);
+    vi.useFakeTimers();
+    try {
+      window.dispatchEvent(new Event('focus'));
+      window.dispatchEvent(new Event('focus'));
+      vi.advanceTimersByTime(500);
+      expect(api.register).toHaveBeenCalledTimes(2);
+      changes$.next({ type: 'document_changed', doc_type: 'letters_letter', doc_id: 50, action: 'updated' });
+      vi.advanceTimersByTime(500);
+      expect(api.register).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('قطعی در بازخوانی بی‌صدا دفتر نشان‌داده‌شده را پاک نمی‌کند', () => {
     api.register.mockReturnValue(throwError(() => ({ status: 0 })));
-    window.dispatchEvent(new Event('focus'));
+    vi.useFakeTimers();
+    try {
+      window.dispatchEvent(new Event('focus'));
+      vi.advanceTimersByTime(500);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(api.register).toHaveBeenCalledTimes(2);
     fixture.detectChanges();
     expect(q('[data-testid="register-row-1"]')).not.toBeNull();
     expect(q('[data-testid="register-error"]')).toBeNull();

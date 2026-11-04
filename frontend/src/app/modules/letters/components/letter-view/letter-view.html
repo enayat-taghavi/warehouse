@@ -1,7 +1,7 @@
 <div class="flex flex-col gap-3 min-w-0 pb-6" dir="rtl">
   <app-command-center>
     <div cc-tabs class="flex items-center gap-2 min-w-0">
-      <h1 class="text-sm font-black text-fg truncate">{{ letter()?.number_display || 'نامه' }}</h1>
+      <h1 class="text-sm font-black text-fg truncate"><bdi>{{ letter()?.number_display || 'نامه' }}</bdi></h1>
       @if (letter(); as l) {
         <app-status-badge [label]="statusLabels[l.status]" [color]="statusColor()" />
       }
@@ -74,13 +74,13 @@
       <form class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2" (submit)="$event.preventDefault(); submitForm()" data-testid="action-form">
         @if (fa === 'send') {
           <label class="text-xs font-bold text-fg" for="letter-send-method">روش ارسال</label>
-          <select id="letter-send-method" class="rounded-xl border border-line bg-surface px-3 py-2 text-sm" [formControl]="method">
+          <select id="letter-send-method" class="rounded-xl border border-line bg-surface px-3 py-2 text-sm" [formControl]="method" #actionField>
             @for (m of sendMethods; track m.id) { <option [value]="m.id">{{ m.label }}</option> }
           </select>
         } @else {
           <label class="text-xs font-bold text-fg" for="letter-action-reason">{{ fa === 'return' ? 'دلیل عودت' : 'دلیل ابطال' }}</label>
           <textarea id="letter-action-reason" rows="2" maxlength="500" class="rounded-xl border border-line bg-surface px-3 py-2 text-sm"
-                    [formControl]="reason" [attr.aria-invalid]="!!actionError()"></textarea>
+                    [formControl]="reason" [attr.aria-invalid]="!!actionError()" #actionField></textarea>
         }
         <div class="flex gap-2 justify-end">
           <button appAction="close" label="انصراف" type="button" (click)="formAction.set(null)"></button>
@@ -115,24 +115,24 @@
 
     <article class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-3 min-w-0" aria-label="برگ نامه">
       <dl class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-        <div><dt class="text-fg-subtle">نوع</dt><dd class="font-bold text-fg">{{ kindLabels[l.kind] }}</dd></div>
-        <div><dt class="text-fg-subtle">شماره</dt><dd class="font-bold text-fg tabular-nums">{{ l.number_display || '—' }}</dd></div>
-        <div><dt class="text-fg-subtle">تاریخ ثبت</dt><dd class="font-bold text-fg">{{ l.registered_at ? (l.registered_at | persianDate: 'short') : '—' }}</dd></div>
-        <div><dt class="text-fg-subtle">محرمانگی</dt><dd class="font-bold text-fg">{{ confLabels[l.confidentiality] }}</dd></div>
+        <div><dt class="text-fg-muted">نوع</dt><dd class="font-bold text-fg">{{ kindLabels[l.kind] }}</dd></div>
+        <div><dt class="text-fg-muted">شماره</dt><dd class="font-bold text-fg tabular-nums"><bdi>{{ l.number_display || '—' }}</bdi></dd></div>
+        <div><dt class="text-fg-muted">تاریخ ثبت</dt><dd class="font-bold text-fg">{{ l.registered_at ? (l.registered_at | persianDate: 'short') : '—' }}</dd></div>
+        <div><dt class="text-fg-muted">محرمانگی</dt><dd class="font-bold text-fg">{{ confLabels[l.confidentiality] }}</dd></div>
         @if (l.external_number) {
-          <div><dt class="text-fg-subtle">شمارهٔ بیرونی</dt><dd class="font-bold text-fg">{{ l.external_number }}</dd></div>
+          <div><dt class="text-fg-muted">شمارهٔ بیرونی</dt><dd class="font-bold text-fg"><bdi>{{ l.external_number }}</bdi></dd></div>
         }
         @if (l.project_title) {
-          <div><dt class="text-fg-subtle">پروژه</dt><dd class="font-bold text-fg break-words">{{ l.project_title }}</dd></div>
+          <div><dt class="text-fg-muted">پروژه</dt><dd class="font-bold text-fg break-words">{{ l.project_title }}</dd></div>
         }
       </dl>
       @if (toRecipients().length || ccRecipients().length) {
         <div class="text-xs flex flex-col gap-1" data-testid="recipients">
           @if (toRecipients().length) {
-            <p><span class="text-fg-subtle">گیرنده: </span>@for (r of toRecipients(); track $index) {<span class="font-bold text-fg">{{ recipientName(r) }}</span>@if (!$last) {<span>، </span>}}</p>
+            <p><span class="text-fg-muted">گیرنده: </span>@for (r of toRecipients(); track $index) {<span class="font-bold text-fg">{{ recipientName(r) }}</span>@if (!$last) {<span>، </span>}}</p>
           }
           @if (ccRecipients().length) {
-            <p><span class="text-fg-subtle">رونوشت: </span>@for (r of ccRecipients(); track $index) {<span class="text-fg">{{ recipientName(r) }}</span>@if (!$last) {<span>، </span>}}</p>
+            <p><span class="text-fg-muted">رونوشت: </span>@for (r of ccRecipients(); track $index) {<span class="text-fg">{{ recipientName(r) }}</span>@if (!$last) {<span>، </span>}}</p>
           }
         </div>
       }
@@ -141,7 +141,7 @@
         @for (b of l.body; track $index) {
           @switch (b.type) {
             @case ('paragraph') {
-              <p [style.text-align]="b.align">@for (run of runs(b.runs); track $index) {@if (run.bold) {<strong>{{ run.text }}</strong>} @else {<span>{{ run.text }}</span>}}</p>
+              <p [style.text-align]="align(b.align)">@for (run of runs(b.runs); track $index) {@if (run.bold) {<strong>{{ run.text }}</strong>} @else {<span>{{ run.text }}</span>}}</p>
             }
             @case ('list') {
               @if (b.style === 'ordered') {
@@ -153,19 +153,24 @@
             @case ('table') {
               <div class="overflow-x-auto max-w-full">
                 <table class="text-xs border border-line w-full">
-                  @for (row of b.rows; track $index; let first = $first) {
-                    <tr>
-                      @for (cell of row; track $index) {
-                        @if (first && b.header) {<th class="border border-line p-1 bg-surface-muted">{{ cell }}</th>} @else {<td class="border border-line p-1">{{ cell }}</td>}
-                      }
-                    </tr>
+                  @if (b.header && b.rows.length) {
+                    <thead>
+                      <tr>@for (cell of b.rows[0]; track $index) {<th scope="col" class="border border-line p-1 bg-surface-muted">{{ cell }}</th>}</tr>
+                    </thead>
                   }
+                  <tbody>
+                    @for (row of b.rows; track $index; let first = $first) {
+                      @if (!(first && b.header)) {
+                        <tr>@for (cell of row; track $index) {<td class="border border-line p-1">{{ cell }}</td>}</tr>
+                      }
+                    }
+                  </tbody>
                 </table>
               </div>
             }
           }
         } @empty {
-          <p class="text-fg-subtle text-xs">متنی ندارد.</p>
+          <p class="text-fg-muted text-xs">متنی ندارد.</p>
         }
       </div>
       @if (l.void_reason) {
@@ -179,7 +184,7 @@
         <ol class="flex flex-col gap-1">
           @for (s of l.signers; track s.id) {
             <li class="flex items-center gap-2 text-xs min-w-0">
-              <span class="text-fg-subtle tabular-nums">{{ $index + 1 }}.</span>
+              <span class="text-fg-muted tabular-nums">{{ $index + 1 }}.</span>
               <span class="font-bold text-fg truncate flex-1 min-w-0">{{ s.user.name }}@if (s.title_text) {<span class="text-fg-muted font-normal"> — {{ s.title_text }}</span>}</span>
               <app-status-badge [label]="signerStatus(s.status)" [color]="s.status === 'signed' ? 'green' : s.status === 'returned' ? 'rose' : 'slate'" />
             </li>
@@ -187,6 +192,11 @@
         </ol>
       </section>
     }
+
+    <section class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-2" aria-label="پیوست‌ها" data-testid="letter-attachments">
+      <h2 class="text-sm font-black text-fg">پیوست‌ها</h2>
+      <app-attachments kind="letters.letter" [entityId]="l.id" [canEdit]="online() && l.status !== 'void'" />
+    </section>
 
     @if (l.registered_at) {
       <app-letter-referral-tree [letterId]="l.id" [version]="treeVersion()" [online]="online()" (referFrom)="openRefer($event)" />
@@ -198,7 +208,7 @@
         @for (v of vs; track $index) {
           <p class="text-xs flex gap-2"><span class="font-bold text-fg flex-1 min-w-0 truncate">{{ v.name }}</span><span class="text-fg-muted">{{ v.at | persianDate: 'short-time' }}</span></p>
         } @empty {
-          <p class="text-xs text-fg-subtle">هنوز کسی ندیده است.</p>
+          <p class="text-xs text-fg-muted">هنوز کسی ندیده است.</p>
         }
       </section>
     }

@@ -4,7 +4,10 @@ import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { firstValueFrom } from 'rxjs';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { isServerUnreachable } from '../../../../core/services/server-reachability';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
+import { ToastService } from '../../../../shared/components/toast/toast.component';
 import { LetterParty, errorText } from '../../letters.models';
+import { DatePickEvent, gregorianDay } from '../../letters-date';
 import { LettersApiService } from '../../services/letters-api.service';
 import { LettersOfflineService } from '../../services/letters-offline';
 import { PartyPickerComponent } from '../party-picker/party-picker';
@@ -25,12 +28,13 @@ const newTempId = (): string =>
 @Component({
   selector: 'app-letter-register-incoming',
   standalone: true,
-  imports: [ReactiveFormsModule, NgPersianDatepickerModule, ActionButtonComponent, PartyPickerComponent],
+  imports: [ReactiveFormsModule, NgPersianDatepickerModule, ActionButtonComponent, PartyPickerComponent, SvgIconDirective],
   templateUrl: './register-incoming.html',
 })
 export class RegisterIncomingComponent {
   private readonly api = inject(LettersApiService);
   private readonly offline = inject(LettersOfflineService);
+  private readonly toast = inject(ToastService);
 
   readonly company = input<number | null>(null);
   readonly created = output<number>();
@@ -49,8 +53,13 @@ export class RegisterIncomingComponent {
   readonly subjectError = signal(false);
   private tempId = newTempId();
 
-  onDateSelect(ev: any): void {
-    this.externalDate.set(ev?.gregorian ? String(ev.gregorian).slice(0, 10) : null);
+  onDateSelect(ev: DatePickEvent): void {
+    this.externalDate.set(gregorianDay(ev));
+  }
+
+  clearDate(): void {
+    this.externalDate.set(null);
+    this.form.controls.dateText.setValue('');
   }
 
   onFile(ev: Event): void {
@@ -85,15 +94,17 @@ export class RegisterIncomingComponent {
     this.busy.set(true);
     this.error.set('');
     let letterId = 0;
+    let step: 'scan' | 'register' = 'scan';
     try {
       const letter = await firstValueFrom(this.api.create({
-        kind: 'incoming', company, client_temp_id: this.tempId, subject,
+        kind: 'incoming', company, client_temp_id: this.tempId, subject, body: [],
         external_number: this.form.controls.external_number.value.trim(),
         external_date: this.externalDate(), sender_party: this.sender()?.id ?? null,
-      } as any));
+      }));
       letterId = letter.id;
       const file = this.scan();
       if (file) await firstValueFrom(this.api.uploadScan(letterId, file));
+      step = 'register';
       await firstValueFrom(this.api.lifecycle(letterId, 'register'));
       this.reset();
       this.created.emit(letterId);
@@ -101,6 +112,9 @@ export class RegisterIncomingComponent {
       const status = err?.status ?? 0;
       if (letterId) {
         // نامه ساخته شده است؛ کاربر در صفحهٔ آن اسکن یا ثبت را دوباره انجام می‌دهد
+        this.toast.warning(step === 'scan'
+          ? 'نامه ساخته شد ولی اسکن بارگذاری نشد؛ از صفحهٔ نامه دوباره بفرستید.'
+          : 'نامه ساخته شد ولی ثبت نشد؛ از صفحهٔ نامه ثبت کنید.');
         this.reset();
         this.created.emit(letterId);
       } else {

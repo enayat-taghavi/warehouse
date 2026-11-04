@@ -1,11 +1,14 @@
-import { Component, inject, input, output, signal } from '@angular/core';
+import { Component, ElementRef, afterNextRender, inject, input, output, signal, viewChild } from '@angular/core';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
 import { PersonRolePickerComponent, PersonRoleValue } from '../../../../shared/components/person-role-picker/person-role-picker.component';
 import { isServerUnreachable } from '../../../../core/services/server-reachability';
 import { ReferPayload, errorText } from '../../letters.models';
+import { DatePickEvent, gregorianDay } from '../../letters-date';
 import { LettersApiService } from '../../services/letters-api.service';
+import { LettersOfflineService } from '../../services/letters-offline';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 
 /** سقف گیرنده در هر بار ارجاع (قاعدهٔ هسته) */
 export const MAX_REFER_TARGETS = 20;
@@ -17,11 +20,13 @@ export const MAX_REFER_TARGETS = 20;
 @Component({
   selector: 'app-letter-refer-dialog',
   standalone: true,
-  imports: [ReactiveFormsModule, NgPersianDatepickerModule, ActionButtonComponent, PersonRolePickerComponent],
+  imports: [ReactiveFormsModule, NgPersianDatepickerModule, ActionButtonComponent, PersonRolePickerComponent, SvgIconDirective],
   templateUrl: './refer-dialog.html',
 })
 export class ReferDialogComponent {
   private readonly api = inject(LettersApiService);
+  readonly online = inject(LettersOfflineService).online;
+  private readonly firstField = viewChild<ElementRef<HTMLElement>>('firstField');
 
   readonly letterId = input.required<number>();
   readonly parentTask = input<number | null>(null);
@@ -37,8 +42,12 @@ export class ReferDialogComponent {
   readonly busy = signal(false);
   readonly error = signal('');
 
-  onDueSelect(ev: any): void {
-    this.dueAt.set(ev?.gregorian ? String(ev.gregorian).slice(0, 10) : null);
+  constructor() {
+    afterNextRender(() => this.firstField()?.nativeElement.querySelector('input')?.focus());
+  }
+
+  onDueSelect(ev: DatePickEvent): void {
+    this.dueAt.set(gregorianDay(ev));
   }
 
   clearDue(): void {
@@ -47,7 +56,7 @@ export class ReferDialogComponent {
   }
 
   submit(): void {
-    if (this.busy()) return;
+    if (this.busy() || !this.online()) return;
     const ids = this.targets.value.filter(v => v.type === 'user').map(v => Number(v.id)).filter(Boolean);
     if (!ids.length) {
       this.error.set('دست‌کم یک گیرنده انتخاب کنید.');

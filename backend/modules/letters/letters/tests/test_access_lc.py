@@ -180,7 +180,8 @@ class SecretariatRegisterTests(LettersBase):
     def test_confidential_row_is_covered(self):
         normal = self.registered(subject='موضوع عادی')
         secret = self.registered(confidentiality=Letter.CONF_SECRET, subject='موضوع سری',
-                                 body=[{'type': 'paragraph', 'runs': [{'text': 'متن سری'}]}], number_display='1405/د/9')
+                                 body=[{'type': 'paragraph', 'runs': [{'text': 'متن سری'}]}], number_display='1405/د/9',
+                                 external_number='EXT-SECRET-77')
         client = APIClient()
         client.force_authenticate(self.fresh(self.secretary))
         res = client.get('/api/letters/register/', {'company': self.co_a.pk})
@@ -191,6 +192,7 @@ class SecretariatRegisterTests(LettersBase):
         self.assertTrue(rows[secret.pk]['covered'])
         self.assertNotIn('موضوع سری', res.content.decode())
         self.assertNotIn('متن سری', res.content.decode())
+        self.assertNotIn('EXT-SECRET-77', res.content.decode())
         # صفحهٔ خود نامهٔ سری برای دبیرخانه 404 است
         self.assertEqual(client.get(f'/api/letters/{secret.pk}/').status_code, 404)
 

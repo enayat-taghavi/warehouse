@@ -51,7 +51,7 @@ describe('LetterViewPage — نمایش نامه', () => {
       imports: [LetterViewPage],
       providers: [
         provideRouter([]), provideHttpClient(), provideHttpClientTesting(),
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: convertToParamMap({ id: '7' }), queryParamMap: convertToParamMap({}) } } },
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: '7' })), snapshot: { paramMap: convertToParamMap({ id: '7' }), queryParamMap: convertToParamMap({}) } } },
         { provide: LettersApiService, useValue: api },
         { provide: LettersOfflineService, useValue: { online } },
         { provide: WebSocketService, useValue: { documentChanges$: () => changes$, liveRefresh$: () => NEVER } },

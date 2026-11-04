@@ -52,7 +52,7 @@ describe('ReferralTreeComponent — درخت ارجاع', () => {
 
   it('در دسکتاپ همهٔ شاخه‌ها باز است و تورفتگی دارد', () => {
     expect(q('[data-testid="ref-3"]')).not.toBeNull();
-    expect(q('[data-testid="ref-1"] [role="group"] [data-testid="ref-2"]')).not.toBeNull();
+    expect(q('[data-testid="ref-1"] ul [data-testid="ref-2"]')).not.toBeNull();
   });
 
   it('در موبایل شاخه‌ها بسته شروع می‌شوند و با دکمه باز می‌شوند', () => {
@@ -63,7 +63,7 @@ describe('ReferralTreeComponent — درخت ارجاع', () => {
     toggle.click();
     fixture.detectChanges();
     expect(q('[data-testid="ref-2"]')).not.toBeNull();
-    expect(q('[data-testid="ref-1"]')!.getAttribute('aria-expanded')).toBe('true');
+    expect(q('[data-testid="toggle-1"]')!.getAttribute('aria-expanded')).toBe('true');
   });
 
   it('«انجام شد» و «رؤیت شد» فقط برای کار باز خود کاربر', () => {

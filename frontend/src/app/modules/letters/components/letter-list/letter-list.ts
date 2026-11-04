@@ -11,7 +11,7 @@ import { ActiveCompanyService } from '../../../../core/services/active-company.s
 import { isServerUnreachable } from '../../../../core/services/server-reachability';
 import {
   EMPTY_LETTER_FILTERS, LETTER_CONFIDENTIALITY_LABELS, LETTER_DOC_TYPE, LETTER_KIND_LABELS, LETTER_STATUS_LABELS,
-  LETTER_TABS, LetterConfidentiality, LetterFilters, LetterKind, LetterProject, LetterRow, LetterStatus, LetterTab,
+  LETTER_TABS, CircularRow, LetterConfidentiality, LetterFilters, LetterKind, LetterProject, LetterRow, LetterStatus, LetterTab,
 } from '../../letters.models';
 import { LettersApiService } from '../../services/letters-api.service';
 import { LettersOfflineService, LocalDraft } from '../../services/letters-offline';
@@ -163,8 +163,8 @@ export class LetterListPage implements OnInit {
   }
 
   /** بخشنامهٔ نخوانده (فقط زیرزبانهٔ «بخشنامه‌ها» `is_read` دارد) */
-  unread(r: LetterRow): boolean {
-    return (r as LetterRow & { is_read?: boolean }).is_read === false;
+  unread(r: LetterRow | CircularRow): boolean {
+    return 'is_read' in r && r.is_read === false;
   }
 
   openNew(): void {

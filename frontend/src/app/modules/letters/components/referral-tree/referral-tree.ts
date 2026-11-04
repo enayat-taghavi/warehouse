@@ -36,6 +36,7 @@ export class ReferralTreeComponent {
   readonly count = signal(0);
   readonly loading = signal(true);
   readonly error = signal<'offline' | 'error' | null>(null);
+  readonly stale = signal(false);
   readonly collapsed = signal<ReadonlySet<number>>(new Set());
   readonly replyFor = signal<number | null>(null);
   readonly busy = signal<number | null>(null);
@@ -70,11 +71,19 @@ export class ReferralTreeComponent {
         this.roots.set(roots);
         this.count.set((tree.referrals || []).length);
         this.error.set(null);
+        this.stale.set(false);
         this.loading.set(false);
       },
       error: err => {
         if (seq !== this.seq) return;
-        this.error.set(isServerUnreachable(err?.status ?? 0) ? 'offline' : 'error');
+        const unreachable = isServerUnreachable(err?.status ?? 0);
+        if (this.initialized && unreachable) {
+          // درخت نشان‌داده‌شده می‌ماند؛ فقط یادداشت «قدیمی»
+          this.stale.set(true);
+          this.loading.set(false);
+          return;
+        }
+        this.error.set(unreachable ? 'offline' : 'error');
         this.loading.set(false);
       },
     });

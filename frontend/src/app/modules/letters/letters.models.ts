@@ -149,11 +149,14 @@ export interface LetterWritePayload {
   revision?: number;
   subject: string;
   body: LetterBlock[];
-  confidentiality: LetterConfidentiality;
-  sign_mode: LetterSignMode;
-  project: number | null;
-  recipients: LetterRecipientRow[];
-  signers: LetterSignerInput[];
+  confidentiality?: LetterConfidentiality;
+  sign_mode?: LetterSignMode;
+  project?: number | null;
+  recipients?: LetterRecipientRow[];
+  signers?: LetterSignerInput[];
+  external_number?: string;
+  external_date?: string | null;
+  sender_party?: number | null;
 }
 
 // ─── فیلترهای فهرست (در آدرس صفحه) ─────────────────────────────────────────────────────
@@ -262,7 +265,6 @@ export interface RegisterRow {
 
 export interface CircularRow extends LetterRow { is_read: boolean }
 export interface AudienceEntry { scope: 'company' | 'section'; section_id?: number | null; section_name?: string }
-export interface LetterViewer { id?: number; user?: UserBrief | null; name?: string; viewed_at?: string }
 
 /** پیام خطای API (detail، message یا نخستین خطای فیلد) */
 export function errorText(body: any): string {

@@ -1,6 +1,6 @@
 <form class="bg-surface rounded-2xl border border-line shadow-sm p-4 flex flex-col gap-3 min-w-0" (submit)="$event.preventDefault(); submit()" aria-label="ارجاع نامه" data-testid="refer-dialog">
   <h2 class="text-sm font-black text-fg">{{ parentTask() ? 'ارجاع از کار من' : 'ارجاع نامه' }}</h2>
-  <div class="flex flex-col gap-1">
+  <div class="flex flex-col gap-1" #firstField>
     <span class="text-xs font-bold text-fg" id="refer-targets-label">گیرنده‌ها</span>
     <app-person-role-picker [formControl]="targets" [allowRoles]="false" [max]="maxTargets" placeholder="جست‌وجوی همکار" aria-labelledby="refer-targets-label" />
   </div>
@@ -20,7 +20,7 @@
                  class="w-full rounded-xl border border-line bg-surface px-3 py-2 text-sm cursor-pointer" readonly>
         </ng-persian-datepicker>
         @if (dueAt()) {
-          <button type="button" class="btn-icon-sm btn-icon-slate min-w-[40px] min-h-[40px]" title="پاک کردن مهلت" aria-label="پاک کردن مهلت" (click)="clearDue()">×</button>
+          <button type="button" class="btn-icon-sm btn-icon-slate min-w-[40px] min-h-[40px]" title="پاک کردن مهلت" aria-label="پاک کردن مهلت" (click)="clearDue()"><svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg></button>
         }
       </div>
     </div>
@@ -32,8 +32,11 @@
   @if (error()) {
     <p class="text-xs rounded-xl px-3 py-2 bg-rose-50 text-rose-800" role="alert" data-testid="refer-error">{{ error() }}</p>
   }
+  @if (!online()) {
+    <p class="text-xs rounded-xl px-3 py-2 bg-amber-50 text-amber-900" role="status">آفلاین؛ پس از اتصال بفرستید</p>
+  }
   <div class="flex gap-2 justify-end">
     <button appAction="close" label="انصراف" type="button" (click)="cancelled.emit()"></button>
-    <button appAction="forward" label="ارجاع" type="submit" data-testid="refer-submit" [disabled]="busy()"></button>
+    <button appAction="forward" label="ارجاع" type="submit" data-testid="refer-submit" [disabled]="busy() || !online()"></button>
   </div>
 </form>

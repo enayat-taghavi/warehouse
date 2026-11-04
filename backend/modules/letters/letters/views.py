@@ -390,6 +390,9 @@ def _replay_create(user, existing, raw):
     if base != existing.revision and _same_text(existing, raw):
         return Response(_detail(existing, user, duplicate=True), status=status.HTTP_200_OK)
     payload = {k: v for k, v in raw.items() if k not in ('company', 'client_temp_id')}
+    if base != existing.revision:
+        # پروژه در نامهٔ قفل‌شده بی‌بررسی نسخه نوشته می‌شود؛ پخش کهنه نباید پروژهٔ تازه‌تر را برگرداند
+        payload.pop('project', None)
     payload['revision'] = base
     response = LetterDetailView().patch_raw(user, existing.pk, payload)
     response.data['duplicate'] = True

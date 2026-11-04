@@ -1,4 +1,5 @@
-import { Component, DestroyRef, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnInit, computed, effect, inject, signal, untracked } from '@angular/core';
+import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
 import { ActionButtonComponent } from '../../../../shared/components/action-button/action-button.component';
@@ -28,7 +29,7 @@ export type SecretariatTab = 'register' | 'pending' | 'incoming';
   standalone: true,
   imports: [
     RouterLink, ActionButtonComponent, CommandCenterComponent, LoadingSkeletonComponent, StatusBadgeComponent,
-    TabBarComponent, PersianDatePipe, RegisterIncomingComponent,
+    TabBarComponent, PersianDatePipe, RegisterIncomingComponent, SvgIconDirective,
   ],
   templateUrl: './secretariat.html',
 })
@@ -61,15 +62,34 @@ export class SecretariatPage implements OnInit {
     : this.rows());
   private seq = 0;
 
+  private autoTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor() {
+    // شرکت فعال (در شروع خالی یا بعداً عوض‌شده) دفتر را دوباره می‌خواند
+    effect(() => {
+      this.company();
+      untracked(() => this.reload());
+    });
+    this.destroyRef.onDestroy(() => { if (this.autoTimer) clearTimeout(this.autoTimer); });
+  }
+
   ngOnInit(): void {
-    this.reload();
-    this.ws.documentChanges$([LETTER_DOC_TYPE]).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.reload(true));
-    this.ws.liveRefresh$().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.reload(true));
+    this.ws.documentChanges$([LETTER_DOC_TYPE]).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.autoReload());
+    this.ws.liveRefresh$().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.autoReload());
   }
 
   @HostListener('window:focus')
   onFocus(): void {
-    this.reload(true);
+    this.autoReload();
+  }
+
+  /** بازخوانی خودکار: ۵۰۰ میلی‌ثانیه تجمیع؛ هنگام «ثبت وارده» انجام نمی‌شود */
+  private autoReload(): void {
+    if (this.autoTimer) clearTimeout(this.autoTimer);
+    this.autoTimer = setTimeout(() => {
+      this.autoTimer = null;
+      if (this.tab() !== 'incoming') this.reload(true);
+    }, 500);
   }
 
   onTab(id: string): void {

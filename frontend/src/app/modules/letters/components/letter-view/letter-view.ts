@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, Injector, OnInit, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -7,6 +7,7 @@ import { CommandCenterComponent } from '../../../../shared/components/command-ce
 import { ConfirmDialogService } from '../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { LoadingSkeletonComponent } from '../../../../shared/components/loading-skeleton/loading-skeleton.component';
 import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
+import { AttachmentsComponent } from '../../../../shared/components/attachments/attachments.component';
 import { PersianDatePipe } from '../../../../shared/pipes/persian-date.pipe';
 import { SvgIconDirective } from '../../../../shared/icons/svg-icon.directive';
 import { WebSocketService } from '../../../../core/http/websocket.service';
@@ -43,6 +44,7 @@ type FormAction = 'return' | 'void' | 'send';
   imports: [
     RouterLink, ReactiveFormsModule, ActionButtonComponent, CommandCenterComponent, LoadingSkeletonComponent,
     StatusBadgeComponent, PersianDatePipe, SvgIconDirective, ReferralTreeComponent, ReferDialogComponent,
+    AttachmentsComponent,
   ],
   templateUrl: './letter-view.html',
 })
@@ -54,6 +56,8 @@ export class LetterViewPage implements OnInit {
   private readonly ws = inject(WebSocketService);
   private readonly confirm = inject(ConfirmDialogService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  private readonly actionField = viewChild<ElementRef<HTMLElement>>('actionField');
 
   readonly kindLabels = LETTER_KIND_LABELS;
   readonly statusLabels = LETTER_STATUS_LABELS;
@@ -82,8 +86,18 @@ export class LetterViewPage implements OnInit {
   private loadSeq = 0;
 
   ngOnInit(): void {
-    this.id = Number(this.route.snapshot.paramMap.get('id')) || 0;
-    this.load();
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
+      const id = Number(params.get('id')) || 0;
+      if (this.id && id !== this.id) {
+        // رفتن از نامه‌ای به نامهٔ دیگر: وضعیت نامهٔ پیشین را نگه ندار
+        this.letter.set(null);
+        this.viewers.set(null);
+        this.formAction.set(null);
+        this.referOpen.set(false);
+      }
+      this.id = id;
+      this.load();
+    });
     // زنده: فقط همین نامه؛ رویداد زبانهٔ خود را سرویس هسته کنار می‌گذارد (client_tab_id)
     this.ws.documentChanges$([LETTER_DOC_TYPE]).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(ev => {
       if (Number(ev.doc_id) === this.id) this.load(true);
@@ -122,7 +136,8 @@ export class LetterViewPage implements OnInit {
   private loadViewers(): void {
     this.api.viewers(this.id).subscribe({
       next: res => this.viewers.set((res.viewers || []).map(v => ({ name: v.user?.name || '—', at: v.first_viewed_at, times: v.times }))),
-      error: () => this.viewers.set(null),
+      // فقط 403 بخش را پنهان می‌کند؛ در قطعی یا خطای دیگر دادهٔ قبلی می‌ماند
+      error: err => { if (err?.status === 403) this.viewers.set(null); },
     });
   }
 
@@ -172,6 +187,14 @@ export class LetterViewPage implements OnInit {
     this.reason.setValue('');
     this.actionError.set('');
     this.formAction.set(this.formAction() === action ? null : action);
+    if (this.formAction()) {
+      afterNextRender(() => this.actionField()?.nativeElement.focus(), { injector: this.injector });
+    }
+  }
+
+  /** نگاشت تراز ذخیره‌شده (right/center/justify) به تراز منطقی تا در RTL و LTR درست بماند */
+  align(a: string | undefined): string | null {
+    return a === 'right' ? 'start' : a === 'left' ? 'end' : a || null;
   }
 
   submitForm(): void {

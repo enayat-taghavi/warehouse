@@ -271,7 +271,7 @@ def register_row(letter, full_view: bool):
     row = {
         'id': letter.pk, 'kind': letter.kind, 'status': letter.status, 'number_display': letter.number_display,
         'registered_at': letter.registered_at, 'confidentiality': letter.confidentiality,
-        'external_number': letter.external_number, 'covered': not full_view,
+        'external_number': letter.external_number if full_view else '', 'covered': not full_view,
     }
     if full_view:
         row.update(subject=letter.subject, author=_user_brief(letter.author))

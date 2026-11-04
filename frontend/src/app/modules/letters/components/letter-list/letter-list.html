@@ -9,7 +9,7 @@
     </div>
   </app-command-center>
 
-  @if (filters().tab !== 'projects') {
+  @if (filters().tab !== 'projects' && filters().tab !== 'circulars') {
     <div class="bg-surface rounded-2xl border border-line shadow-sm p-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 min-w-0" role="search" aria-label="فیلتر نامه‌ها">
       <div class="col-span-2 sm:col-span-3 lg:col-span-2 flex items-center gap-1 min-w-0">
         <label class="sr-only" for="letters-q">جست‌وجوی موضوع یا شماره</label>
@@ -147,7 +147,7 @@
       @for (r of rows(); track r.id) {
         <li class="min-w-0">
           <a class="block bg-surface rounded-2xl border border-line shadow-sm p-3 min-w-0 break-words focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-             [routerLink]="['/app/letters', r.id, 'edit']">
+             [routerLink]="['/app/letters', r.id]">
             <span class="flex items-center gap-2 min-w-0">
               <span class="text-sm font-bold text-fg flex-1 min-w-0 break-words">{{ r.subject || 'بی‌موضوع' }}@if (unread(r)) {<span class="ms-1 text-[10px] rounded-full bg-indigo-50 text-indigo-700 px-1.5 py-0.5">نخوانده</span>}</span>
               <span class="text-[11px] rounded-full bg-surface-muted border border-line px-2 py-0.5 text-fg-muted shrink-0">{{ statusLabels[r.status] }}</span>
@@ -164,7 +164,7 @@
       }
     </ul>
 
-    @if (pages() > 1) {
+    @if (pages() > 1 && filters().tab !== 'circulars') {
       <nav class="flex items-center justify-center gap-2" aria-label="صفحه‌بندی">
         <button type="button" class="btn-icon-square btn-icon-slate min-w-[40px] min-h-[40px]" [disabled]="filters().page <= 1"
                 aria-label="صفحهٔ قبل" title="صفحهٔ قبل" (click)="setFilter({ page: filters().page - 1 })">

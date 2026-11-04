@@ -163,6 +163,13 @@ class ReplayCreateTests(SigningBase):
         self.assertEqual(Letter.objects.get(pk=d.pk).subject, 'موضوع آزمایشی')
         self.assertTrue(LetterDraftCopy.objects.filter(letter_id=d.pk, subject='late').exists())
 
+    def test_stale_replay_does_not_overwrite_project(self):
+        tid = uuid.uuid4()
+        d = self.registered(client_temp_id=tid, project=self.proj_a)
+        res = self.create(client_temp_id=str(tid), body=NEW_BODY, subject='late', project=None)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(Letter.objects.get(pk=d.pk).project_id, self.proj_a.pk)
+
 
 class RegisterExportTests(SigningBase):
     def test_export_has_two_header_rows_and_voided_rows(self):
