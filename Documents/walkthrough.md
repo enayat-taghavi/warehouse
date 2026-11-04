@@ -19,3 +19,9 @@
 - **فایل گزارش و سناریوها:** [walkthrough_responsive_clickable_ergonomics.md](file:///e:/warehouse%20project/Documents/Responsive_Clickable_Ergonomics/walkthrough_responsive_clickable_ergonomics.md)
 - **وضعیت نهایی:** اسناد پس از بازبینی دوم ۱۴۰۵/۰۷/۱۸ (ماژولار و آیکون یکسان) اصلاح شد؛ در انتظار تایید انسانی برای شروع گام ۰
 
+
+
+## بازطراحی چت به سبک تلگرام (Chat Telegram Redesign)
+- **پوشهٔ مستندات:** [Documents/Chat_Telegram_Redesign/](file:///e:/comanager/Documents/Chat_Telegram_Redesign/)
+- **سند گزارش اجرا:** [walkthrough_chat_telegram_redesign.md](file:///e:/comanager/Documents/Chat_Telegram_Redesign/walkthrough_chat_telegram_redesign.md)
+- **وضعیت:** هنوز اجرا نشده است

@@ -25,3 +25,15 @@
 - **وضعیت وظایف:** بازبینی دوم ۱۴۰۵/۰۷/۱۸: ۱۴ گام (۰ تا ۱۳) و ۸۶ ردیف هم‌شماره با جدول‌های طرح؛ هیچ گامی آغاز نشده
 
 
+
+
+## بازطراحی ناوبری موبایل: نوار برند بالا، هدر ثابت و نوار تب‌های پایین (Mobile Navigation & Top Brand Bar)
+- **پوشهٔ مستندات:** [Documents/Mobile_Navigation_And_Top_Brand_Bar/](file:///e:/comanager/Documents/Mobile_Navigation_And_Top_Brand_Bar/)
+- **فایل وظایف مرتبط:** [task_mobile_navigation.md](file:///e:/comanager/Documents/Mobile_Navigation_And_Top_Brand_Bar/task_mobile_navigation.md)
+- **وضعیت فعلی:** تدوین‌شده در ۴ فاز؛ آمادهٔ اجرا در چت جدید
+
+
+## بازطراحی چت به سبک تلگرام (Chat Telegram Redesign)
+- **پوشهٔ مستندات:** [Documents/Chat_Telegram_Redesign/](file:///e:/comanager/Documents/Chat_Telegram_Redesign/)
+- **سند فهرست کار:** [task_chat_telegram_redesign.md](file:///e:/comanager/Documents/Chat_Telegram_Redesign/task_chat_telegram_redesign.md)
+- **وضعیت فعلی:** ۰ از ۱۰ فاز؛ در انتظار تأیید طرح

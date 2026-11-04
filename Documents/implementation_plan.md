@@ -32,3 +32,17 @@
 - **وضعیت:** بازبینی دوم ۱۴۰۵/۰۷/۱۸: طرح ماژولار شد (جعبه‌ابزار مشترک و فرهنگ آیکون یکسان)؛ ۸۶ ردیف در ۱۴ گام کوچک با پایلوت؛ در انتظار تایید کاربر برای شروع گام ۰
 
 
+
+
+## بازطراحی ناوبری موبایل: نوار برند بالا، هدر ثابت و نوار تب‌های پایین (Mobile Navigation & Top Brand Bar)
+- **پوشهٔ مستندات:** [Documents/Mobile_Navigation_And_Top_Brand_Bar/](file:///e:/comanager/Documents/Mobile_Navigation_And_Top_Brand_Bar/)
+- **فایل طرح اجرایی:** [implementation_plan_mobile_navigation.md](file:///e:/comanager/Documents/Mobile_Navigation_And_Top_Brand_Bar/implementation_plan_mobile_navigation.md)
+- **فایل وظایف:** [task_mobile_navigation.md](file:///e:/comanager/Documents/Mobile_Navigation_And_Top_Brand_Bar/task_mobile_navigation.md)
+- **وضعیت:** آمادهٔ اجرا (در انتظار دستور شروع در گفت‌وگوی جدید)
+
+
+## بازطراحی چت به سبک تلگرام (Chat Telegram Redesign)
+- **پوشهٔ مستندات:** [Documents/Chat_Telegram_Redesign/](file:///e:/comanager/Documents/Chat_Telegram_Redesign/)
+- **سند طرح اجرایی:** [implementation_plan_chat_telegram_redesign.md](file:///e:/comanager/Documents/Chat_Telegram_Redesign/implementation_plan_chat_telegram_redesign.md)
+- **خلاصه:** صفحهٔ کامل `/app/chat` با استفادهٔ مشترک از کامپوننت کشو، پوستهٔ ظاهری تلگرامی، تعامل‌ها (کشیدن برای پاسخ، ایموجی محلی، پیش‌نویس، انتخاب چندتایی)، و چهار فاز بک‌اند با مهاجرت فقط‌افزودنی: واکنش، بازارسال، سنجاق و آخرین بازدید. انتشار فقط روی app و soft یک‌جا در پایان.
+- **وضعیت:** در انتظار تأیید کاربر
