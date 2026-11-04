@@ -7,6 +7,7 @@ app_name = 'letters'
 urlpatterns = [
     path('', views.LetterListCreateView.as_view(), name='letter-list'),
     path('register/', views.SecretariatRegisterView.as_view(), name='letter-register'),
+    path('register/export/', views.SecretariatRegisterExportView.as_view(), name='letter-register-export'),
     path('projects/', views.LetterProjectsView.as_view(), name='letter-projects'),
     path('link-kinds/', views.LinkKindsView.as_view(), name='letter-link-kinds'),
     path('parties/', views.PartiesView.as_view(), name='letter-parties'),

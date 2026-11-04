@@ -569,17 +569,30 @@ class SecretariatRegisterView(APIView):
     permission_classes = (IsAuthenticated, LettersPermission)
 
     def get(self, request):
-        user = request.user
-        company_id = _company_param(request)
-        if not user.is_superuser and (company_id not in access.member_company_ids(user)
-                                      or not access.has_company_perm(user, company_id, access.SECRETARIAT_PERM)):
-            raise PermissionDenied('دفتر دبیرخانهٔ این شرکت برای شما باز نیست.')
-        rows = list(Letter.objects.filter(company_id=company_id)
-                    .filter(Q(registered_at__isnull=False) | Q(kind=Letter.KIND_INCOMING))
-                    .select_related('author').order_by('-registered_at', '-id')[:500])
-        full = set(access.visible_letters(user, Letter.objects.filter(pk__in=[r.pk for r in rows]))
-                   .values_list('pk', flat=True))
-        return Response([register_row(r, r.pk in full) for r in rows])
+        return Response(register_rows(request))
+
+
+def register_rows(request):
+    user = request.user
+    company_id = _company_param(request)
+    if not user.is_superuser and (company_id not in access.member_company_ids(user)
+                                  or not access.has_company_perm(user, company_id, access.SECRETARIAT_PERM)):
+        raise PermissionDenied('دفتر دبیرخانهٔ این شرکت برای شما باز نیست.')
+    rows = list(Letter.objects.filter(company_id=company_id)
+                .filter(Q(registered_at__isnull=False) | Q(kind=Letter.KIND_INCOMING))
+                .select_related('author').order_by('-registered_at', '-id')[:500])
+    full = set(access.visible_letters(user, Letter.objects.filter(pk__in=[r.pk for r in rows]))
+               .values_list('pk', flat=True))
+    return [register_row(r, r.pk in full) for r in rows]
+
+
+class SecretariatRegisterExportView(APIView):
+    """GET /api/letters/register/export/?company= — خروجی اکسل دفتر (ل-ز، AGENTS §3): دو ردیف سربرگ، تاریخ شمسی."""
+    permission_classes = (IsAuthenticated, LettersPermission)
+
+    def get(self, request):
+        from .register_excel import register_workbook_response
+        return register_workbook_response(register_rows(request))
 
 
 class LetterProjectsView(APIView):

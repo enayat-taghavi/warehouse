@@ -162,3 +162,20 @@ class ReplayCreateTests(SigningBase):
         self.assertTrue(res.json()['conflict'])
         self.assertEqual(Letter.objects.get(pk=d.pk).subject, 'موضوع آزمایشی')
         self.assertTrue(LetterDraftCopy.objects.filter(letter_id=d.pk, subject='late').exists())
+
+
+class RegisterExportTests(SigningBase):
+    def test_export_has_two_header_rows_and_voided_rows(self):
+        import io
+
+        import openpyxl
+        self.registered(number_display='1405/1')
+        self.registered(number_display='1405/2', status=Letter.STATUS_VOID)
+        res = self.api(self.secretary).get('/api/letters/register/export/', {'company': self.co_a.pk})
+        self.assertEqual(res.status_code, 200)
+        ws = openpyxl.load_workbook(io.BytesIO(res.content)).active
+        self.assertEqual(ws.freeze_panes, 'A3')
+        self.assertEqual(ws.cell(2, 1).value, 'number_display')
+        self.assertEqual({ws.cell(r, 1).value for r in range(3, ws.max_row + 1)}, {'1405/1', '1405/2'})
+        self.assertEqual(self.api(self.author).get('/api/letters/register/export/',
+                                                   {'company': self.co_a.pk}).status_code, 403)
