@@ -254,7 +254,7 @@
           <label for="pam_opening_date" class="block text-xs font-bold text-fg mb-1">تاریخ موجودی اولیه</label>
           <div class="flex items-center h-10 border border-line rounded-xl ps-3 pe-1 bg-surface focus-within:ring-2 focus-within:ring-indigo-500 relative to-datepicker">
             <ng-persian-datepicker [(uiIsVisible)]="isFormDatePickerOpen" [dateInitValue]="false" (dateOnSelect)="onFormDateSelect($event)" class="w-full block relative cursor-pointer to-datepicker">
-              <input id="pam_opening_date" type="text" [formControl]="openingDateControl" (click)="isFormDatePickerOpen = !isFormDatePickerOpen"
+              <input id="pam_opening_date" type="text" [formControl]="openingDateControl" (click)="isFormDatePickerOpen = true"
                 placeholder="۱۴۰۵/۰۱/۰۱" class="w-full h-8 text-xs font-bold text-fg bg-transparent focus:outline-none cursor-pointer" />
             </ng-persian-datepicker>
             <button type="button" (click)="isFormDatePickerOpen = !isFormDatePickerOpen; $event.stopPropagation()" title="انتخاب تاریخ از تقویم" aria-label="انتخاب تاریخ از تقویم"
@@ -497,7 +497,7 @@
         <label for="pam_rec_date" class="block text-[11px] font-bold text-fg mb-1">پایان دوره <span class="text-rose-600" aria-hidden="true">*</span></label>
         <div class="flex items-center border border-line rounded-xl ps-2.5 pe-0.5 py-0.5 bg-surface focus-within:ring-2 focus-within:ring-indigo-500 relative to-datepicker">
           <ng-persian-datepicker [(uiIsVisible)]="isRecDatePickerOpen" [dateInitValue]="false" (dateOnSelect)="onRecDateSelect($event)" class="w-full block relative cursor-pointer to-datepicker">
-            <input id="pam_rec_date" type="text" [formControl]="recDateControl" (click)="isRecDatePickerOpen = !isRecDatePickerOpen"
+            <input id="pam_rec_date" type="text" [formControl]="recDateControl" (click)="isRecDatePickerOpen = true"
               placeholder="۱۴۰۵/۰۱/۳۱" class="w-full text-xs font-bold text-fg bg-transparent focus:outline-none cursor-pointer" />
           </ng-persian-datepicker>
           <button type="button" (click)="isRecDatePickerOpen = !isRecDatePickerOpen; $event.stopPropagation()" title="انتخاب تاریخ از تقویم" aria-label="انتخاب تاریخ از تقویم"
