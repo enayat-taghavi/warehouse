@@ -177,6 +177,7 @@ export class TrainingVideo {
   readonly pageErrors: string[] = [];
   readonly consoleErrors: string[] = [];
   readonly toastErrors: string[] = [];
+  readonly apiErrors: string[] = [];
   private captionTop: boolean;
 
   constructor(page: Page, info: TestInfo, captions: Captions) {
@@ -189,6 +190,12 @@ export class TrainingVideo {
     page.on('pageerror', err => this.pageErrors.push(String(err?.message ?? err)));
     page.on('console', msg => {
       if (msg.type() === 'error') this.consoleErrors.push(msg.text());
+    });
+    // failed API calls, so a red toast in the log names its request
+    page.on('response', res => {
+      if (res.status() >= 400 && res.url().includes('/api/')) {
+        this.apiErrors.push(`${res.request().method()} ${res.url().replace(/^https?:\/\/[^/]+/, '')} ${res.status()}`);
+      }
     });
   }
 
@@ -342,9 +349,14 @@ export class TrainingVideo {
   async pickCompany(name = 'شرکت نمایشی'): Promise<void> {
     const close = this.page.getByTitle('انصراف و بستن');
     if (!(await close.isVisible({ timeout: 5_000 }).catch(() => false))) return;
-    const option = this.page.getByRole('button', { name: new RegExp(name) }).first();
-    if (await option.isVisible().catch(() => false)) await this.act.click(option);
+    // company rows in the picker are clickable divs (not buttons)
+    const option = this.page
+      .locator('app-company-selection-modal div.cursor-pointer')
+      .filter({ has: this.page.locator('span.font-black', { hasText: new RegExp(name) }) })
+      .first();
+    if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) await this.act.click(option);
     else await this.act.click(close);
+    await expect(close).toBeHidden({ timeout: 15_000 });
   }
 
   /**
@@ -353,8 +365,12 @@ export class TrainingVideo {
    */
   async openMenu(label: string, fallbackPath: string): Promise<void> {
     if (this.mobile) {
-      const show = this.page.getByRole('button', { name: 'نمایش منو' });
-      if (await show.isVisible({ timeout: 3_000 }).catch(() => false)) await this.act.click(show);
+      // finance shell: hamburger «منوی کامل» in the brand bar; operations shell: «نمایش منو»
+      const show = this.page.getByRole('button', { name: /^(منوی کامل|نمایش منو)$/ }).first();
+      if (await show.isVisible({ timeout: 3_000 }).catch(() => false)) {
+        await this.act.click(show);
+        await this.page.waitForTimeout(400); // sidebar slide-in
+      }
     }
     const entry = this.page.getByRole('button', { name: label, exact: true }).first();
     if (await entry.isVisible({ timeout: 3_000 }).catch(() => false)) {
@@ -372,7 +388,7 @@ export class TrainingVideo {
   /** No red error toast and no uncaught page error (console errors are attached as a warning). */
   async expectNoErrors(): Promise<void> {
     await expect(this.page.locator('.toast.text-rose-400')).toHaveCount(0);
-    expect(this.toastErrors, 'red error toasts seen during the video').toEqual([]);
+    expect(this.toastErrors, `red error toasts seen during the video; failed API calls: ${this.apiErrors.join(' | ') || 'none'}`).toEqual([]);
     expect(this.pageErrors, 'uncaught page errors').toEqual([]);
   }
 
