@@ -1,88 +1,62 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, inject } from '@angular/core';
-import { PermissionService } from '../../../../../../core/services/permission.service';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { AuthService } from '../../../../../../core/auth/auth.service';
-import { StateService } from '../../../../../../core/services/state.service';
-import { ToastService } from '../../../../../../shared/components/toast/toast.component';
-import { PersonnelApiService } from '../../../../api/personnel-api.service';
-import { ProjectSection, PettyCashTransaction } from '../../../../models/personnel.model';
-import { TabBarComponent, TabDef } from '../../../../../../shared/components/tab-bar/tab-bar.component';
-import { ActionButtonComponent } from '../../../../../../shared/components/action-button/action-button.component';
-import { CommandCenterComponent } from '../../../../../../shared/components/command-center/command-center.component';
-import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
-import { STATUS_ICONS } from '../../../../../../shared/icons/semantic-icons';
-import { saveBlob } from '../../../../../../core/platform/file-output';
-import { WorkflowReasonDialogComponent } from '../../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
-import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
-import { PettyAccountManagerComponent } from './petty-account-manager/petty-account-manager';
-import { WebSocketService, patchDocumentRow } from '../../../../../../core/http/websocket.service';
+import { PermissionService } from '../../../../../core/services/permission.service';
+import { ToastService } from '../../../../../shared/components/toast/toast.component';
+import { PersonnelApiService } from '../../../api/personnel-api.service';
+import { ProjectSection, PettyCashTransaction } from '../../../models/personnel.model';
+import { TabBarComponent, TabDef } from '../../../../../shared/components/tab-bar/tab-bar.component';
+import { ActionButtonComponent } from '../../../../../shared/components/action-button/action-button.component';
+import { CommandCenterComponent } from '../../../../../shared/components/command-center/command-center.component';
+import { ModalComponent } from '../../../../../shared/components/modal/modal.component';
+import { saveBlob } from '../../../../../core/platform/file-output';
+import { WorkflowReasonDialogComponent } from '../../../../../shared/components/workflow-reason-dialog/workflow-reason-dialog.component';
+import { SvgIconDirective } from '../../../../../shared/icons/svg-icon.directive';
+import { PettyAccountManagerComponent } from '../accountant/accountant-petty-cash/petty-account-manager/petty-account-manager';
+import { WebSocketService, patchDocumentRow } from '../../../../../core/http/websocket.service';
+import { attendanceActionErrorMessage } from '../../../attendance-period-error';
+import { PettyPageConfig, PettyTabId, pettyPageConfig } from './petty-cash-page.config';
 
+/**
+ * صفحهٔ مشترک تن‌خواه حسابدار، مدیر و خزانه‌دار (طرح بازطراحی تن‌خواه ت۱/ت۲).
+ * نقش از data.pettyRole مسیر می‌آید؛ تفاوت‌های نقش فقط در petty-cash-page.config.ts است.
+ */
 @Component({
-  selector: 'app-accountant-petty-cash-hub',
+  selector: 'app-petty-cash-page',
   standalone: true,
   imports: [
     CommonModule,
     FormsModule,
-    ReactiveFormsModule,
     TabBarComponent,
     ActionButtonComponent,
     CommandCenterComponent,
+    ModalComponent,
     WorkflowReasonDialogComponent,
     PettyAccountManagerComponent,
     SvgIconDirective
   ],
-  templateUrl: './accountant-petty-cash.html',
-  styleUrl: './accountant-petty-cash.css'
+  templateUrl: './petty-cash-page.html'
 })
-export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
-  protected perm = inject(PermissionService);
+export class PettyCashPageComponent implements OnInit, OnDestroy {
+  @ViewChild(PettyAccountManagerComponent) accountManager?: PettyAccountManagerComponent;
+
+  readonly config: PettyPageConfig;
   loadError = '';
-  activeSubTab: 'pending_review' | 'settled' | 'all' | 'accounts' = 'pending_review';
+  activeSubTab: PettyTabId = 'all';
 
   // Memoized tabs for app-tab-bar (NG0100 prevention)
   private tabsKey = '';
   private tabsCache: TabDef[] = [];
   get tabs(): TabDef[] {
-    const sc = this.statusCounters;
-    const key = `${sc.pending_review}:${sc.settled}:${sc.all}`;
+    const key = this.config.tabs.map(t => this.counts[t.id] ?? '').join(':');
     if (key !== this.tabsKey) {
       this.tabsKey = key;
-      this.tabsCache = [
-        {
-          id: 'pending_review',
-          label: 'نیازمند ممیزی',
-          shortLabel: 'ممیزی',
-          icon: STATUS_ICONS.pending,
-          count: sc.pending_review,
-          tone: 'amber'
-        },
-        {
-          id: 'settled',
-          label: 'شارژ و تسویه شده',
-          shortLabel: 'تسویه',
-          icon: STATUS_ICONS.approved,
-          count: sc.settled,
-          tone: 'emerald'
-        },
-        {
-          id: 'all',
-          label: 'کل دفاتر تنخواه',
-          shortLabel: 'همه',
-          icon: STATUS_ICONS.all,
-          count: sc.all,
-          tone: 'slate'
-        },
-        {
-          id: 'accounts',
-          label: 'حساب‌های تنخواه',
-          shortLabel: 'حساب‌ها',
-          icon: ACCOUNTING_ENTITY_ICONS.pettyCash,
-          tone: 'indigo'
-        }
-      ];
+      // فقط زبانهٔ «بررسی/واریز» عدد منتظرها را دارد
+      this.tabsCache = this.config.tabs.map(({ statuses: _s, ...tab }) =>
+        tab.id === 'pending_review' ? { ...tab, count: this.counts.pending_review } : tab
+      );
     }
     return this.tabsCache;
   }
@@ -93,35 +67,47 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
   isLoadingSections = false;
 
   searchQuery = '';
-  fiscalYear = '1405';
 
   isLoading = false;
   allTransactions: PettyCashTransaction[] = [];
   items: PettyCashTransaction[] = [];
-
-  statusCounters = {
-    pending_review: 0,
-    settled: 0,
-    all: 0
-  };
+  counts: Partial<Record<PettyTabId, number>> = {};
 
   private routeSub?: Subscription;
   private docSub?: Subscription;
 
   constructor(
-    public auth: AuthService,
-    public state: StateService,
     private toast: ToastService,
     private personnelApi: PersonnelApiService,
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
+    protected perm: PermissionService,
     @Optional() private ws?: WebSocketService
-  ) {}
+  ) {
+    this.config = pettyPageConfig(this.route.snapshot?.data?.['pettyRole']);
+  }
+
+  get isAccountsTab(): boolean {
+    return this.activeSubTab === 'accounts';
+  }
+
+  private hasTab(id: unknown): id is PettyTabId {
+    return this.config.tabs.some(t => t.id === id);
+  }
+
+  private tabStatuses(id: PettyTabId): string[] | undefined {
+    return this.config.tabs.find(t => t.id === id)?.statuses;
+  }
+
+  /** ردیفی که اقدام نقش (تایید/عودت یا واریز) روی آن ممکن است */
+  isActionable(item: PettyCashTransaction): boolean {
+    return !!this.config.rowAction && (this.tabStatuses('pending_review') || []).includes(item.status);
+  }
 
   ngOnInit(): void {
     this.routeSub = this.route.queryParams.subscribe(params => {
-      if (params['tab'] && ['pending_review', 'settled', 'all', 'accounts'].includes(params['tab'])) {
+      if (this.hasTab(params['tab'])) {
         this.activeSubTab = params['tab'];
       }
       if (params['section_id']) {
@@ -195,16 +181,14 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
   }
 
   switchSubTab(tab: string): void {
-    if (tab !== 'pending_review' && tab !== 'settled' && tab !== 'all' && tab !== 'accounts') {
-      return;
-    }
+    if (!this.hasTab(tab)) return;
     this.activeSubTab = tab;
     this.syncUrlParams();
     this.updateViewAndCounters();
   }
 
   syncUrlParams(): void {
-    this.router.navigate([], {
+    void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: {
         tab: this.activeSubTab,
@@ -215,15 +199,35 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** تازه‌سازی یگانهٔ کادر بالا: در زبانهٔ «حساب‌ها» فهرست حساب‌ها، وگرنه اسناد */
+  refresh(): void {
+    if (this.isAccountsTab) {
+      this.accountManager?.load();
+      return;
+    }
+    this.fetchPettyCash();
+  }
+
+  /** «حساب جدید» کادر بالا: به زبانهٔ «حساب‌ها» می‌رود و فرم ساخت حساب را باز می‌کند */
+  newAccount(): void {
+    if (!this.config.canManageAccounts) return;
+    if (!this.isAccountsTab) {
+      this.switchSubTab('accounts');
+      this.cdr.detectChanges();
+    }
+    this.accountManager?.openCreate();
+  }
+
   /** silent: بازخوانی پس از رویداد زنده، بی‌نشانگر بارگذاری و بی‌پیام خطا */
   fetchPettyCash(silent = false): void {
     if (!silent) {
       this.isLoading = true;
       this.loadError = '';
     }
-    const params: { section_id?: number; search?: string } = {};
+    const params: { section_id?: number; search?: string; transaction_type?: string } = {};
     if (this.selectedSectionId) params.section_id = this.selectedSectionId;
     if (this.searchQuery?.trim()) params.search = this.searchQuery.trim();
+    if (this.config.transactionType) params.transaction_type = this.config.transactionType;
 
     this.personnelApi.getPettyCashTransactions(params).subscribe({
       next: (data: PettyCashTransaction[]) => {
@@ -235,11 +239,9 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
       },
       error: (err: any) => {
         this.isLoading = false;
-        if (!silent) {
-          this.loadError = 'دریافت اطلاعات انجام نشد.';
-        }
         if (silent) return;
-        this.toast.error('خطا در دریافت اسناد تنخواه حسابداری: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.loadError = 'دریافت اطلاعات انجام نشد.';
+        this.toast.error(attendanceActionErrorMessage(err, 'خطا در دریافت اسناد تن‌خواه.'));
         this.cdr.detectChanges();
       }
     });
@@ -247,22 +249,18 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
 
   updateViewAndCounters(): void {
     // legacy rows only; documents of the new workflows (statements, charges) go through the shared cartable
-    const list = this.allTransactions.filter(x => ['pending_supervisor', 'pending_accountant', 'pending_manager'].includes(x.status));
-    this.statusCounters = {
-      pending_review: list.filter(x => x.status === 'pending_accountant').length,
-      settled: list.filter(x => ['pending_manager'].includes(x.status)).length,
-      all: list.length
-    };
-
-    if (this.activeSubTab === 'pending_review') {
-      this.items = list.filter(x => x.status === 'pending_accountant');
-    } else if (this.activeSubTab === 'settled') {
-      this.items = list.filter(x => ['pending_manager'].includes(x.status));
-    } else {
-      this.items = list;
+    const list = this.allTransactions.filter(x => this.config.listStatuses.includes(x.status));
+    const counts: Partial<Record<PettyTabId, number>> = {};
+    for (const tab of this.config.tabs) {
+      if (tab.id === 'accounts') continue;
+      counts[tab.id] = tab.statuses ? list.filter(x => tab.statuses!.includes(x.status)).length : list.length;
     }
+    this.counts = counts;
+    const statuses = this.tabStatuses(this.activeSubTab);
+    this.items = statuses ? list.filter(x => statuses.includes(x.status)) : list;
   }
 
+  // ─── تایید و عودت حسابدار ───
   approveReplenishment(item: PettyCashTransaction): void {
     if (!item.id) return;
     this.isLoading = true;
@@ -319,11 +317,79 @@ export class AccountantPettyCashHubComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ─── واریز شارژ خزانه‌دار ───
+  refillModalOpen = false;
+  refillItem: PettyCashTransaction | null = null;
+  refillTrackingCode = '';
+  refillError = '';
+
+  /** خالص واریز (د۴): مبلغ منهای کسر بدهی؛ در شارژهای قدیمی همان مبلغ */
+  netAmount(item: PettyCashTransaction): number {
+    return item.net_amount !== null && item.net_amount !== undefined
+      ? Number(item.net_amount)
+      : Number(item.amount || 0) - this.offsetTotal(item);
+  }
+
+  offsetTotal(item: PettyCashTransaction): number {
+    return Number(item.offset_total || 0);
+  }
+
+  faAmount(value: string | number | null | undefined): string {
+    if (value === null || value === undefined || value === '') return '—';
+    const n = Number(value);
+    return Number.isFinite(n) ? new Intl.NumberFormat('fa-IR').format(n) : String(value);
+  }
+
+  refillPettyCash(item: PettyCashTransaction): void {
+    this.refillItem = item;
+    this.refillTrackingCode = '';
+    this.refillError = '';
+    this.refillModalOpen = true;
+  }
+
+  closeRefillModal(): void {
+    this.refillModalOpen = false;
+    this.refillItem = null;
+    this.refillError = '';
+  }
+
+  confirmRefill(): void {
+    const item = this.refillItem;
+    if (!item?.id) return;
+    const code = this.refillTrackingCode.trim();
+    if (!code) {
+      this.refillError = 'ورود شماره پیگیری الزامی است.';
+      return;
+    }
+    this.refillModalOpen = false;
+    this.refillError = '';
+    this.isLoading = true;
+    this.personnelApi.approvePettyCashTransaction(item.id, code).subscribe({
+      next: () => {
+        this.isLoading = false;
+        this.refillItem = null;
+        this.toast.success(`شارژ تن‌خواه به حساب ${item.custodian_name || ''} با موفقیت ثبت شد.`);
+        this.fetchPettyCash();
+      },
+      error: (err: any) => {
+        this.isLoading = false;
+        if (err?.status === 409 && err?.error?.code === 'ceiling_exceeded_at_pay') {
+          this.toast.error('مبلغ این شارژ از سقف تنخواه بیشتر شده است. شارژ باید برگردانده شود و دوباره برای مدیر ارسال شود.');
+        } else {
+          this.toast.error(attendanceActionErrorMessage(err, 'خطا در ثبت شارژ تن‌خواه.'));
+        }
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  // ─── اکسل ───
   exportExcel(): void {
     this.toast.info('در حال صدور فایل اکسل صورت‌ریز تن‌خواه‌گردان...');
+    const reviewStatuses = this.tabStatuses('pending_review');
     this.personnelApi.exportPettyCashTransactionsExcel({
       section_id: this.selectedSectionId || undefined,
-      status: this.activeSubTab === 'pending_review' ? 'pending_accountant' : undefined
+      status: this.activeSubTab === 'pending_review' && reviewStatuses?.length === 1 ? reviewStatuses[0] : undefined
     }).subscribe({
       next: (blob: Blob) => {
         void saveBlob(blob, `PettyCash_Audit_${this.selectedSectionId || 'all'}.xlsx`);

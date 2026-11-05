@@ -69,6 +69,8 @@ export interface TabDef {
   label: string;
   /** عنوان کوتاه یک‌کلمه‌ای برای موبایل */
   shortLabel?: string;
+  /** متن کامل اختیاری در title (راهنمای نشانگر) وقتی برچسب دیده‌شده کوتاه است */
+  title?: string;
   /** آیکون معنایی از فرهنگ آیکون (در mobile="icon" برای هر تب لازم است؛ وگرنه تب در موبایل خالی می‌ماند) */
   icon?: string;
   /** عدد شمارنده فراداده */
@@ -111,7 +113,7 @@ const TAB_INDICATOR_CLASSES: Record<'emerald' | 'amber' | 'rose', string> = {
           [attr.tabindex]="tab.id === focusableTabId() ? 0 : -1"
           [attr.id]="idPrefix() ? idPrefix() + '-tab-' + tab.id : null"
           [attr.aria-controls]="idPrefix() ? idPrefix() + '-panel-' + tab.id : null"
-          [attr.title]="mobile() === 'icon' ? tab.label : null"
+          [attr.title]="tab.title || (mobile() === 'icon' ? tab.label : null)"
           (click)="selectTab(tab.id)"
           (keydown)="onKeydown($event, idx)"
           class="relative inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs md:text-sm whitespace-nowrap cursor-pointer transition-all duration-150 select-none min-h-[40px] md:min-h-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"

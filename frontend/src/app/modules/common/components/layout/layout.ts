@@ -1525,6 +1525,7 @@ export class Layout implements OnInit, OnDestroy {
       'manager-fleet': 'تصویب ناوگان و تسویه (پنل مدیر)',
       'manager-budget': 'پایش و کنترل سقف بودجه بخش‌ها (پنل مدیر)',
       'manager-contracts': 'تصویب احکام کارگزینی و قراردادها (پنل مدیر)',
+      'manager-petty-cash': 'تن‌خواه (پنل مدیر)',
       'manager-reports': 'گزارشات جامع و تحلیلی مدیریت (پنل مدیر)',
       'treasurer-disbursements': 'پرداخت مکانیزه حقوق و کارکرد ناوگان (پنل خزانه‌دار)',
       'treasurer-invoices': 'پرداخت رسیدهای پرداخت (پنل خزانه‌دار)',

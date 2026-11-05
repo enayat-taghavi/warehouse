@@ -1,0 +1,265 @@
+<div class="min-h-screen bg-slate-50/50 p-3 md:p-6 space-y-4" dir="rtl">
+
+  <!-- ── کادر بالا (چسبان): زبانه‌ها + دکمه‌های کل صفحه ── -->
+  <app-command-center rowFrom="lg">
+    <div cc-tabs class="flex flex-wrap items-center gap-2 md:gap-3">
+      <app-tab-bar
+        [tabs]="tabs"
+        [active]="activeSubTab"
+        mobile="icon"
+        (activeChange)="switchSubTab($event)"
+      />
+    </div>
+
+    <div cc-actions class="flex flex-wrap items-center gap-2 justify-end">
+      <button
+        *ngIf="config.canManageAccounts"
+        type="button"
+        appAction="create"
+        label="حساب جدید"
+        hint="ساخت حساب تنخواه"
+        (click)="newAccount()"
+      ></button>
+
+      <button
+        *ngIf="config.canExport && !isAccountsTab"
+        type="button"
+        appAction="export-excel"
+        (click)="exportExcel()"
+      ></button>
+
+      <button
+        *ngIf="config.canManageAccounts && !isAccountsTab"
+        type="button"
+        appAction="import-excel"
+        (click)="importExcel()"
+      ></button>
+
+      <button
+        type="button"
+        appAction="refresh"
+        [busy]="isLoading"
+        (click)="refresh()"
+      ></button>
+    </div>
+  </app-command-center>
+
+  <!-- ── ردیف فیلتر: بخش و جستجو (حساب سطح شرکت است، پس در «حساب‌ها» پنهان) ── -->
+  <div *ngIf="!isAccountsTab" class="flex flex-wrap items-center gap-2 md:gap-3">
+    <div *ngIf="mySections.length > 0" class="flex items-center gap-1.5 bg-surface border border-line px-2.5 min-h-10 rounded-xl">
+      <label for="pc-section" class="text-[11px] font-bold text-slate-500">بخش:</label>
+      <select
+        id="pc-section"
+        [(ngModel)]="selectedSectionId"
+        (change)="onSectionChanged()"
+        class="bg-transparent text-xs font-black text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded cursor-pointer">
+        <option [ngValue]="null">همه بخش‌ها</option>
+        <option *ngFor="let sec of mySections" [ngValue]="sec.id">
+          {{ sec.project_name ? (sec.project_name + ' ◀ ') : '' }}{{ sec.name }}
+        </option>
+      </select>
+    </div>
+
+    <div class="relative flex-1 min-w-[220px] max-w-md">
+      <svg appIcon="search" class="w-4 h-4 text-slate-400 absolute start-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      <input
+        id="pc-search"
+        type="text"
+        [(ngModel)]="searchQuery"
+        (keyup.enter)="syncUrlParams(); fetchPettyCash()"
+        aria-label="جستجو بر اساس عنوان تنخواه یا مسئول تنخواه"
+        placeholder="جستجوی عنوان یا تنخواه‌گردان..."
+        class="w-full ps-9 pe-10 py-2 min-h-10 bg-surface border border-line rounded-xl text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all font-sans" />
+      <button
+        *ngIf="searchQuery"
+        type="button"
+        (click)="clearSearch()"
+        title="پاک‌سازی جستجو"
+        aria-label="پاک‌سازی جستجو"
+        class="absolute end-0 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl">
+        <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── حساب‌های تنخواه (سطح شرکت) ── -->
+  <app-petty-account-manager *ngIf="isAccountsTab"></app-petty-account-manager>
+
+  <!-- ── جدول اسناد ── -->
+  <div *ngIf="!isAccountsTab" class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">
+    <div *ngIf="isLoading" class="p-12 text-center space-y-3">
+      <div class="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+      <p class="text-xs text-slate-500 font-bold">در حال بارگذاری اسناد تنخواه...</p>
+    </div>
+
+    <div *ngIf="!isLoading && loadError" class="p-10 text-center space-y-3" role="alert">
+      <p class="text-xs font-bold text-rose-700">{{ loadError }}</p>
+      <button
+        type="button"
+        (click)="fetchPettyCash()"
+        class="min-h-10 px-3 text-xs font-bold rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">
+        تلاش دوباره
+      </button>
+    </div>
+
+    <div *ngIf="!isLoading && !loadError && items.length === 0" class="p-12 text-center space-y-3">
+      <div class="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto shadow-inner">
+        <svg appIcon="credit-card" class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+      </div>
+      <h3 class="text-sm font-black text-slate-800">سندی در این زبانه نیست</h3>
+      <p class="text-xs text-slate-500 max-w-md mx-auto">
+        سندهای تازهٔ تنخواه از «کارهای من» پیش می‌روند؛ اینجا سندهای قدیمی دیده می‌شوند.
+      </p>
+    </div>
+
+    <div *ngIf="!isLoading && !loadError && items.length > 0" class="overflow-x-auto">
+      <table class="w-full text-start text-xs">
+        <thead class="bg-slate-50 border-b border-slate-100 text-slate-500 font-black">
+          <tr>
+            <th class="p-3">ردیف</th>
+            <th class="p-3">عنوان سند</th>
+            <th class="p-3">تنخواه‌دار</th>
+            <th class="p-3">بخش</th>
+            <th class="p-3">دسته‌بندی</th>
+            <th class="p-3">مبلغ (ریال)</th>
+            <th class="p-3">تاریخ سند</th>
+            <th class="p-3">وضعیت</th>
+            <th class="p-3 text-center">عملیات</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 text-slate-700">
+          <tr *ngFor="let item of items; let idx = index" class="hover:bg-slate-50/70 transition-colors">
+            <td class="p-3 font-mono text-slate-400"><bdi>{{ faAmount(idx + 1) }}</bdi></td>
+            <td class="p-3 font-bold text-slate-800">{{ item.title }}</td>
+            <td class="p-3 font-bold text-slate-700">{{ item.custodian_name || item.counterparty_name || 'تنخواه‌دار' }}</td>
+            <td class="p-3 text-slate-600">{{ item.section_name || '—' }}</td>
+            <td class="p-3 text-slate-600">{{ item.category }}</td>
+            <td class="p-3 font-mono font-bold text-emerald-600"><bdi dir="ltr">{{ faAmount(item.amount) }}</bdi></td>
+            <td class="p-3 font-mono text-slate-600"><bdi dir="ltr">{{ item.transaction_date_shamsi }}</bdi></td>
+            <td class="p-3">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border"
+                [ngClass]="{
+                  'bg-amber-50 text-amber-800 border-amber-200': item.status === 'pending_supervisor',
+                  'bg-sky-50 text-sky-800 border-sky-200': item.status === 'pending_accountant',
+                  'bg-indigo-50 text-indigo-800 border-indigo-200': item.status === 'pending_manager',
+                  'bg-emerald-50 text-emerald-800 border-emerald-200': item.status === 'approved',
+                  'bg-rose-50 text-rose-800 border-rose-200': item.status === 'rejected',
+                  'bg-amber-100 text-amber-900 border-amber-300': item.status === 'revision_required'
+                }">
+                <ng-container [ngSwitch]="item.status">
+                  <span *ngSwitchCase="'pending_supervisor'" class="inline-flex items-center gap-1">
+                    <svg appIcon="clock" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    <span>در انتظار سرپرست</span>
+                  </span>
+                  <span *ngSwitchCase="'pending_accountant'" class="inline-flex items-center gap-1">
+                    <svg appIcon="briefcase" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    <span>در انتظار حسابداری</span>
+                  </span>
+                  <span *ngSwitchCase="'pending_manager'" class="inline-flex items-center gap-1">
+                    <svg appIcon="user" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    <span>در انتظار مدیریت</span>
+                  </span>
+                  <span *ngSwitchCase="'approved'" class="inline-flex items-center gap-1">
+                    <svg appIcon="check-circle" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    <span>تایید نهایی</span>
+                  </span>
+                  <span *ngSwitchCase="'revision_required'" class="inline-flex items-center gap-1">
+                    <svg appIcon="alert-triangle" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    <span>نیازمند بازنگری</span>
+                  </span>
+                  <span *ngSwitchCase="'rejected'" class="inline-flex items-center gap-1">
+                    <svg appIcon="x-circle" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                    <span>ابطال شده</span>
+                  </span>
+                  <span *ngSwitchDefault>{{ item.status }}</span>
+                </ng-container>
+              </span>
+            </td>
+            <td class="p-3 text-center">
+              <!-- حسابدار: تایید و عودت -->
+              <div *ngIf="config.rowAction === 'review' && isActionable(item) && perm.canWriteDocuments()" class="flex items-center justify-center gap-1.5">
+                <button
+                  type="button"
+                  appAction="approve"
+                  label="تایید"
+                  display="label"
+                  size="sm"
+                  (click)="approveReplenishment(item)"
+                ></button>
+                <button
+                  type="button"
+                  appAction="return"
+                  label="عودت"
+                  display="label"
+                  size="sm"
+                  (click)="rejectReplenishment(item)"
+                ></button>
+              </div>
+              <!-- خزانه‌دار: واریز شارژ با شمارهٔ پیگیری -->
+              <button
+                *ngIf="config.rowAction === 'deposit' && isActionable(item)"
+                type="button"
+                appAction="confirm"
+                label="واریز"
+                hint="واریز شارژ"
+                display="label"
+                size="sm"
+                (click)="refillPettyCash(item)"
+              ></button>
+              <div *ngIf="!isActionable(item)" class="text-[11px] text-slate-400 font-bold">
+                <span *ngIf="item.status === 'approved'" class="inline-flex items-center gap-1">
+                  <svg appIcon="check" class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                  <span>{{ item.receipt_number || 'تایید شده' }}</span>
+                </span>
+                <span *ngIf="item.status !== 'approved'">{{ config.rowAction ? 'ارسال شده' : 'از کارتابل' }}</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- دلیل عودت سند تنخواه -->
+  <app-workflow-reason-dialog
+    [open]="isReasonDialogOpen"
+    [title]="reasonDialogTitle"
+    confirmLabel="عودت سند"
+    [serverError]="reasonDialogServerError"
+    (confirmed)="onReasonConfirmed($event)"
+    (cancelled)="onReasonCancelled()"
+  ></app-workflow-reason-dialog>
+
+  <!-- شمارهٔ پیگیری واریز شارژ تنخواه -->
+  <app-modal [isOpen]="refillModalOpen" size="md" [title]="'واریز شارژ تنخواه ' + (refillItem?.custodian_name || '')" (closed)="closeRefillModal()">
+    <form class="space-y-3" (ngSubmit)="confirmRefill()" novalidate>
+      <dl *ngIf="refillItem" class="grid grid-cols-3 gap-2 text-[11px] bg-surface-muted rounded-xl p-3">
+        <div>
+          <dt class="text-fg-muted">مبلغ شارژ</dt>
+          <dd class="font-mono font-bold text-fg">{{ faAmount(refillItem.amount) }}</dd>
+        </div>
+        <div>
+          <dt class="text-fg-muted">کسر بدهی</dt>
+          <dd class="font-mono font-bold text-rose-700">{{ faAmount(offsetTotal(refillItem)) }}</dd>
+        </div>
+        <div>
+          <dt class="text-fg-muted">خالص واریز</dt>
+          <dd class="font-mono font-black text-emerald-700">{{ faAmount(netAmount(refillItem)) }}</dd>
+        </div>
+      </dl>
+      <p class="text-[11px] text-fg-muted">مبلغ خالص واریز را به حساب تنخواه‌گردان واریز کنید و شمارهٔ پیگیری را بنویسید (ریال).</p>
+      <div>
+        <label for="refill_tracking_code" class="block text-[11px] font-bold text-fg mb-1">شمارهٔ پیگیری واریز <span class="text-rose-600" aria-hidden="true">*</span></label>
+        <input id="refill_tracking_code" type="text" [(ngModel)]="refillTrackingCode" name="refillTrackingCode" aria-required="true"
+          [attr.aria-invalid]="refillError ? 'true' : 'false'"
+          class="w-full text-xs font-mono p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
+      </div>
+      <div *ngIf="refillError" role="alert" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">{{ refillError }}</div>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" appAction="close" label="انصراف" size="sm" (click)="closeRefillModal()"></button>
+        <button type="submit" appAction="confirm" label="ثبت واریز" display="label" size="sm"></button>
+      </div>
+    </form>
+  </app-modal>
+
+</div>

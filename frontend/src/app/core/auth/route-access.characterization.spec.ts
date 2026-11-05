@@ -70,6 +70,7 @@ const ROUTE_PERMISSIONS_LITERAL: Record<string, string[]> = {
   'accountant-counterparties': ['view_sys_payroll', 'perm_counterparty_manage', 'perm_approve_personnel_finance', 'admin_all'],
   'manager-dashboard': ['perm_manager_payment_authorize', 'perm_approve_personnel_manager', 'perm_approve_fleet_manager', 'admin_all'],
   'manager-budget': ['perm_manager_payment_authorize', 'admin_all'],
+  'manager-petty-cash': ['perm_manager_payment_authorize', 'admin_all'],
   'manager-contracts': ['perm_manager_payment_authorize', 'admin_all'],
   'manager-reports': ['perm_accounting_reports', 'admin_all'],
   'treasurer-disbursements': ['perm_treasury_disburse_action', 'admin_all'],
@@ -197,7 +198,7 @@ describe('Route Access Characterization Spec', () => {
     });
 
     it('validates Group 16: Manager Portal (manager-dashboard, manager-budget, manager-contracts, manager-reports)', () => {
-      for (const k of ['manager-dashboard', 'manager-budget', 'manager-contracts', 'manager-reports']) {
+      for (const k of ['manager-dashboard', 'manager-budget', 'manager-contracts', 'manager-reports', 'manager-petty-cash']) {
         verifyRouteKey(k);
       }
     });

@@ -74,6 +74,7 @@ export const MANAGER_NAV_ITEMS: NavItem[] = [
   { id: 'manager-approvals', label: 'کارتابل تاییدات', shortLabel: 'تاییدات', icon: ACCOUNTING_ENTITY_ICONS.approvals, permission: 'perm_approve_personnel_manager', module: 'accounting', isAccounting: true },
   { id: 'invoices', label: 'رسیدهای پرداخت', shortLabel: 'رسیدها', icon: ACCOUNTING_ENTITY_ICONS.invoices, permission: 'perm_manager_payment_authorize', module: 'accounting', isAccounting: true, sectionKey: 'accounting.invoices' },
   { id: 'manager-budget', label: 'کنترل بودجه', shortLabel: 'بودجه', icon: ACCOUNTING_ENTITY_ICONS.budget, permission: 'perm_manager_payment_authorize', module: 'accounting', isAccounting: true },
+  { id: 'manager-petty-cash', label: 'تن‌خواه', shortLabel: 'تن‌خواه', icon: ACCOUNTING_ENTITY_ICONS.pettyCash, permission: 'perm_manager_payment_authorize', module: 'accounting', isAccounting: true, sectionKey: 'accounting.petty_cash' },
   { id: 'manager-reports', label: 'گزارش‌های مدیریتی', shortLabel: 'گزارش‌ها', icon: PLATFORM_ENTITY_ICONS.reports, permission: 'perm_accounting_reports', module: 'accounting', isAccounting: true },
   { id: 'base-settings', label: 'تنظیمات پایه حقوق', shortLabel: 'تنظیمات پایه', icon: PLATFORM_ENTITY_ICONS.settings, permission: 'perm_manager_payment_authorize', module: 'accounting', isAccounting: true },
 ];

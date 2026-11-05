@@ -92,6 +92,7 @@ export const MODULE: WhFrontendModule = {
     { path: 'manager-dashboard', redirectTo: 'app/finance/manager-dashboard', pathMatch: 'full' },
     { path: 'manager-budget', redirectTo: 'app/finance/manager-budget', pathMatch: 'full' },
     { path: 'manager-contracts', redirectTo: 'app/finance/manager-contracts', pathMatch: 'full' },
+    { path: 'manager-petty-cash', redirectTo: 'app/finance/manager-petty-cash', pathMatch: 'full' },
     { path: 'manager-reports', redirectTo: 'app/finance/manager-reports', pathMatch: 'full' },
     { path: 'treasurer', redirectTo: 'app/finance/treasurer-disbursements', pathMatch: 'full' },
     { path: 'treasurer-disbursements', redirectTo: 'app/finance/treasurer-disbursements', pathMatch: 'full' },

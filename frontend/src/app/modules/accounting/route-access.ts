@@ -67,6 +67,7 @@ export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
     'manager-dashboard': ['perm_manager_payment_authorize', 'perm_approve_personnel_manager', 'perm_approve_fleet_manager', 'admin_all'],
     'manager-budget': ['perm_manager_payment_authorize', 'admin_all'],
     'manager-contracts': ['perm_manager_payment_authorize', 'admin_all'],
+    'manager-petty-cash': ['perm_manager_payment_authorize', 'admin_all'],
     'manager-reports': ['perm_accounting_reports', 'admin_all'],
     'treasurer-disbursements': ['perm_treasury_disburse_action', 'admin_all'],
     'treasurer-invoices': ['perm_treasury_disburse_action', 'admin_all'],

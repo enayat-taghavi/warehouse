@@ -173,6 +173,7 @@ describe('accounting role menus spec (step 3.5-c)', () => {
       'manager-approvals',
       'invoices',
       'manager-budget',
+      'manager-petty-cash',
       'manager-reports',
       'base-settings'
     ]);

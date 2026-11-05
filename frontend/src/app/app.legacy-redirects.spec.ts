@@ -73,6 +73,7 @@ const FORMER_ROOT_REDIRECTS: [string, string][] = [
   ['manager-dashboard', 'app/finance/manager-dashboard'],
   ['manager-budget', 'app/finance/manager-budget'],
   ['manager-contracts', 'app/finance/manager-contracts'],
+  ['manager-petty-cash', 'app/finance/manager-petty-cash'],
   ['manager-reports', 'app/finance/manager-reports'],
   ['treasurer', 'app/finance/treasurer-disbursements'],
   ['treasurer-disbursements', 'app/finance/treasurer-disbursements'],
