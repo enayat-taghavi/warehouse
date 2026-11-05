@@ -121,6 +121,22 @@ class SeedVideoDemoTests(TestCase):
         self._run(purge=True)
         self.assertFalse(PettyCashAccount.objects.filter(pk=account.pk).exists())
 
+    def test_purge_breaks_petty_handover_cycle(self):
+        # فیلم ۴-ج حساب را به تنخواه‌گردان تازه تحویل می‌دهد؛ دو حساب دوطرفه با PROTECT به هم بسته می‌شوند
+        from personnel.models import PettyCashAccount
+
+        self._run(base=True, with_petty_account=True)
+        old = PettyCashAccount.objects.get(company__code='DEMO-VID', custodian__username='demo_employee')
+        new = PettyCashAccount.objects.create(
+            company=old.company, custodian=get_user_model().objects.get(username='demo_employee2'),
+            ceiling_amount=0, opening_balance=0, opening_balance_date='1405/01/01', handover_from=old)
+        old.is_active = False
+        old.handover_to = new
+        old.save(update_fields=['is_active', 'handover_to'])
+        self._run(purge=True)
+        self.assertFalse(Company.objects.filter(code='DEMO-VID').exists())
+        self.assertFalse(PettyCashAccount.objects.filter(pk__in=(old.pk, new.pk)).exists())
+
     def test_with_petty_approver_and_second_company_and_purge(self):
         from personnel.models import PettyCashAccount
 

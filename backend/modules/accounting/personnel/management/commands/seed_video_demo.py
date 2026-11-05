@@ -421,4 +421,7 @@ class Command(BaseCommand):
 
     def _delete_company(self, company):
         """حذف شرکت نمایشی با همهٔ اسنادش؛ بازدارنده‌ها فقط اگر از آن همین شرکت باشند پاک می‌شوند."""
+        from personnel.models import PettyCashAccount
+        # تحویل تنخواه (فیلم ۴-ج) دو حساب را دوطرفه با PROTECT به هم می‌بندد؛ بی‌شکستن این حلقه حذف بی‌پایان می‌شود
+        PettyCashAccount.objects.filter(company=company).update(handover_from=None, handover_to=None)
         self._delete_tree(company, company.pk)
