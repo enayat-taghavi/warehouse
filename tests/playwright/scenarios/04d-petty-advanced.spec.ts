@@ -193,7 +193,30 @@ test('video 4-d: petty cash approver, ceiling, two companies and debt', async ({
   await page.waitForTimeout(1500);
   await tv.expectNoErrors();
 
-  // ─── ۷. کارمند: شارژ دوم (باز می‌ماند تا تسویهٔ بدهی از آن کسر شود) ───
+  // ─── ۷. حسابدار: تطبیق نقد با کسری (پیش از شارژ دوم؛ با شارژ در جریان، تطبیق بسته است) ───
+  await tv.loginAs('demo_accountant');
+  await tv.pickCompany(FIRST_COMPANY);
+  await tv.openMenu('رسیدگی تن‌خواه', '/app/finance/accountant-petty-cash');
+  await openAccountsTab(tv, page);
+  const recAcc = firstCompanyCard(page);
+  await expect(recAcc).toBeVisible({ timeout: 30_000 });
+
+  await tv.say('shortage');
+  await tv.act.click(recAcc.getByRole('button', { name: 'تطبیق نقد' }));
+  const rec = page.getByRole('dialog').filter({ hasText: 'تطبیق نقد' });
+  await expect(rec.getByText(/موجودی دفتری فعلی/)).toBeVisible({ timeout: 30_000 });
+  const expected = await bookBalance(rec);
+  await tv.act.fill(rec.locator('#pam_rec_date'), todayShamsi(), { quick: true });
+  if (await page.locator('.datepicker-outer-container').isVisible().catch(() => false)) {
+    await rec.getByTitle('انتخاب تاریخ از تقویم').click();
+  }
+  await tv.fillAmount(rec.locator('#pam_rec_counted'), expected - 2_000_000);
+  await tv.act.fill(rec.locator('#pam_rec_note'), 'شمارش صندوق؛ دو میلیون ریال کسری');
+  await tv.act.click(rec.getByRole('button', { name: 'ثبت تطبیق' }));
+  await expect(rec).toBeHidden({ timeout: 30_000 });
+  await tv.expectNoErrors();
+
+  // ─── ۸. کارمند: شارژ دوم (باز می‌ماند تا تسویهٔ بدهی از آن کسر شود) ───
   await tv.loginAs('demo_employee');
   await tv.pickCompany(FIRST_COMPANY);
   await tv.openMenu('تن‌خواه من', '/app/finance/employee-petty-cash');
@@ -208,28 +231,13 @@ test('video 4-d: petty cash approver, ceiling, two companies and debt', async ({
   await expect(charge2).toBeHidden({ timeout: 30_000 });
   await tv.expectNoErrors();
 
-  // ─── ۸. حسابدار: کسری نقد، تسویه با کسر از شارژ، ابطال، کسر از حقوق ───
+  // ─── ۹. حسابدار: تسویه با کسر از شارژ، ابطال، کسر از حقوق ───
   await tv.loginAs('demo_accountant');
   await tv.pickCompany(FIRST_COMPANY);
   await tv.openMenu('رسیدگی تن‌خواه', '/app/finance/accountant-petty-cash');
   await openAccountsTab(tv, page);
   const acc = firstCompanyCard(page);
   await expect(acc).toBeVisible({ timeout: 30_000 });
-
-  await tv.say('shortage');
-  await tv.act.click(acc.getByRole('button', { name: 'تطبیق نقد' }));
-  const rec = page.getByRole('dialog').filter({ hasText: 'تطبیق نقد' });
-  await expect(rec.getByText(/موجودی دفتری فعلی/)).toBeVisible({ timeout: 30_000 });
-  const expected = await bookBalance(rec);
-  await tv.act.fill(rec.locator('#pam_rec_date'), todayShamsi(), { quick: true });
-  if (await page.locator('.datepicker-outer-container').isVisible().catch(() => false)) {
-    await rec.getByTitle('انتخاب تاریخ از تقویم').click();
-  }
-  await tv.fillAmount(rec.locator('#pam_rec_counted'), expected - 2_000_000);
-  await tv.act.fill(rec.locator('#pam_rec_note'), 'شمارش صندوق؛ دو میلیون ریال کسری');
-  await tv.act.click(rec.getByRole('button', { name: 'ثبت تطبیق' }));
-  await expect(rec).toBeHidden({ timeout: 30_000 });
-  await tv.expectNoErrors();
 
   // تسویهٔ بخشی از بدهی با کسر از شارژ بعدی
   await tv.say('offset');

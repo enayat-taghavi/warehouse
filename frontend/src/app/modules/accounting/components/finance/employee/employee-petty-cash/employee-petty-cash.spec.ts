@@ -2,7 +2,7 @@
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EmployeePettyCashHubComponent } from './employee-petty-cash';
-import { of, throwError } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 import {
   PettyCashTransaction,
   PettyCashBalanceSummary,
@@ -13,15 +13,33 @@ import {
 import { TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { PermissionService } from '../../../../../../core/services/permission.service';
+import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
 
 try {
   getTestBed().initTestEnvironment(BrowserTestingModule, platformBrowserTesting());
 } catch {}
 
+// کاربر تک‌شرکتی بی شرکت فعال (سرور شرکت را خودش می‌یابد)
+let activeCompanyStub: {
+  activeCompanyId: number | null;
+  activeCompany$: BehaviorSubject<{ id: number } | null>;
+  availableCompanies$: BehaviorSubject<{ id: number }[]>;
+  readonly availableCompanies: { id: number }[];
+};
+
 function __inCtx<T>(factory: () => T): T {
+  activeCompanyStub = {
+    activeCompanyId: null,
+    activeCompany$: new BehaviorSubject<{ id: number } | null>(null),
+    availableCompanies$: new BehaviorSubject<{ id: number }[]>([{ id: 5 }]),
+    get availableCompanies() { return this.availableCompanies$.value; },
+  };
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
-    providers: [{ provide: PermissionService, useValue: { canWriteDocuments: () => true } }],
+    providers: [
+      { provide: PermissionService, useValue: { canWriteDocuments: () => true } },
+      { provide: ActiveCompanyService, useValue: activeCompanyStub },
+    ],
   });
   return TestBed.runInInjectionContext(factory);
 }
@@ -220,6 +238,18 @@ describe('EmployeePettyCashHubComponent Vitest Suite', () => {
     expect(component.balanceSummary).toEqual(sampleBalance);
     expect(component.balanceSummary?.current_balance).toBe(50000000);
     expect(component.balanceSummary?.debt).toBe(2000000);
+  });
+
+  it('2b. without an active company the balance waits until the company list says one company or a company is picked', () => {
+    activeCompanyStub.availableCompanies$.next([]);
+    component.loadBalanceSummary();
+    activeCompanyStub.availableCompanies$.next([{ id: 5 }, { id: 6 }]);
+    component.loadBalanceSummary();
+    expect(mockPersonnelApi.getPettyCashBalance).not.toHaveBeenCalled();
+
+    activeCompanyStub.activeCompanyId = 6;
+    component.loadBalanceSummary();
+    expect(mockPersonnelApi.getPettyCashBalance).toHaveBeenCalledWith(null, undefined, 6);
   });
 
   it('3. should filter transactions by an optional section', () => {
