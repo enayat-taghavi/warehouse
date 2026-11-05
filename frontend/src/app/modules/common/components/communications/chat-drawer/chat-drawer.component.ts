@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, input, signal, computed, effect, ViewChild, ElementRef, AfterViewChecked, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, input, signal, computed, effect, ViewChild, ElementRef, AfterViewChecked, HostListener, Injector, afterNextRender } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, NavigationEnd } from '@angular/router';
@@ -149,6 +149,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private http = inject(HttpClient);
+  private injector = inject(Injector);
   public pendingRouteConvId: string | null = null;
   /** سقف مؤثر حجم هر فایل به مگابایت (تنظیم سرور، پیش‌فرض ۱۰۰) */
   public maxUploadMb = signal<number>(CHAT_DEFAULT_MAX_FILE_MB);
@@ -244,7 +245,6 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     'text-teal-600',
   ];
 
-  private shouldScrollBottom = false;
   private typingTimeout: any = null;
   private typingIndicatorClearTimer: any = null;
 
@@ -472,12 +472,12 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     this.lastMsgKey = key;
     if (this.openedFresh && msgs.length > 0) {
       this.openedFresh = false;
-      this.shouldScrollBottom = true;
+      this.requestScrollBottom(true);
       return;
     }
     if (!changedTail || !last) return;
     if (last.is_me || this.isNearBottom()) {
-      this.shouldScrollBottom = true;
+      this.requestScrollBottom();
     } else if (!last.is_system) {
       this.showNewBtn.set(true);
     }
@@ -534,10 +534,6 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       if (el) el.scrollTop = this.restoreScroll.top + (el.scrollHeight - this.restoreScroll.height);
       this.restoreScroll = null;
     }
-    if (this.shouldScrollBottom) {
-      this.scrollToBottom();
-      this.shouldScrollBottom = false;
-    }
   }
 
   private isExpandingToPage = false;
@@ -570,16 +566,26 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
     if (this.audioEl) { this.audioEl.pause(); this.audioEl.removeAttribute('src'); this.audioEl = null; }
   }
 
-  private scrollToBottom(): void {
+  private scrollToBottom(instant = false): void {
     try {
       if (this.messagesScrollContainer) {
         const el = this.messagesScrollContainer.nativeElement;
         el.scrollTo({
           top: el.scrollHeight,
-          behavior: 'smooth'
+          behavior: instant ? 'auto' : 'smooth'
         });
       }
     } catch (err) {}
+  }
+
+  /**
+   * پایین رفتن بعد از رندر بعدی، وقتی پیام‌ها واقعاً در DOM هستند.
+   * ngAfterViewChecked برای این کار قابل اتکا نیست: تغییر سیگنال پیام‌ها فقط نمای همین کامپوننت را تازه می‌کند
+   * و هوک تا رویداد بعدی (مثلاً یک کلیک) اجرا نمی‌شد. باز کردن گفتگو بی‌انیمیشن است؛ اسکرول نرم روی رشتهٔ بلند
+   * با تغییر ارتفاع محتوا وسط راه قطع می‌شد.
+   */
+  private requestScrollBottom(instant = false): void {
+    afterNextRender(() => this.scrollToBottom(instant), { injector: this.injector });
   }
 
   private async loadContacts(warehouseId?: number): Promise<void> {
@@ -1594,8 +1600,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
       }
     } finally {
       this.isSending.set(false);
-      this.shouldScrollBottom = true;
-      setTimeout(() => this.scrollToBottom(), 60);
+      this.requestScrollBottom();
     }
   }
 

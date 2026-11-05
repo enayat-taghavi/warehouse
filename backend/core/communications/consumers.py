@@ -448,7 +448,9 @@ class ChatConsumer(WsAuthLifecycleMixin, AsyncWebsocketConsumer):
                     updated, effective_id, conv = await record_delivery_ack(self.user, conv_id, msg_id)
                     if updated and conv:
                         from .broadcast import broadcast_message_delivered_ws
-                        broadcast_message_delivered_ws(conv, self.user, effective_id)
+                        # برودکست هم کوئری دیتابیس دارد و هم async_to_sync؛ هر دو داخل حلقهٔ async خطا می‌دهند،
+                        # پس در نخ همگام اجرا می‌شود تا دو تیک خاکستری همان لحظه به فرستنده برسد
+                        await database_sync_to_async(broadcast_message_delivered_ws)(conv, self.user, effective_id)
 
 
         except Exception as e:

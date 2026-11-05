@@ -285,6 +285,42 @@ class WebSocketSecurityTestCase(TransactionTestCase):
 
         await comm_outsider.disconnect()
 
+    async def test_delivery_ack_reaches_sender_live(self):
+        """اعلان تحویل گیرنده از وب‌سوکت باید همان لحظه دو تیک خاکستری را به فرستنده برساند"""
+        from channels.db import database_sync_to_async
+        msg = await database_sync_to_async(Message.objects.create)(
+            conversation=self.direct_conv, sender=self.manager_wh1, text="پیام تست تحویل"
+        )
+
+        comm_sender = WebsocketCommunicator(application, f"/ws/chat/?token={self.get_jwt_token(self.manager_wh1)}")
+        comm_recipient = WebsocketCommunicator(application, f"/ws/chat/?token={self.get_jwt_token(self.staff_wh1)}")
+        self.assertTrue((await comm_sender.connect())[0])
+        self.assertTrue((await comm_recipient.connect())[0])
+
+        await comm_recipient.send_json_to({
+            'type': 'delivery_ack',
+            'conversation_id': str(self.direct_conv.id),
+            'message_id': msg.id,
+        })
+
+        delivered = None
+        for _ in range(10):
+            try:
+                event = await comm_sender.receive_json_from(timeout=2)
+            except Exception:
+                break
+            if event.get('event') == 'chat.message_delivered':
+                delivered = event.get('data')
+                break
+
+        self.assertIsNotNone(delivered, "رویداد دو تیک خاکستری به فرستنده نرسید")
+        self.assertEqual(delivered.get('conversation_id'), str(self.direct_conv.id))
+        self.assertEqual(delivered.get('user_id'), self.staff_wh1.id)
+        self.assertEqual(str(delivered.get('last_delivered_message_id')), str(msg.id))
+
+        await comm_sender.disconnect()
+        await comm_recipient.disconnect()
+
     async def test_chat_disabled_rejects_websocket(self):
         """هنگامی که چت غیرفعال است، اتصال وب‌سوکت باید با کد ۴۰۰۳ بسته شود"""
         from settings_core.models import SystemSetting

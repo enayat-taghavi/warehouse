@@ -57,7 +57,9 @@ class Phase8DeliveryAndBulkDeleteTestCase(BaseCommsTestCase):
 
         # ۲) پرسنل لیست مکالمات خود را واکشی می‌کند (مشابه لود شدن تب چت در فرانت یا رسیدن اعلان)
         self.client.force_authenticate(user=self.staff_wh1)
-        res_conv = self.client.get(self.conv_url)
+        # برودکست تحویل در on_commit اجرا می‌شود؛ بدون اجرای آن، خطای واقعی فهرست گفتگوها پنهان می‌ماند
+        with self.captureOnCommitCallbacks(execute=True):
+            res_conv = self.client.get(self.conv_url)
         self.assertEqual(res_conv.status_code, status.HTTP_200_OK)
 
         # بررسی به‌روزرسانی last_delivered_message در دیتابیس
