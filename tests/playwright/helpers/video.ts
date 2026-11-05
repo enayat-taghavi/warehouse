@@ -348,7 +348,10 @@ export class TrainingVideo {
   /** The «turn on notifications» bar covers the bottom of the page; «بعداً» hides it. */
   async dismissPushBanner(): Promise<void> {
     const later = this.page.getByRole('button', { name: 'بعداً', exact: true });
-    if (await later.isVisible({ timeout: 4_000 }).catch(() => false)) await this.act.click(later);
+    if (!(await later.isVisible({ timeout: 4_000 }).catch(() => false))) return;
+    // the company picker of a two-company user covers the bar; pickCompany dismisses the bar after picking
+    if (await this.companyPickerHeading().isVisible().catch(() => false)) return;
+    await this.act.click(later);
   }
 
   /** The company picker may open after entering the finance app; pick the demo company or close it. */
@@ -372,6 +375,7 @@ export class TrainingVideo {
       this.pickingCompany = false;
     }
     await expect(heading).toBeHidden({ timeout: 15_000 });
+    await this.dismissPushBanner();
   }
 
   /** Company last picked; the picker of a two-company user can open late (after the shell loads its companies) or again after a reload. */
@@ -428,6 +432,7 @@ export class TrainingVideo {
       }
     }
     const entry = this.page.getByRole('button', { name: label, exact: true }).first();
+    let entryReachable = true;
     if (this.mobile && await entry.isVisible({ timeout: 3_000 }).catch(() => false)) {
       // the picker handler may reload the page after the hamburger click: the sidebar is closed again
       const inView = await expect(entry).toBeInViewport({ timeout: 1_500 }).then(() => true, () => false);
@@ -436,8 +441,10 @@ export class TrainingVideo {
         await this.act.click(show);
         await this.page.waitForTimeout(400);
       }
+      // still off screen (sidebar closed again): use the route instead of a tap that can never land
+      if (!inView) entryReachable = await expect(entry).toBeInViewport({ timeout: 2_000 }).then(() => true, () => false);
     }
-    if (await entry.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    if (entryReachable && await entry.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await this.act.click(entry);
     } else {
       if (this.mobile) {
