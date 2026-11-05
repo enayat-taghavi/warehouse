@@ -350,8 +350,10 @@ export class TrainingVideo {
     const later = this.page.getByRole('button', { name: 'بعداً', exact: true });
     if (!(await later.isVisible({ timeout: 4_000 }).catch(() => false))) return;
     // the company picker of a two-company user covers the bar; pickCompany dismisses the bar after picking
-    if (await this.companyPickerHeading().isVisible().catch(() => false)) return;
-    await this.act.click(later);
+    if (await this.companyPickerHeading().isVisible({ timeout: 2_000 }).catch(() => false)) return;
+    // the picker can still open between the check and the click: never let the bar block the video
+    if (!(await later.click({ trial: true, timeout: 2_000 }).then(() => true, () => false))) return;
+    await this.act.click(later).catch(() => undefined);
   }
 
   /** The company picker may open after entering the finance app; pick the demo company or close it. */
@@ -434,25 +436,23 @@ export class TrainingVideo {
     const entry = this.page.getByRole('button', { name: label, exact: true }).first();
     let entryReachable = true;
     if (this.mobile && await entry.isVisible({ timeout: 3_000 }).catch(() => false)) {
-      // the picker handler may reload the page after the hamburger click: the sidebar is closed again
-      const inView = await expect(entry).toBeInViewport({ timeout: 1_500 }).then(() => true, () => false);
-      const show = this.page.getByRole('button', { name: /^(منوی کامل|نمایش منو)$/ }).first();
-      if (!inView && await show.isVisible().catch(() => false)) {
-        await this.act.click(show);
-        await this.page.waitForTimeout(400);
+      // test if entry is actually tappable; if not or off-screen, try opening the menu or fall back to route
+      entryReachable = await entry.tap({ trial: true, timeout: 1_500 }).then(() => true, () => false);
+      if (!entryReachable) {
+        const show = this.page.getByRole('button', { name: /^(منوی کامل|نمایش منو)$/ }).first();
+        if (await show.isVisible().catch(() => false)) {
+          await this.act.click(show);
+          await this.page.waitForTimeout(400);
+          entryReachable = await entry.tap({ trial: true, timeout: 1_500 }).then(() => true, () => false);
+        }
       }
-      // still off screen (sidebar closed again): use the route instead of a tap that can never land
-      if (!inView) entryReachable = await expect(entry).toBeInViewport({ timeout: 2_000 }).then(() => true, () => false);
     }
     if (entryReachable && await entry.isVisible({ timeout: 3_000 }).catch(() => false)) {
-      await this.act.click(entry);
+      await this.act.click(entry).catch(async () => {
+        await this.page.goto(fallbackPath);
+      });
     } else {
-      if (this.mobile) {
-        const hide = this.page.getByRole('button', { name: 'بستن منو' });
-        // a closed sidebar slides off screen but stays "visible": tap «بستن منو» only when it is really on screen
-        const hideInView = await expect(hide).toBeInViewport({ timeout: 1_000 }).then(() => true, () => false);
-        if (hideInView) await this.act.click(hide);
-      }
+      // the page load closes a half-open mobile sidebar too (a tap on «بستن منو» mid-slide can miss the viewport)
       await this.page.goto(fallbackPath);
     }
     await this.page.waitForLoadState('domcontentloaded');
