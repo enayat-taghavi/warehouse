@@ -352,6 +352,7 @@ export class TrainingVideo {
   /** The company picker may open after entering the finance app; pick the demo company or close it. */
   async pickCompany(name = 'شرکت نمایشی', waitMs = 8_000): Promise<void> {
     this.lastCompany = name;
+    await this.watchCompanyPicker();
     // without an active company (user of two companies) the picker has no close button, so wait on its heading
     const heading = this.companyPickerHeading();
     if (!(await heading.isVisible({ timeout: waitMs }).catch(() => false))) return;
@@ -361,13 +362,42 @@ export class TrainingVideo {
       .locator('app-company-selection-modal div.cursor-pointer')
       .filter({ has: this.page.locator('span.font-black', { hasText: new RegExp(name) }) })
       .first();
-    if (await option.isVisible({ timeout: 5_000 }).catch(() => false)) await this.act.click(option);
-    else await this.act.click(close);
+    this.pickingCompany = true;
+    try {
+      if (await option.isVisible({ timeout: 5_000 }).catch(() => false)) await this.act.click(option);
+      else await this.act.click(close);
+    } finally {
+      this.pickingCompany = false;
+    }
     await expect(heading).toBeHidden({ timeout: 15_000 });
   }
 
   /** Company last picked; the picker of a two-company user can open late (after the shell loads its companies) or again after a reload. */
   private lastCompany: string | undefined;
+  private pickerWatched = false;
+  private pickingCompany = false;
+
+  /**
+   * The picker opens whenever a page loads the company list without an active company, at any moment;
+   * Playwright runs this handler before each action while the picker is visible, so it never blocks a click.
+   */
+  private async watchCompanyPicker(): Promise<void> {
+    if (this.pickerWatched) return;
+    this.pickerWatched = true;
+    const heading = this.companyPickerHeading();
+    await this.page.addLocatorHandler(heading, async () => {
+      // pickCompany itself is clicking a row: let its own (visible, narrated) click go on
+      if (!this.lastCompany || this.pickingCompany) return;
+      const option = this.page
+        .locator('app-company-selection-modal div.cursor-pointer')
+        .filter({ has: this.page.locator('span.font-black', { hasText: new RegExp(this.lastCompany) }) })
+        .first();
+      if (await option.isVisible().catch(() => false)) await option.click();
+      else await this.page.getByTitle('انصراف و بستن').click().catch(() => undefined);
+      await expect(heading).toBeHidden({ timeout: 15_000 });
+      await this.page.waitForLoadState('domcontentloaded').catch(() => undefined);
+    }, { noWaitAfter: true });
+  }
 
   private companyPickerHeading(): Locator {
     return this.page.locator('app-company-selection-modal').getByText('انتخاب شرکت کاری', { exact: true });
