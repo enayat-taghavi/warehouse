@@ -3,6 +3,7 @@ import {
   Component,
   DestroyRef,
   computed,
+  effect,
   forwardRef,
   inject,
   input,
@@ -128,6 +129,7 @@ export class PersonRolePickerComponent implements ControlValueAccessor {
   readonly allowRoles = input(true);
   readonly max = input<number | null>(null);
   readonly placeholder = input('جست‌وجوی شخص یا نقش');
+  readonly companyId = input<number | null>(null);
 
   readonly inputId = `prp-input-${nextPickerId}`;
   readonly listId = `prp-list-${nextPickerId++}`;
@@ -162,7 +164,12 @@ export class PersonRolePickerComponent implements ControlValueAccessor {
   private onTouched: () => void = () => {};
 
   constructor() {
-    this.network.state$.pipe(takeUntilDestroyed()).subscribe((s) => this.online.set(s !== 'offline'));
+    effect(() => {
+      // با تغییر شرکت، نتایج قبلی پاک می‌شود
+      this.companyId();
+      this.results.set([]);
+      this.activeIndex.set(-1);
+    });
     this.search$
       .pipe(
         debounceTime(300),
@@ -191,9 +198,14 @@ export class PersonRolePickerComponent implements ControlValueAccessor {
   private fetch(q: string) {
     const term = q.trim();
     const skip = { context: new HttpContext().set(SKIP_GLOBAL_ERROR_TOAST, true) };
+    let params = new HttpParams().set('search', term);
+    const cid = this.companyId();
+    if (cid) {
+      params = params.set('company_id', String(cid));
+    }
     const users$ = this.allowUsers()
       ? this.http
-          .get<any>(`${environment.apiUrl}/auth/users/`, { ...skip, params: new HttpParams().set('search', term) })
+          .get<any>(`${environment.apiUrl}/auth/users/`, { ...skip, params })
           .pipe(
             map((res) =>
               unwrap(res).map(

@@ -82,7 +82,7 @@ class UserViewSet(DeleteImpactMixin, viewsets.ModelViewSet):
                 if cid not in set(get_user_allowed_companies(user).values_list('id', flat=True)):
                     from rest_framework.exceptions import PermissionDenied
                     raise PermissionDenied('شما به کاربران این شرکت دسترسی ندارید.')
-            qs = qs.filter(Q(company_accesses__company_id=cid) | Q(is_superuser=True)).distinct()
+            qs = qs.filter(Q(company_accesses__company_id=cid) | Q(personnel_profile__company_id=cid) | Q(is_superuser=True)).distinct()
         elif user and user.is_authenticated and not user.is_superuser:
             # کاربر عادی بدون فیلتر صریح: فقط کاربران شرکت‌های مشترک مجاز را مشاهده می‌کند
             from accounts.scope import get_visible_users_for_user

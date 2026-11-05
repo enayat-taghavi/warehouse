@@ -166,11 +166,54 @@
   <!-- ── پنجرهٔ ساخت و ویرایش حساب ── -->
   <app-modal [isOpen]="modal === 'form'" size="lg" [title]="current ? 'ویرایش حساب تنخواه' : 'حساب تنخواه جدید'" (closed)="closeModal()">
     <form class="space-y-3" (ngSubmit)="saveAccount()" novalidate>
+      <!-- ۱. انتخاب صریح شرکت عامل تنخواه -->
       <div *ngIf="!current">
-        <label class="block text-[11px] font-bold text-fg mb-1">تنخواه‌گردان <span class="text-rose-600" aria-hidden="true">*</span></label>
-        <app-person-role-picker [allowRoles]="false" [max]="1" placeholder="جست‌وجوی تنخواه‌گردان" [(ngModel)]="custodianPick" name="custodian"></app-person-role-picker>
+        <label for="pam_company_select" class="block text-[11px] font-bold text-fg mb-1">
+          شرکت عامل تنخواه <span class="text-rose-600" aria-hidden="true">*</span>
+        </label>
+        <select
+          id="pam_company_select"
+          [(ngModel)]="form.companyId"
+          (ngModelChange)="onCompanyChange($event)"
+          name="companyId"
+          class="w-full text-xs font-bold p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
+          <option [ngValue]="null" disabled>-- انتخاب شرکت عامل --</option>
+          <option *ngFor="let c of availableCompanies" [ngValue]="c.id">
+            {{ c.name }} (کد: {{ c.code }})
+          </option>
+        </select>
       </div>
-      <div *ngIf="current" class="text-xs font-bold text-fg">تنخواه‌گردان: {{ current.custodian_name }}</div>
+
+      <!-- ۲. انتخاب تنخواه‌گردان محدود به همان شرکت -->
+      <div *ngIf="!current">
+        <div class="flex items-center justify-between mb-1">
+          <label class="block text-[11px] font-bold text-fg">
+            تنخواه‌گردان <span class="text-rose-600" aria-hidden="true">*</span>
+          </label>
+          <span *ngIf="form.companyId" class="text-[10px] text-fg-muted font-bold">
+            (فقط کاربران و پرسنل شرکت انتخاب‌شده)
+          </span>
+          <span *ngIf="!form.companyId" class="text-[10px] text-amber-700 font-bold">
+            ⚠ ابتدا شرکت عامل را انتخاب کنید
+          </span>
+        </div>
+        <app-person-role-picker
+          [allowRoles]="false"
+          [max]="1"
+          [companyId]="form.companyId"
+          [placeholder]="form.companyId ? 'جست‌وجوی تنخواه‌گردان در این شرکت...' : 'ابتدا شرکت عامل را انتخاب کنید'"
+          [(ngModel)]="custodianPick"
+          name="custodian">
+        </app-person-role-picker>
+      </div>
+
+      <div *ngIf="current" class="flex items-center gap-3 text-xs font-bold text-fg bg-surface-muted/60 p-2.5 rounded-xl border border-line">
+        <span *ngIf="current.company_name" class="inline-flex items-center gap-1 text-indigo-700">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building" aria-hidden="true"></svg>
+          <span>شرکت: {{ current.company_name }}</span>
+        </span>
+        <span>تنخواه‌گردان: {{ current.custodian_name }}</span>
+      </div>
 
       <div *ngIf="isManager">
         <label for="pam_ceiling" class="block text-[11px] font-bold text-fg mb-1">سقف تنخواه (ریال)</label>

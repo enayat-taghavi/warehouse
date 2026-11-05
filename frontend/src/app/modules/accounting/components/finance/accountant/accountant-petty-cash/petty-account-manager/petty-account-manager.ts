@@ -5,6 +5,7 @@ import { Subscription } from 'rxjs';
 import { NgPersianDatepickerModule } from 'ng-persian-datepicker';
 import { AuthService } from '../../../../../../../core/auth/auth.service';
 import { ActiveCompanyService } from '../../../../../../../core/services/active-company.service';
+import { Company } from '../../../../../../../core/models/company.model';
 import { isServerUnreachable } from '../../../../../../../core/services/server-reachability';
 import { NetworkStatusService } from '../../../../../../../core/services/network-status.service';
 import { ToastService } from '../../../../../../../shared/components/toast/toast.component';
@@ -110,7 +111,7 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
 
   // فرم حساب
   custodianPick: PersonRoleValue[] = [];
-  form = { ceiling: null as string | number | null, opening: null as string | number | null, openingDate: '', reason: '', card: '', bank_name: '', sheba: '', description: '' };
+  form = { companyId: null as number | null, ceiling: null as string | number | null, opening: null as string | number | null, openingDate: '', reason: '', card: '', bank_name: '', sheba: '', description: '' };
   isFormDatePickerOpen = false;
   readonly openingDateControl = new FormControl<string>('');
   private original = { opening: 0, openingDate: '', card: '', sheba: '' };
@@ -155,11 +156,26 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
   get canManageAccounts(): boolean { return this.hasPerm(PERM_PETTY_MANAGE) || this.isManager; }
   private get companyId(): number | null { return this.activeCompany?.activeCompanyId ?? null; }
 
+  get availableCompanies(): Company[] {
+    const list = this.activeCompany?.availableCompanies || [];
+    if (list.length > 0) return list;
+    const manageable = this.activeCompany?.manageableCompanies?.() || [];
+    if (manageable.length > 0) return manageable;
+    const current = this.activeCompany?.activeCompany;
+    return current ? [current] : [];
+  }
+
   ngOnInit(): void {
     this.netSub = this.network.state$.subscribe(() => {
       this.isOnline = this.network.isOnline;
       this.cdr.markForCheck();
     });
+    if (this.activeCompany && this.availableCompanies.length === 0) {
+      this.activeCompany.loadAvailableCompanies().subscribe({
+        next: () => this.cdr.markForCheck(),
+        error: () => {}
+      });
+    }
     this.dateControlSubs.add(
       this.openingDateControl.valueChanges.subscribe(val => {
         this.form.openingDate = val || '';
@@ -294,9 +310,26 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
     this.recDateControl.setValue('', { emitEvent: false });
   }
 
+  onCompanyChange(companyId: number | null): void {
+    this.form.companyId = companyId;
+    this.custodianPick = [];
+    this.cdr.markForCheck();
+  }
+
   openCreate(): void {
     this.custodianPick = [];
-    this.form = { ceiling: null, opening: null, openingDate: '', reason: '', card: '', bank_name: '', sheba: '', description: '' };
+    const defaultCompanyId = this.companyId || (this.availableCompanies[0]?.id ?? null);
+    this.form = {
+      companyId: defaultCompanyId,
+      ceiling: null,
+      opening: null,
+      openingDate: '',
+      reason: '',
+      card: '',
+      bank_name: '',
+      sheba: '',
+      description: ''
+    };
     this.openingDateControl.setValue('', { emitEvent: false });
     this.original = { opening: 0, openingDate: '', card: '', sheba: '' };
     this.isBankDropdownOpen = false;
@@ -308,6 +341,7 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
   openEdit(acc: PettyCashAccount): void {
     const openingDate = acc.opening_balance_date || '';
     this.form = {
+      companyId: acc.company || null,
       ceiling: acc.ceiling_amount ?? null,
       opening: acc.opening_balance ?? 0,
       openingDate,
@@ -581,6 +615,7 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
     if (!this.isOnline) { this.modalError = OFFLINE_TITLE; return; }
     const opening = this.num(this.form.opening);
     if (opening > 0 && !this.form.openingDate) { this.modalError = 'برای موجودی اولیه، تاریخ آن لازم است.'; return; }
+    if (!this.current && !this.form.companyId) { this.modalError = 'لطفاً شرکت عامل تنخواه را انتخاب کنید.'; return; }
     if (!this.current && !this.custodianPick[0]) { this.modalError = 'تنخواه‌گردان را انتخاب کنید.'; return; }
     if (this.form.sheba !== this.original.sheba && this.shebaValidation && !this.shebaValidation.isValid) {
       this.modalError = this.shebaValidation.errorMessage || 'شماره شبا نامعتبر است.';
@@ -602,10 +637,11 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
     if (this.current?.id) {
       req = this.api.updatePettyCashAccount(this.current.id, body);
     } else {
+      const cid = this.form.companyId || this.companyId;
       body.custodian = Number(this.custodianPick[0].id);
-      if (this.companyId) {
-        body.company = this.companyId;
-        (body as any).company_id = this.companyId;
+      if (cid) {
+        body.company = cid;
+        (body as any).company_id = cid;
       }
       if (!this.isManager) body.ceiling_amount = 0;
       req = this.api.createPettyCashAccount(body);
