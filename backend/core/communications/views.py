@@ -23,6 +23,7 @@ from rest_framework.views import APIView
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.throttling import ScopedRateThrottle
+from channels.layers import get_channel_layer
 
 from accounts.models import AuditLog
 from notifications.models import Notification
