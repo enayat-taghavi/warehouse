@@ -44,13 +44,13 @@
   <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
     <div class="p-4 border-b border-slate-100 flex items-center gap-2 bg-slate-50/60">
       <span class="w-2.5 h-2.5 rounded-full bg-teal-600"></span>
-      <h2 class="text-sm font-black text-slate-900">رسیدهای پرداخت تاییدشده توسط حسابدار و مدیر (آماده تسویه بانکی)</h2>
+      <h2 class="text-sm font-black text-slate-900">دستورهای پرداخت تاییدشده توسط حسابدار و مدیر (آماده تسویه بانکی)</h2>
     </div>
 
     @if (isLoading && invoices.length === 0) {
-      <p class="p-10 text-center text-slate-400 text-xs" role="status">در حال بارگذاری رسیدهای پرداخت...</p>
+      <p class="p-10 text-center text-slate-400 text-xs" role="status">در حال بارگذاری دستورهای پرداخت...</p>
     } @else if (invoices.length === 0) {
-      <p class="p-10 text-center text-slate-400 text-xs">رسید پرداختی برای پرداخت وجود ندارد.</p>
+      <p class="p-10 text-center text-slate-400 text-xs">دستور پرداختی برای پرداخت وجود ندارد.</p>
     } @else {
       <app-payment-receipt-list [rows]="invoices" [showDescription]="false" [headsOf]="categoryOf" (preview)="openPreview($event, 'preview')">
         <ng-template #rowActions let-item>
@@ -70,7 +70,7 @@
   }
 
   <!-- ── ۴. پنجرهٔ ثبت قسط و فهرست قسط‌ها (بخش مشترک با صفحهٔ جدای پرداخت) ── -->
-  <app-modal [isOpen]="payModalOpen" size="xl" [title]="'پرداخت رسید پرداخت ' + (payItem?.number || payItem?.invoice_number || '')" (closed)="closePayModal()">
+  <app-modal [isOpen]="payModalOpen" size="xl" [title]="'پرداخت دستور پرداخت ' + (payItem?.number || payItem?.invoice_number || '')" (closed)="closePayModal()">
     <app-invoice-payment-panel *ngIf="payItem as it" [item]="it" [showPageLink]="true"
       (cancelled)="closePayModal()" (settled)="closePayModal()" (changed)="loadTreasuryData(true)"></app-invoice-payment-panel>
   </app-modal>

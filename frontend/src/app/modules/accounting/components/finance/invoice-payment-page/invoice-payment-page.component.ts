@@ -44,7 +44,7 @@ export class InvoicePaymentPageComponent implements OnInit, OnDestroy {
       } else {
         this.invoiceId = null;
         this.payItem = null;
-        this.loadError = 'شناسهٔ رسید پرداخت درست نیست.';
+        this.loadError = 'شناسهٔ دستور پرداخت درست نیست.';
         this.isLoading = false;
       }
     });
@@ -73,7 +73,7 @@ export class InvoicePaymentPageComponent implements OnInit, OnDestroy {
         this.payItem = null;
         this.loadError = typeof err?.status === 'number' && isServerUnreachable(err.status)
           ? 'اتصال به سرور برقرار نیست؛ پرداخت فقط آنلاین ممکن است.'
-          : 'رسید پرداخت یافت نشد یا دسترسی به آن مجاز نیست.';
+          : 'دستور پرداخت یافت نشد یا دسترسی به آن مجاز نیست.';
         this.cdr.detectChanges();
       }
     });

@@ -160,7 +160,7 @@ describe('EmployeeInvoicesHubComponent - Fiscal Period Closed Spec (Release v1 s
     expect(component.invoiceDateError).toBe('');
     expect(mockToast.show).toHaveBeenCalledWith(
       'error',
-      expect.stringContaining('خطا در ثبت رسید پرداخت')
+      expect.stringContaining('خطا در ثبت دستور پرداخت')
     );
     expect(mockToast.show).toHaveBeenCalledWith(
       'error',

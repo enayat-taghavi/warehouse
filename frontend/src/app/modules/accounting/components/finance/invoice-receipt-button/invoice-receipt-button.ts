@@ -200,7 +200,7 @@ export class InvoiceReceiptButtonComponent implements OnDestroy {
     } catch (err) {
       const status = (err as { status?: number })?.status;
       if (status === 403) {
-        this.toast?.info('سند واریزی برای این رسید پرداخت ثبت نشده است');
+        this.toast?.info('سند واریزی برای این دستور پرداخت ثبت نشده است');
       } else {
         this.toast?.error(this.messageOf(err, 'دریافت سند واریز انجام نشد'));
       }
@@ -214,7 +214,7 @@ export class InvoiceReceiptButtonComponent implements OnDestroy {
       this.menuOpen = false;
       this.busy = false;
       this.cdr.markForCheck();
-      this.toast?.info('سند واریزی برای این رسید پرداخت ثبت نشده است');
+      this.toast?.info('سند واریزی برای این دستور پرداخت ثبت نشده است');
       return;
     }
 

@@ -77,7 +77,7 @@ def printable_invoice(user, entity_id):
     info_pairs = [
         ('شمارهٔ داخلی', fa_digits(invoice.number) if invoice.number else '—'),
         ('شمارهٔ فاکتور فروشنده', fa_digits(invoice.invoice_number) if invoice.invoice_number else '—'),
-        ('تاریخ رسید پرداخت', fa_digits(invoice.invoice_date_shamsi)),
+        ('تاریخ دستور پرداخت', fa_digits(invoice.invoice_date_shamsi)),
         ('طرف حساب', invoice.counterparty.name if invoice.counterparty_id else '—'),
         ('پروژه / بخش', f'{invoice.section.project.name} / {invoice.section.name}'),
         ('وضعیت', invoice.get_status_display()),
@@ -119,7 +119,7 @@ def printable_invoice(user, entity_id):
 
     return PrintableDocument(
         company_id=company_id,
-        title='رسید پرداخت هزینه',
+        title='دستور پرداخت هزینه',
         number=invoice.number or invoice.invoice_number,
         date=invoice.invoice_date_shamsi,
         attachments_count=1 if invoice.attachment else 0,

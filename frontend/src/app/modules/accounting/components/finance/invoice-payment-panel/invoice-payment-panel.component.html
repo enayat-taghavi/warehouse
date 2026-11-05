@@ -109,12 +109,12 @@
 
       <div *ngIf="it.remaining <= 0" data-pay-settled class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-center text-xs font-bold text-emerald-800 flex items-center justify-center gap-2">
         <svg appIcon="check" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-        <span>این رسید پرداخت کامل تسویه شده است.</span>
+        <span>این دستور پرداخت کامل تسویه شده است.</span>
       </div>
 
       <div *ngIf="it.remaining > 0 && !payable" data-pay-not-payable class="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-center text-xs font-bold text-amber-800 flex items-center justify-center gap-2">
         <svg appIcon="info" class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-        <span>این رسید هنوز آمادهٔ پرداخت نیست.</span>
+        <span>این دستور پرداخت هنوز آمادهٔ پرداخت نیست.</span>
       </div>
 
       <form *ngIf="it.remaining > 0 && payable" (ngSubmit)="submitPayment()"

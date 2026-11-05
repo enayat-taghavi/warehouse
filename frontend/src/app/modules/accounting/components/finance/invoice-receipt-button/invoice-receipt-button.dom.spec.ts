@@ -163,7 +163,7 @@ describe('InvoiceReceiptButtonComponent (DOM & unit tests)', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(mockToast.info).toHaveBeenCalledWith('سند واریزی برای این رسید پرداخت ثبت نشده است');
+    expect(mockToast.info).toHaveBeenCalledWith('سند واریزی برای این دستور پرداخت ثبت نشده است');
     expect(mockToast.error).not.toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('[role="menu"]')).toBeNull();
   });
@@ -183,7 +183,7 @@ describe('InvoiceReceiptButtonComponent (DOM & unit tests)', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(mockToast.info).toHaveBeenCalledWith('سند واریزی برای این رسید پرداخت ثبت نشده است');
+    expect(mockToast.info).toHaveBeenCalledWith('سند واریزی برای این دستور پرداخت ثبت نشده است');
     expect(mockToast.error).not.toHaveBeenCalled();
     expect(fixture.nativeElement.querySelector('[role="menu"]')).toBeNull();
   });

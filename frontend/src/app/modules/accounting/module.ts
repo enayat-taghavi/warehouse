@@ -258,7 +258,7 @@ export const MODULE: WhFrontendModule = {
         },
         {
           key: 'treasury', labelFa: 'خزانه‌داران کل (پرداخت و تسویه)', shortLabelFa: 'خزانه‌داران', icon: ROLE_ICONS.treasury, tone: 'emerald', order: 40,
-          descriptionFa: 'صدور حوالهٔ پرداخت و تسویهٔ ریالی رسیدهای پرداخت.'
+          descriptionFa: 'صدور حوالهٔ پرداخت و تسویهٔ ریالی دستورهای پرداخت.'
         },
         {
           key: 'employee', labelFa: 'کارمندان و اپراتورها (ثبت‌کنندگان)', shortLabelFa: 'کارمندان', icon: ROLE_ICONS.operator, tone: 'slate', order: 50,

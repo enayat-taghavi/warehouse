@@ -74,21 +74,21 @@ const COLUMNS: Record<string, ReportColumn[]> = {
     { key: 'group_label', label: 'گروه سرفصل', kind: 'text' },
     { key: 'code', label: 'کد', kind: 'text', ltr: true },
     { key: 'label', label: 'سرفصل', kind: 'text' },
-    { key: 'invoice_amount', label: 'هزینهٔ رسید پرداخت', kind: 'money' },
+    { key: 'invoice_amount', label: 'هزینهٔ دستور پرداخت', kind: 'money' },
     { key: 'petty_amount', label: 'هزینهٔ تنخواه', kind: 'money' },
     { key: 'total', label: 'جمع هزینه', kind: 'money' },
   ],
   'expense-other': [
     { key: 'label', label: 'عنوان', kind: 'text' },
-    { key: 'invoice_amount', label: 'هزینهٔ رسید پرداخت', kind: 'money' },
+    { key: 'invoice_amount', label: 'هزینهٔ دستور پرداخت', kind: 'money' },
     { key: 'petty_amount', label: 'هزینهٔ تنخواه', kind: 'money' },
     { key: 'total', label: 'جمع هزینه', kind: 'money' },
     { key: 'vat_amount', label: 'مالیات بر ارزش افزوده', kind: 'money' },
-    { key: 'invoice_count', label: 'تعداد رسید پرداخت', kind: 'num' },
+    { key: 'invoice_count', label: 'تعداد دستور پرداخت', kind: 'num' },
   ],
   'unpaid-invoices': [
     { key: 'counterparty_name', label: 'طرف‌حساب', kind: 'text' },
-    { key: 'count', label: 'تعداد رسید پرداخت', kind: 'num' },
+    { key: 'count', label: 'تعداد دستور پرداخت', kind: 'num' },
     { key: 'remaining', label: 'مانده', kind: 'money' },
     { key: 'age_0_30', label: '۰ تا ۳۰ روز', kind: 'money' },
     { key: 'age_31_60', label: '۳۱ تا ۶۰ روز', kind: 'money' },
@@ -97,7 +97,7 @@ const COLUMNS: Record<string, ReportColumn[]> = {
   ],
   'unpaid-details': [
     { key: 'number', label: 'شمارهٔ داخلی', kind: 'text', ltr: true },
-    { key: 'invoice_number', label: 'شمارهٔ رسید پرداخت', kind: 'text', ltr: true },
+    { key: 'invoice_number', label: 'شمارهٔ دستور پرداخت', kind: 'text', ltr: true },
     { key: 'approved_date', label: 'تاریخ تأیید مدیر', kind: 'text' },
     { key: 'age_days', label: 'سن بدهی (روز)', kind: 'num' },
     { key: 'section_name', label: 'بخش', kind: 'text' },
@@ -130,7 +130,7 @@ const COLUMNS: Record<string, ReportColumn[]> = {
     { key: 'payment_date', label: 'تاریخ پرداخت', kind: 'text' },
     { key: 'amount', label: 'مبلغ', kind: 'money' },
     { key: 'tracking_code', label: 'کد رهگیری', kind: 'text', ltr: true },
-    { key: 'invoice_number', label: 'شمارهٔ رسید پرداخت', kind: 'text', ltr: true },
+    { key: 'invoice_number', label: 'شمارهٔ دستور پرداخت', kind: 'text', ltr: true },
     { key: 'counterparty_name', label: 'طرف‌حساب', kind: 'text' },
     { key: 'bank_name', label: 'بانک', kind: 'text' },
   ],
@@ -157,7 +157,7 @@ const COLUMNS: Record<string, ReportColumn[]> = {
 
 const TITLES: Record<AccountingReportKey, string> = {
   expense: 'گزارش هزینه',
-  'unpaid-invoices': 'ماندهٔ پرداخت‌نشدهٔ رسیدهای پرداخت',
+  'unpaid-invoices': 'ماندهٔ پرداخت‌نشدهٔ دستورهای پرداخت',
   'petty-cash': 'گزارش تنخواه',
   'bank-payments': 'پرداخت‌ها از حساب بانکی',
   'labor-cost': 'بهای نیروی انسانی',
@@ -269,7 +269,7 @@ export class ManagerReportsComponent implements OnInit {
   ngOnInit(): void {
     const defs: ReportTabDef[] = [
       { id: 'expense', label: 'هزینه', shortLabel: 'هزینه', icon: ACCOUNTING_ENTITY_ICONS.invoices, totalLabelKey: 'label' },
-      { id: 'unpaid-invoices', label: 'ماندهٔ رسیدهای پرداخت', shortLabel: 'مانده', icon: ACCOUNTING_ENTITY_ICONS.counterparties, noDates: true, totalLabelKey: 'counterparty_name' },
+      { id: 'unpaid-invoices', label: 'ماندهٔ دستورهای پرداخت', shortLabel: 'مانده', icon: ACCOUNTING_ENTITY_ICONS.counterparties, noDates: true, totalLabelKey: 'counterparty_name' },
       { id: 'petty-cash', label: 'تنخواه', shortLabel: 'تنخواه', icon: ACCOUNTING_ENTITY_ICONS.pettyCash, noDates: true, totalLabelKey: 'custodian_name' },
       { id: 'bank-payments', label: 'پرداخت‌ها از حساب بانکی', shortLabel: 'بانک', icon: ACCOUNTING_ENTITY_ICONS.bankAccounts, totalLabelKey: 'company_name' },
     ];

@@ -6,7 +6,7 @@ import { PrintService } from '../../../../../core/services/print.service';
 import { InvoiceReceiptButtonComponent } from '../invoice-receipt-button/invoice-receipt-button';
 import { invoiceAmountHint, invoiceCreatorHint, invoiceStatusClass, invoiceStatusShort } from '../../../payment-receipt';
 
-/** فیلدهای مشترک ردیف رسید پرداخت که فهرست مشترک نشان می‌دهد */
+/** فیلدهای مشترک ردیف دستور پرداخت که فهرست مشترک نشان می‌دهد */
 export interface PaymentReceiptListRow {
   id?: number;
   invoice_number?: string | null;
@@ -43,7 +43,7 @@ export interface PaymentReceiptListColumn<T> {
 }
 
 /**
- * فهرست یکسان رسیدهای پرداخت برای همهٔ نقش‌ها (کارمند، سرپرست، حسابدار، مدیر، خزانه‌دار).
+ * فهرست یکسان دستورهای پرداخت برای همهٔ نقش‌ها (کارمند، سرپرست، حسابدار، مدیر، خزانه‌دار).
  * ظاهر ردیف، دکمه‌های مشترک (پیش‌نمایش، همرسانی، چاپ، رسید) فقط این‌جاست؛ هر صفحه فقط
  * دکمه‌های کار نقش خود را با `<ng-template #rowActions let-row>` و نشان‌های پایانی را با
  * `<ng-template #rowExtra let-row>` می‌دهد.

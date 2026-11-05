@@ -46,7 +46,7 @@ def _invoice_state_change(invoice, state, instance):
         paid = _locked_paid_amount(invoice)
         if (amount > 0 and paid != amount) or (amount <= 0 and not (invoice.payment_ref or '').strip()):
             raise WorkflowError('payment_required',
-                                'پرداخت رسید پرداخت فقط با ثبت پرداخت‌ها از صفحهٔ رسید پرداخت و تا صفر شدن مانده انجام می‌شود', 400)
+                                'پرداخت دستور پرداخت فقط با ثبت پرداخت‌ها از صفحهٔ دستور پرداخت و تا صفر شدن مانده انجام می‌شود', 400)
     elif state in (RETURNED, CANCELLED, REJECTED) and _locked_paid_amount(invoice) > 0:
         # بعد از اولین قسط باطل‌نشده، عودت، لغو و رد بسته است (اصلاح فقط با ابطال قسط)
         from .invoice_payments import PAYMENTS_EXIST_CODE, PAYMENTS_EXIST_MESSAGE
@@ -74,7 +74,7 @@ def can_settle_invoice_outside(invoice, instance):
         paid = Decimal(str(ExpenseInvoice.objects.filter(pk=invoice.pk).values_list('paid_amount', flat=True)
                            .first() or 0))
     if paid > 0:
-        return 'برای این رسید پرداخت قسط ثبت شده است؛ پرداخت باقی‌مانده فقط به دست خزانه‌دار انجام می‌شود.'
+        return 'برای این دستور پرداخت قسط ثبت شده است؛ پرداخت باقی‌مانده فقط به دست خزانه‌دار انجام می‌شود.'
     return None
 
 
@@ -98,7 +98,7 @@ def invoice_heads_summary(invoice):
 def _invoice_summary(invoice):
     counterparty = getattr(invoice, 'counterparty', None)
     return {
-        'title': f'رسید پرداخت {invoice.invoice_number}' + (f' — {counterparty.name}' if counterparty else ''),
+        'title': f'دستور پرداخت {invoice.invoice_number}' + (f' — {counterparty.name}' if counterparty else ''),
         'amount': invoice.amount,
         'category': invoice_heads_summary(invoice),
         'date_shamsi': invoice.invoice_date_shamsi,
@@ -115,7 +115,7 @@ INVOICE_WORKFLOW_SPEC = WorkflowSpec(
     key=INVOICE_WORKFLOW,
     version=1,
     entity_kind=INVOICE_ENTITY,
-    title_fa='رسید پرداخت هزینه',
+    title_fa='دستور پرداخت هزینه',
     steps=(
         StepSpec('supervisor_ok', 'تأیید سرپرست', 'supervisor', 'perm_invoice_approve', APPROVE),
         # حسابدارِ ثبت‌کننده‌ای که تنها حسابدار بخش است این مرحله را رد می‌کند (تصمیم کاربر ۹ آبان ۱۴۰۵)

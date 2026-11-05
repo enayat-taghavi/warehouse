@@ -250,10 +250,10 @@ describe('EmployeeInvoicesHubComponent - Review Accountant Edit DOM Specs', () =
     const el = fixture.nativeElement as HTMLElement;
     const modalDialog = el.querySelector('[role="dialog"]') as HTMLElement;
     expect(modalDialog).not.toBeNull();
-    expect(modalDialog.getAttribute('aria-label')).toBe('ویرایش رسید پرداخت در مرحلهٔ بررسی');
+    expect(modalDialog.getAttribute('aria-label')).toBe('ویرایش دستور پرداخت در مرحلهٔ بررسی');
 
     const modalTitle = el.querySelector('h3');
-    expect(modalTitle?.textContent).toContain('ویرایش رسید پرداخت در مرحلهٔ بررسی');
+    expect(modalTitle?.textContent).toContain('ویرایش دستور پرداخت در مرحلهٔ بررسی');
 
     // Section and Project select must be disabled
     const projectSelect = el.querySelector('#invoice_project') as HTMLSelectElement;
@@ -292,7 +292,7 @@ describe('EmployeeInvoicesHubComponent - Review Accountant Edit DOM Specs', () =
     expect(calledPayload.status).toBeUndefined();
     expect(mockToast.show).toHaveBeenCalledWith(
       'success',
-      expect.stringContaining('تغییرات رسید پرداخت')
+      expect.stringContaining('تغییرات دستور پرداخت')
     );
     expect(mockToast.show).toHaveBeenCalledWith(
       'success',

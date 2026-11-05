@@ -166,7 +166,7 @@ describe('Role invoice components in embedded mode (ح۲)', () => {
     const full = managerFixture(false);
     const fel: HTMLElement = full.fixture.nativeElement;
     // the list (or its empty state when nothing is pending) renders outside embedded mode
-    expect(fel.querySelector('app-payment-receipt-list') || fel.textContent?.includes('هیچ رسید پرداختی')).toBeTruthy();
+    expect(fel.querySelector('app-payment-receipt-list') || fel.textContent?.includes('هیچ دستور پرداختی')).toBeTruthy();
     expect(fel.firstElementChild?.classList.contains('contents')).toBe(false);
     expect(full.m.personnelApi.getExpenseInvoices).toHaveBeenCalledWith({ status: 'pending_manager' });
   });

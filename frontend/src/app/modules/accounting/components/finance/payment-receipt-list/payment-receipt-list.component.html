@@ -1,5 +1,5 @@
-<!-- موبایل: هر رسید پرداخت یک کارت -->
-<ul class="md:hidden divide-y divide-line" aria-label="فهرست رسیدهای پرداخت">
+<!-- موبایل: هر دستور پرداخت یک کارت -->
+<ul class="md:hidden divide-y divide-line" aria-label="فهرست دستورهای پرداخت">
   @for (row of rows(); track row.id) {
     <li class="p-3 space-y-2">
       <div class="flex items-start justify-between gap-2">
@@ -7,7 +7,7 @@
           <p class="text-sm font-black text-fg truncate">{{ row.counterparty_name || 'طرف‌حساب نامشخص' }}</p>
           <button type="button" (click)="preview.emit(row)"
             class="text-start text-[11px] text-fg-muted hover:text-indigo-600 transition-colors cursor-pointer mt-0.5 block"
-            title="مشاهده پیش‌نمایش و سابقه رسید پرداخت">
+            title="مشاهده پیش‌نمایش و سابقه دستور پرداخت">
             <span class="tabular-nums">{{ dateOf(row) }}</span>
             <span class="font-mono"> · <bdi dir="ltr">{{ row.invoice_number || row.id }}</bdi></span>
             @if (row.number) { <span class="font-mono" title="شمارهٔ داخلی"> · <bdi dir="ltr">{{ row.number }}</bdi></span> }
@@ -47,13 +47,13 @@
   }
 </ul>
 
-<!-- تبلت و دسکتاپ: هر رسید پرداخت یک ردیف یک‌خطی؛ جزئیات در راهنمای نشانگر -->
+<!-- تبلت و دسکتاپ: هر دستور پرداخت یک ردیف یک‌خطی؛ جزئیات در راهنمای نشانگر -->
 <div class="hidden md:block overflow-x-auto">
   <table class="w-full text-start border-collapse text-xs">
     <thead>
       <tr class="bg-slate-50/90 text-slate-600 border-b border-slate-200 text-[11px] font-black">
         <th class="py-3 px-3 text-center w-12">#</th>
-        <th class="py-3 px-3">شماره رسید پرداخت</th>
+        <th class="py-3 px-3">شماره دستور پرداخت</th>
         <th class="py-3 px-3">تاریخ</th>
         <th class="py-3 px-3">طرف‌حساب</th>
         <th class="py-3 px-3">پروژه / بخش</th>
@@ -72,7 +72,7 @@
           <td class="py-2.5 px-3 text-center font-mono text-slate-400 text-[11px]">{{ fa(indexOffset() + idx + 1) }}</td>
           <td class="py-2.5 px-3 font-mono font-bold text-fg hover:text-indigo-600 transition-colors cursor-pointer"
             (click)="preview.emit(row)" (keydown.enter)="preview.emit(row)" (keydown.space)="$event.preventDefault(); preview.emit(row)"
-            tabindex="0" role="button" title="مشاهده پیش‌نمایش و سابقه رسید پرداخت">
+            tabindex="0" role="button" title="مشاهده پیش‌نمایش و سابقه دستور پرداخت">
             <span class="inline-flex items-center gap-1.5">
               <bdi dir="ltr">{{ row.invoice_number || row.id }}</bdi>
               @if (row.number) { <span class="text-[10px] text-slate-500" title="شمارهٔ داخلی"><bdi dir="ltr">{{ row.number }}</bdi></span> }
@@ -120,8 +120,8 @@
 <ng-template #actions let-row>
   @if (actionsTpl(); as tpl) { <ng-container *ngTemplateOutlet="tpl; context: { $implicit: row }"></ng-container> }
   <button type="button" appAction="history" display="icon" label="سابقه و گردش کار" size="sm" (click)="preview.emit(row)" hint="جزئیات و سابقه گردش کار دستور پرداخت"></button>
-  <button type="button" appAction="share" display="icon" label="همرسانی" size="sm" [busy]="sharingId() === row.id" (click)="share(row)" hint="همرسانی PDF رسید پرداخت"></button>
-  <button type="button" appAction="print" display="icon" label="چاپ / PDF" size="sm" [disabled]="!canPrint()" (click)="print(row)" hint="چاپ رسید پرداخت (PDF)"></button>
+  <button type="button" appAction="share" display="icon" label="همرسانی" size="sm" [busy]="sharingId() === row.id" (click)="share(row)" hint="همرسانی PDF دستور پرداخت"></button>
+  <button type="button" appAction="print" display="icon" label="چاپ / PDF" size="sm" [disabled]="!canPrint()" (click)="print(row)" hint="چاپ دستور پرداخت (PDF)"></button>
   @if (isPaidPart(row)) { <app-invoice-receipt-button [invoiceId]="row.id!" display="icon"></app-invoice-receipt-button> }
   @if (extraTpl(); as tpl) { <ng-container *ngTemplateOutlet="tpl; context: { $implicit: row }"></ng-container> }
 </ng-template>

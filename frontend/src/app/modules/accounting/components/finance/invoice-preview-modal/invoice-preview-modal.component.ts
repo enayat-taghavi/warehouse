@@ -63,9 +63,9 @@ export class InvoicePreviewModalComponent implements OnInit, OnChanges, OnDestro
 
   get modalTitle(): string {
     const inv = this.invoiceDetail || this.invoice;
-    if (!inv) return 'مشاهده و سابقه رسید پرداخت';
+    if (!inv) return 'مشاهده و سابقه دستور پرداخت';
     const num = inv.number || inv.invoice_number || inv.id;
-    return `پیش‌نمایش و سابقه رسید پرداخت ${num}`;
+    return `پیش‌نمایش و سابقه دستور پرداخت ${num}`;
   }
 
   ngOnInit(): void {

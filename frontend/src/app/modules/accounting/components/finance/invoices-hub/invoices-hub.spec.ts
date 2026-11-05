@@ -135,7 +135,7 @@ describe('InvoicesHubComponent — یک فهرست با کار نقش روی ر�
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('app-employee-invoices-hub')).toBeNull();
     expect(el.querySelector('app-supervisor-invoices-hub')).toBeNull();
-    expect(el.textContent).toContain('دسترسی به رسیدهای پرداخت برای نقش فعلی تعریف نشده است.');
+    expect(el.textContent).toContain('دسترسی به دستور پرداخت برای نقش فعلی تعریف نشده است.');
   });
 
   it('a role without the list permission falls back to the old (non-embedded) role page', () => {

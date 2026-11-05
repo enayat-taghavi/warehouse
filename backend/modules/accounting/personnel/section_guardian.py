@@ -701,7 +701,7 @@ class SectionGuardian:
             submodules = [
                 ('employee-attendance', 'EmployeeAttendanceHubComponent', 'کارکرد پرسنل'),
                 ('employee-fleet', 'EmployeeFleetHubComponent', 'کارکرد ماشین‌آلات'),
-                ('employee-invoices', 'EmployeeInvoicesHubComponent', 'ثبت رسید پرداخت هزینه'),
+                ('employee-invoices', 'EmployeeInvoicesHubComponent', 'ثبت دستور پرداخت هزینه'),
                 ('employee-petty-cash', 'EmployeePettyCashHubComponent', 'مدیریت تن‌خواه'),
                 ('employee-new-vehicle', 'EmployeeNewVehicleHubComponent', 'تعریف خودرو جدید'),
                 ('employee-new-personnel', 'EmployeeNewPersonnelHubComponent', 'تعریف پرسنل جدید'),

@@ -39,7 +39,7 @@ export type { PayableInvoiceItem } from '../../invoice-payment-panel/invoice-pay
   styleUrl: './treasurer-invoices.css'
 })
 export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
-  /** ستون سرفصل در فهرست مشترک رسیدهای پرداخت */
+  /** ستون سرفصل در فهرست مشترک دستورهای پرداخت */
   readonly categoryOf = (r: PayableInvoiceItem) => r.category || '—';
   protected perm = inject(PermissionService);
   /** درون فهرست یکپارچهٔ فاکتورها: فقط کارها و پنجره‌ها؛ بارگذاری و فهرست با میزبان است */
@@ -245,7 +245,7 @@ export class TreasurerInvoicesComponent implements OnInit, OnDestroy {
     this.personnelApi.exportExpenseInvoicesExcel().subscribe({
       next: (blob: Blob) => {
         void saveBlob(blob, 'treasury_expense_invoices.xlsx');
-        this.toast.success('فایل اکسل رسیدهای پرداخت هزینه دانلود شد.');
+        this.toast.success('فایل اکسل دستورهای پرداخت هزینه دانلود شد.');
       },
       error: (err: any) => {
         const msg = (typeof err?.status === 'number' && isServerUnreachable(err.status))

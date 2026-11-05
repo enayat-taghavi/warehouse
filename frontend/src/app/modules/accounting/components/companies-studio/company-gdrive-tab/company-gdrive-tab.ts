@@ -91,7 +91,7 @@ export const MODEL_NAME_PERSIAN_MAP: Record<string, string> = {
   Company: 'سند پایهٔ شرکت',
   CompanyDocument: 'سند مرکزی شرکت',
   CompanyBoardMember: 'مدرک عضو هیئت‌مدیره',
-  ExpenseInvoice: 'رسید پرداخت هزینه',
+  ExpenseInvoice: 'دستور پرداخت هزینه',
   PettyCashTransaction: 'رسید تنخواه',
   PersonnelProfile: 'پرونده پرسنلی',
   PersonnelDocument: 'مدرک پرسنلی',

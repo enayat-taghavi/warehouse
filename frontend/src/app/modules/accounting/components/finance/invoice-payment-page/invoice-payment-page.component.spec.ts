@@ -97,7 +97,7 @@ describe('InvoicePaymentPageComponent — صفحهٔ جدای پرداخت رو�
     TestBed.resetTestingModule();
   });
 
-  describe('رسید پرداخت‌پذیر', () => {
+  describe('دستور پرداخت‌پذیر', () => {
     beforeEach(async () => { await setup(); });
 
     it('1) loads the invoice, renders the shared panel and defaults the amount to the remaining', () => {

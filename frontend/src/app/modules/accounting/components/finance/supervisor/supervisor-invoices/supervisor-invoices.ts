@@ -65,7 +65,7 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
       },
       {
         id: 'all',
-        label: 'کل رسیدهای پرداخت',
+        label: 'کل دستورهای پرداخت',
         shortLabel: 'همه',
         icon: STATUS_ICONS.all,
         count: this.statusCounters.all,
@@ -240,7 +240,7 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
       error: (err: any) => {
         this.isLoading = false;
         if (silent) return;
-        this.toast.error(attendanceActionErrorMessage(err, 'خطا در دریافت رسیدهای پرداخت هزینه'));
+        this.toast.error(attendanceActionErrorMessage(err, 'خطا در دریافت دستورهای پرداخت هزینه'));
         this.cdr.detectChanges();
       }
     });
@@ -269,12 +269,12 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
     this.personnelApi.approveExpenseInvoice(item.id).subscribe({
       next: () => {
         this.isLoading = false;
-        this.toast.success(`رسید پرداخت شماره ${item.invoice_number || ''} تایید و به کارتابل حسابداری ارسال شد.`);
+        this.toast.success(`دستور پرداخت شماره ${item.invoice_number || ''} تایید و به کارتابل حسابداری ارسال شد.`);
         this.fetchInvoices();
       },
       error: (err: any) => {
         this.isLoading = false;
-        this.toast.error(attendanceActionErrorMessage(err, 'خطا در تایید رسید پرداخت'));
+        this.toast.error(attendanceActionErrorMessage(err, 'خطا در تایید دستور پرداخت'));
         this.cdr.detectChanges();
       }
     });
@@ -301,15 +301,15 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
 
   isReasonDialogOpen = false;
   reasonDialogTitle = '';
-  reasonDialogConfirmLabel = 'عودت رسید پرداخت';
+  reasonDialogConfirmLabel = 'عودت دستور پرداخت';
   reasonDialogServerError = '';
   pendingRejectInvoice: ExpenseInvoice | null = null;
 
   rejectSingle(item: ExpenseInvoice): void {
     if (!item.id) return;
     this.pendingRejectInvoice = item;
-    this.reasonDialogTitle = `علت عودت رسید پرداخت شماره ${item.invoice_number || ''} برای اصلاح`;
-    this.reasonDialogConfirmLabel = 'عودت رسید پرداخت';
+    this.reasonDialogTitle = `علت عودت دستور پرداخت شماره ${item.invoice_number || ''} برای اصلاح`;
+    this.reasonDialogConfirmLabel = 'عودت دستور پرداخت';
     this.reasonDialogServerError = '';
     this.isReasonDialogOpen = true;
   }
@@ -324,12 +324,12 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         this.isReasonDialogOpen = false;
         this.pendingRejectInvoice = null;
-        this.toast.warning(`رسید پرداخت شماره ${invNumber} برای اصلاح به کارمند برگشت.`);
+        this.toast.warning(`دستور پرداخت شماره ${invNumber} برای اصلاح به کارمند برگشت.`);
         this.fetchInvoices();
       },
       error: (err: any) => {
         this.isLoading = false;
-        const detail = attendanceActionErrorMessage(err, 'خطا در عودت رسید پرداخت');
+        const detail = attendanceActionErrorMessage(err, 'خطا در عودت دستور پرداخت');
         this.reasonDialogServerError = detail;
         this.toast.error(detail);
         this.cdr.detectChanges();
@@ -344,7 +344,7 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
   }
 
   exportExcel(): void {
-    this.toast.info('در حال تولید فایل اکسل رسیدهای پرداخت...');
+    this.toast.info('در حال تولید فایل اکسل دستورهای پرداخت...');
     const params: any = {
       section_id: this.selectedSectionId || undefined,
       status: this.activeSubTab === 'pending' ? 'pending_supervisor' : undefined
@@ -355,10 +355,10 @@ export class SupervisorInvoicesHubComponent implements OnInit, OnDestroy {
     this.personnelApi.exportExpenseInvoicesExcel(params).subscribe({
       next: (blob: Blob) => {
         void saveBlob(blob, `Expense_Invoices_${this.selectedSectionId || 'all'}.xlsx`);
-        this.toast.success('فایل اکسل رسیدهای پرداخت با موفقیت دریافت شد.');
+        this.toast.success('فایل اکسل دستورهای پرداخت با موفقیت دریافت شد.');
       },
       error: () => {
-        this.toast.error('خطا در دانلود فایل اکسل رسیدهای پرداخت.');
+        this.toast.error('خطا در دانلود فایل اکسل دستورهای پرداخت.');
       }
     });
   }

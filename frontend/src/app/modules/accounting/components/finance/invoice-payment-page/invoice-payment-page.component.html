@@ -4,7 +4,7 @@
       <button type="button" appAction="back" label="فاکتورها" size="sm" (click)="goBack()"></button>
       <h1 class="text-sm md:text-base font-black text-fg flex items-center gap-2">
         <svg appIcon="credit-card" class="w-5 h-5 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-        <span>پرداخت رسید</span>
+        <span>پرداخت دستور</span>
         <span *ngIf="payItem?.number || payItem?.invoice_number" class="font-mono text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-lg text-xs md:text-sm">
           {{ payItem?.number || payItem?.invoice_number }}
         </span>
@@ -21,7 +21,7 @@
 
   <div *ngIf="isLoading" role="status" aria-live="polite" class="bg-surface rounded-3xl border border-line p-12 text-center flex flex-col items-center justify-center gap-3">
     <svg appIcon="spinner" class="w-8 h-8 animate-spin text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-    <p class="text-sm font-bold text-fg">در حال بارگذاری رسید پرداخت...</p>
+    <p class="text-sm font-bold text-fg">در حال بارگذاری دستور پرداخت...</p>
   </div>
 
   <div *ngIf="!isLoading && loadError" role="alert" class="bg-surface rounded-3xl border border-rose-200 p-8 text-center space-y-4">
@@ -47,7 +47,7 @@
           </span>
         </div>
         <div class="rounded-xl border border-line bg-surface-muted p-2">
-          <span class="text-[10px] text-fg-muted block">تاریخ رسید</span>
+          <span class="text-[10px] text-fg-muted block">تاریخ دستور پرداخت</span>
           <span class="font-bold font-mono text-fg block mt-0.5">{{ it.invoice_date_shamsi || '—' }}</span>
         </div>
         <div class="rounded-xl border border-line bg-surface-muted p-2">

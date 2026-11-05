@@ -39,7 +39,7 @@ import { InvoicePreviewModalComponent } from '../../invoice-preview-modal/invoic
   styleUrl: './accountant-invoices.css'
 })
 export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
-  /** ستون ویژهٔ حسابدار در فهرست مشترک رسیدهای پرداخت */
+  /** ستون ویژهٔ حسابدار در فهرست مشترک دستورهای پرداخت */
   readonly approverColumn = { label: 'تاییدکننده سرپرست', value: (r: any) => r.supervisor_approver_name || 'سرپرست کارگاه' };
   protected perm = inject(PermissionService);
   /** درون فهرست یکپارچهٔ فاکتورها: فقط کارها و پنجره‌ها؛ بارگذاری و فهرست با میزبان است */
@@ -76,7 +76,7 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
         },
         {
           id: 'all',
-          label: 'کل رسیدهای پرداخت',
+          label: 'کل دستورهای پرداخت',
           shortLabel: 'همه',
           icon: STATUS_ICONS.all,
           count: sc.all,
@@ -245,7 +245,7 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
       error: (err: any) => {
         this.isLoading = false;
         if (silent) return;
-        this.toast.error('خطا در دریافت رسیدهای پرداخت حسابداری: ' + (err.error?.error || err.message || 'نامشخص'));
+        this.toast.error('خطا در دریافت دستورهای پرداخت حسابداری: ' + (err.error?.error || err.message || 'نامشخص'));
         this.cdr.detectChanges();
       }
     });
@@ -274,7 +274,7 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
     this.personnelApi.approveExpenseInvoice(item.id).subscribe({
       next: () => {
         this.isLoading = false;
-        this.toast.success(`سند حسابداری رسید پرداخت ${item.invoice_number || ''} صادر و پرونده جهت تایید نهایی به مدیر ارسال شد.`);
+        this.toast.success(`سند حسابداری دستور پرداخت ${item.invoice_number || ''} صادر و پرونده جهت تایید نهایی به مدیر ارسال شد.`);
         this.fetchInvoices();
       },
       error: (err: any) => {
@@ -306,15 +306,15 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
 
   isReasonDialogOpen = false;
   reasonDialogTitle = '';
-  reasonDialogConfirmLabel = 'عودت رسید پرداخت';
+  reasonDialogConfirmLabel = 'عودت دستور پرداخت';
   reasonDialogServerError = '';
   pendingRejectInvoice: ExpenseInvoice | null = null;
 
   rejectDocument(item: ExpenseInvoice): void {
     if (!item.id) return;
     this.pendingRejectInvoice = item;
-    this.reasonDialogTitle = `علت عودت رسید پرداخت شماره ${item.invoice_number || ''} برای اصلاح`;
-    this.reasonDialogConfirmLabel = 'عودت رسید پرداخت';
+    this.reasonDialogTitle = `علت عودت دستور پرداخت شماره ${item.invoice_number || ''} برای اصلاح`;
+    this.reasonDialogConfirmLabel = 'عودت دستور پرداخت';
     this.reasonDialogServerError = '';
     this.isReasonDialogOpen = true;
   }
@@ -328,7 +328,7 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
         this.isLoading = false;
         this.isReasonDialogOpen = false;
         this.pendingRejectInvoice = null;
-        this.toast.warning(`رسید پرداخت شماره ${invNumber} جهت بازنگری به سرپرست برگردانده شد.`);
+        this.toast.warning(`دستور پرداخت شماره ${invNumber} جهت بازنگری به سرپرست برگردانده شد.`);
         this.fetchInvoices();
       },
       error: (err: any) => {
@@ -348,14 +348,14 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
   }
 
   exportExcel(): void {
-    this.toast.info('در حال تولید فایل اکسل ممیزی رسیدهای پرداخت...');
+    this.toast.info('در حال تولید فایل اکسل ممیزی دستورهای پرداخت...');
     this.personnelApi.exportExpenseInvoicesExcel({
       section_id: this.selectedSectionId || undefined,
       status: this.activeSubTab === 'pending_audit' ? 'pending_accountant' : undefined
     }).subscribe({
       next: (blob: Blob) => {
         void saveBlob(blob, `Accountant_Invoices_${this.selectedSectionId || 'all'}.xlsx`);
-        this.toast.success('فایل اکسل ممیزی رسیدهای پرداخت دریافت شد.');
+        this.toast.success('فایل اکسل ممیزی دستورهای پرداخت دریافت شد.');
       },
       error: () => {
         this.toast.error('خطا در دانلود فایل اکسل.');
@@ -364,7 +364,7 @@ export class AccountantInvoicesHubComponent implements OnInit, OnDestroy {
   }
 
   importExcel(): void {
-    this.toast.info('قالب اکسل رسیدهای پرداخت حسابداری آماده بارگیری است.');
+    this.toast.info('قالب اکسل دستورهای پرداخت حسابداری آماده بارگیری است.');
   }
 
   clearSearch(): void {

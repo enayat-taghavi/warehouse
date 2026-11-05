@@ -36,7 +36,7 @@
           [checked]="onlyMine"
           (change)="setOnlyMine($any($event.target).checked)"
           class="w-4 h-4 accent-indigo-600 cursor-pointer rounded focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1" />
-        <span title="فقط رسیدهایی که خودم ثبت کرده‌ام">فقط خودم</span>
+        <span title="فقط دستورهای پرداختی که خودم ثبت کرده‌ام">فقط خودم</span>
       </label>
     </div>
 
@@ -47,8 +47,8 @@
         *ngIf="perm.canWriteDocuments()"
         type="button"
         appAction="create"
-        label="رسید پرداخت"
-        hint="ثبت رسید پرداخت جدید"
+        label="دستور پرداخت"
+        hint="ثبت دستور پرداخت جدید"
         (click)="openNewInvoiceModal()"
       ></button>
 
@@ -83,8 +83,8 @@
           inputmode="search"
           [(ngModel)]="invoiceSearch"
           (ngModelChange)="onSearchChange()"
-          aria-label="جستجوی رسید پرداخت"
-          placeholder="جستجوی شماره رسید پرداخت، طرف‌حساب، شرح..."
+          aria-label="جستجوی دستور پرداخت"
+          placeholder="جستجوی شماره دستور پرداخت، طرف‌حساب، شرح..."
           class="w-full ps-9 pe-10 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm font-medium placeholder:text-slate-400" />
         <button
           *ngIf="invoiceSearch"
@@ -99,7 +99,7 @@
 
       <!-- وضعیت بخش و تعداد رکوردها -->
       <div class="flex items-center gap-2 text-xs font-bold text-slate-500">
-        <span>جمع رسیدهای پرداخت:</span>
+        <span>جمع دستورهای پرداخت:</span>
         <span class="font-mono text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
           {{ formatNumber(totalCount) }}
         </span>
@@ -121,17 +121,17 @@
             }
           }
           @if (isEditable(inv) && perm.canWriteDocuments()) {
-            <button type="button" appAction="send" display="label" label="ارسال" size="sm" [disabled]="isSaving" (click)="sendToSupervisor(inv)" hint="ارسال رسید پرداخت به کارتابل سرپرست کارگاه"></button>
-            <button type="button" appAction="edit" display="icon" label="ویرایش" size="sm" [disabled]="isSaving" (click)="openEditInvoiceModal(inv)" hint="ویرایش رسید پرداخت پیش‌نویس"></button>
+            <button type="button" appAction="send" display="label" label="ارسال" size="sm" [disabled]="isSaving" (click)="sendToSupervisor(inv)" hint="ارسال دستور پرداخت به کارتابل سرپرست کارگاه"></button>
+            <button type="button" appAction="edit" display="icon" label="ویرایش" size="sm" [disabled]="isSaving" (click)="openEditInvoiceModal(inv)" hint="ویرایش دستور پرداخت پیش‌نویس"></button>
           }
           @if (isReviewEditable(inv) && perm.canWriteDocuments()) {
-            <button type="button" appAction="edit" display="icon" label="ویرایش" size="sm" [disabled]="isSaving" (click)="openEditInvoiceModal(inv)" hint="ویرایش رسید در مرحلهٔ بررسی حسابدار (در سابقه ثبت می‌شود)"></button>
+            <button type="button" appAction="edit" display="icon" label="ویرایش" size="sm" [disabled]="isSaving" (click)="openEditInvoiceModal(inv)" hint="ویرایش دستور پرداخت در مرحلهٔ بررسی حسابدار (در سابقه ثبت می‌شود)"></button>
           }
           @if (inv.attachment) {
-            <button type="button" appAction="view" display="icon" label="تصویر رسید پرداخت" size="sm" (click)="openAttachmentPreview(inv)" hint="مشاهده تصویر رسید پرداخت"></button>
+            <button type="button" appAction="view" display="icon" label="تصویر پیوست" size="sm" (click)="openAttachmentPreview(inv)" hint="مشاهده تصویر پیوست دستور پرداخت"></button>
           }
           @if (inv.status === 'draft' && perm.canWriteDocuments()) {
-            <button type="button" appAction="delete" display="icon" label="حذف" size="sm" [disabled]="isSaving" (click)="deleteDraftInvoice(inv)" hint="حذف رسید پرداخت پیش‌نویس"></button>
+            <button type="button" appAction="delete" display="icon" label="حذف" size="sm" [disabled]="isSaving" (click)="deleteDraftInvoice(inv)" hint="حذف دستور پرداخت پیش‌نویس"></button>
           }
         </ng-template>
         <ng-template #rowExtra let-inv>
@@ -150,8 +150,8 @@
               <div class="w-14 h-14 mx-auto rounded-2xl bg-surface-muted flex items-center justify-center mb-3">
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text"></svg>
               </div>
-              <p class="font-bold text-fg text-xs">هیچ رسید پرداختی در این وضعیت یا جستجو یافت نشد.</p>
-              <p class="text-[11px] text-fg-muted mt-1">با فشردن دکمهٔ «رسید پرداخت» می‌توانید رسید پرداخت ثبت کنید.</p>
+              <p class="font-bold text-fg text-xs">هیچ دستور پرداختی در این وضعیت یا جستجو یافت نشد.</p>
+              <p class="text-[11px] text-fg-muted mt-1">با فشردن دکمهٔ «دستور پرداخت» می‌توانید دستور پرداخت ثبت کنید.</p>
             </div>
     }
 
@@ -159,7 +159,7 @@
     @if (isLoading) {
       <div class="py-12 text-center text-fg-muted" role="status">
               <svg class="inline-block animate-spin mb-2" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="loader"></svg>
-              <p class="text-xs font-bold">در حال بارگذاری رسیدهای پرداخت بخش...</p>
+              <p class="text-xs font-bold">در حال بارگذاری دستورهای پرداخت بخش...</p>
             </div>
     }
 
@@ -170,7 +170,7 @@
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle"></svg>
               </div>
               <p class="font-bold text-fg text-xs">{{ loadError }}</p>
-              <p *ngIf="isOffline" class="text-[11px] text-fg-muted mt-1">دستگاه آفلاین است؛ رسیدهای پرداخت ثبت‌شدهٔ آفلاین پس از اتصال همگام می‌شوند.</p>
+              <p *ngIf="isOffline" class="text-[11px] text-fg-muted mt-1">دستگاه آفلاین است؛ دستورهای پرداخت ثبت‌شدهٔ آفلاین پس از اتصال همگام می‌شوند.</p>
               <button type="button" appAction="refresh" display="label" label="تلاش دوباره" size="sm" class="mt-3" (click)="loadInvoices()"></button>
             </div>
     }
@@ -199,7 +199,7 @@
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <div *ngIf="isNewInvoiceModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4" tabindex="-1" (keydown.escape)="closeNewInvoiceModal()">
     <div class="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-5xl overflow-hidden fade-in max-h-[92vh] flex flex-col"
-      role="dialog" aria-modal="true" [attr.aria-label]="editingInFlow ? 'ویرایش رسید پرداخت در مرحلهٔ بررسی' : (editingInvoiceId ? 'ویرایش رسید پرداخت پیش‌نویس' : 'ثبت رسید پرداخت هزینه جدید')">
+      role="dialog" aria-modal="true" [attr.aria-label]="editingInFlow ? 'ویرایش دستور پرداخت در مرحلهٔ بررسی' : (editingInvoiceId ? 'ویرایش دستور پرداخت پیش‌نویس' : 'ثبت دستور پرداخت هزینه جدید')">
       
       <!-- هدر مودال -->
       <div class="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
@@ -208,7 +208,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="file-text" aria-hidden="true"></svg>
           </div>
           <div>
-            <h3 class="text-xs md:text-sm font-black text-slate-800">{{ editingInFlow ? 'ویرایش رسید پرداخت در مرحلهٔ بررسی' : (editingInvoiceId ? 'ویرایش رسید پرداخت پیش‌نویس' : 'ثبت رسید پرداخت هزینه جدید') }}</h3>
+            <h3 class="text-xs md:text-sm font-black text-slate-800">{{ editingInFlow ? 'ویرایش دستور پرداخت در مرحلهٔ بررسی' : (editingInvoiceId ? 'ویرایش دستور پرداخت پیش‌نویس' : 'ثبت دستور پرداخت هزینه جدید') }}</h3>
             <p class="text-[11px] text-fg-muted font-medium">{{ formSection ? ('بخش «' + formSection.name + '» · ') : '' }}{{ editingInFlow ? 'تغییر در سابقه ثبت می‌شود' : 'ذخیره به‌صورت پیش‌نویس' }}</p>
           </div>
         </div>
@@ -225,7 +225,7 @@
       <div class="p-4 sm:p-5 space-y-3.5 overflow-y-auto flex-1">
         
         <!-- مشخصات فاکتور -->
-        <section class="p-3.5 rounded-2xl border border-slate-200/90 bg-slate-50/60 space-y-3" aria-label="مشخصات رسید پرداخت">
+        <section class="p-3.5 rounded-2xl border border-slate-200/90 bg-slate-50/60 space-y-3" aria-label="مشخصات دستور پرداخت">
           <!-- ردیف ۱: پروژه، بخش، تاریخ، شماره رسید -->
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
             <div>
@@ -260,7 +260,7 @@
               }
             </div>
             <div>
-              <label for="invoice_date" class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ رسید پرداخت (شمسی) *</label>
+              <label for="invoice_date" class="block text-[11px] font-bold text-slate-700 mb-1">تاریخ دستور پرداخت (شمسی) *</label>
               <div class="relative datepicker-left">
                 <ng-persian-datepicker [dateFormat]="'YYYY/MM/DD'" [uiHideAfterSelectDate]="true">
                   <input
@@ -280,14 +280,14 @@
               }
             </div>
             <div>
-              <label for="invoice_number" class="block text-[11px] font-bold text-slate-700 mb-1">شماره رسید پرداخت <span class="font-normal text-fg-muted">(اختیاری)</span></label>
+              <label for="invoice_number" class="block text-[11px] font-bold text-slate-700 mb-1">شماره دستور پرداخت <span class="font-normal text-fg-muted">(اختیاری)</span></label>
               <input
                 id="invoice_number"
                 type="text"
                 [(ngModel)]="newInvoice.invoice_number"
                 (ngModelChange)="onDuplicateKeyChange()"
-                aria-label="شماره رسید پرداخت"
-                placeholder="اگر رسید پرداخت شماره دارد"
+                aria-label="شماره دستور پرداخت"
+                placeholder="اگر دستور پرداخت شماره دارد"
                 class="min-h-[40px] w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm font-medium" />
             </div>
           </div>
@@ -327,7 +327,7 @@
             @if (counterpartyShebaMissing) {
               <p class="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-amber-800" role="status">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" class="shrink-0" aria-hidden="true"></svg>
-                <span>این طرف‌حساب شبای معتبر ندارد؛ رسید پرداخت ذخیره می‌شود اما ارسال به سرپرست پس از ثبت شبا ممکن است.</span>
+                <span>این طرف‌حساب شبای معتبر ندارد؛ دستور پرداخت ذخیره می‌شود اما ارسال به سرپرست پس از ثبت شبا ممکن است.</span>
               </p>
             }
           </div>
@@ -338,7 +338,7 @@
           <div class="p-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 text-xs" role="alert">
             <div class="flex items-center gap-1.5 font-bold">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" class="shrink-0"></svg>
-              <span>این شماره رسید پرداخت برای این طرف حساب قبلاً ثبت شده است</span>
+              <span>این شماره دستور پرداخت برای این طرف حساب قبلاً ثبت شده است</span>
             </div>
             <ul class="mt-1.5 space-y-0.5">
               @for (m of dup.matches; track m.id) {
@@ -360,7 +360,7 @@
         <div class="rounded-2xl border border-slate-200/90 bg-white shadow-sm overflow-hidden">
           <div class="px-3.5 py-2.5 bg-slate-100/75 border-b border-slate-200 flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span class="text-xs font-black text-slate-800">ردیف‌های رسید پرداخت *</span>
+              <span class="text-xs font-black text-slate-800">ردیف‌های دستور پرداخت *</span>
               <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
                 {{ formatNumber(formLines.length) }} ردیف
               </span>
@@ -464,7 +464,7 @@
             <!-- شرح کلی: خودکار از شرح ردیف اول، قابل ویرایش -->
             <div class="p-3.5 rounded-2xl border border-slate-200/90 bg-slate-50/50">
               <div class="flex items-center justify-between mb-1">
-                <label for="invoice_description" class="text-[11px] font-bold text-slate-700">شرح کلی رسید پرداخت</label>
+                <label for="invoice_description" class="text-[11px] font-bold text-slate-700">شرح کلی دستور پرداخت</label>
                 <span class="text-[10px] text-fg-muted font-medium">پر شدن خودکار از ردیف اول</span>
               </div>
               <textarea
@@ -473,14 +473,14 @@
                 aria-describedby="invoice_description_hint"
                 [(ngModel)]="newInvoice.description"
                 (ngModelChange)="onDescriptionInput($event)"
-                placeholder="شرح کلی رسید پرداخت..."
+                placeholder="شرح کلی دستور پرداخت..."
                 class="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 shadow-sm font-medium"></textarea>
               <p id="invoice_description_hint" class="mt-1 text-[10px] text-fg-muted">از شرح ردیف اول پر می‌شود؛ اگر خودتان تغییرش دهید، دیگر عوض نمی‌شود.</p>
             </div>
 
             <!-- فایل پیوست فاکتور (در ویرایش، فایل تازه جای پیوست فعلی را می‌گیرد) -->
             <div class="p-3.5 rounded-2xl border border-slate-200/90 bg-slate-50/50">
-              <label class="block text-[11px] font-bold text-slate-700 mb-1.5">تصویر یا فایل پیوست رسید پرداخت</label>
+              <label class="block text-[11px] font-bold text-slate-700 mb-1.5">تصویر یا فایل پیوست دستور پرداخت</label>
               @if (editingInvoiceId && existingAttachmentUrl && !attachmentFileName) {
                 <p class="mb-1.5 text-[11px] text-fg-muted">
                   پیوست فعلی:
@@ -546,8 +546,8 @@
               @if (showTotalsExtras) {
               <div id="invoice_totals_extras" class="pt-2 mt-1.5 border-t border-slate-200 space-y-2.5">
                 <div>
-                  <label for="invoice_discount" class="block text-[11px] font-bold text-slate-700 mb-1">تخفیف کل رسید پرداخت (ریال)</label>
-                  <app-amount-input inputId="invoice_discount" ariaLabel="تخفیف کل رسید پرداخت (ریال)" placeholder="۰"
+                  <label for="invoice_discount" class="block text-[11px] font-bold text-slate-700 mb-1">تخفیف کل دستور پرداخت (ریال)</label>
+                  <app-amount-input inputId="invoice_discount" ariaLabel="تخفیف کل دستور پرداخت (ریال)" placeholder="۰"
                     [invalid]="!!discountError" [describedBy]="discountError ? 'invoice_discount_error' : null"
                     [(ngModel)]="discountInput" [ngModelOptions]="{standalone: true}" (ngModelChange)="discountError = ''"></app-amount-input>
                   @if (discountError) {
@@ -620,7 +620,7 @@
           <button
             type="button"
             appAction="create"
-            label="ذخیره و رسید پرداخت بعدی"
+            label="ذخیره و دستور پرداخت بعدی"
             tone="indigo"
             hint="ذخیرهٔ پیش‌نویس و باز شدن فرم خالی با همان تاریخ"
             [busy]="isSaving"
@@ -732,7 +732,7 @@
         <img
           *ngIf="previewAttachmentUrl"
           [src]="previewAttachmentUrl | serverUrl"
-          alt="پیوست رسید پرداخت"
+          alt="پیوست دستور پرداخت"
           class="max-w-full max-h-[70vh] rounded-xl shadow-md object-contain" />
       </div>
       <div class="p-3 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs">
@@ -768,7 +768,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="clock" aria-hidden="true"></svg>
           </div>
           <div>
-            <h3 id="emp-inv-modal-4-title" class="text-xs md:text-sm font-black text-slate-800">جزئیات و سابقه گردش کار رسید پرداخت</h3>
+            <h3 id="emp-inv-modal-4-title" class="text-xs md:text-sm font-black text-slate-800">جزئیات و سابقه گردش کار دستور پرداخت</h3>
             <p class="text-[10px] text-fg-muted font-medium font-mono" *ngIf="selectedInvoiceDetail">
               شماره: {{ invoiceLabel(selectedInvoiceDetail) }}
             </p>
@@ -787,14 +787,14 @@
       <div class="p-5 space-y-4 overflow-y-auto flex-1">
         <div *ngIf="isLoadingDetail" class="py-8 text-center text-slate-500">
           <svg appIcon="loader" class="w-6 h-6 animate-spin mx-auto mb-2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-          <p class="text-xs font-bold">در حال بارگذاری اطلاعات رسید پرداخت...</p>
+          <p class="text-xs font-bold">در حال بارگذاری اطلاعات دستور پرداخت...</p>
         </div>
 
         <div *ngIf="!isLoadingDetail && selectedInvoiceDetail" class="space-y-4">
           <!-- فیلدهای اصلی فاکتور -->
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-200/70 text-xs">
             <div>
-              <span class="text-slate-400 text-[11px] block">شماره رسید پرداخت:</span>
+              <span class="text-slate-400 text-[11px] block">شماره دستور پرداخت:</span>
               <span class="font-mono font-bold text-slate-800">{{ selectedInvoiceDetail.invoice_number || '—' }}</span>
             </div>
             <div>
@@ -856,7 +856,7 @@
             </div>
           </div>
 
-          <!-- رسیدهای پرداخت (دیدنی برای همهٔ شرکت‌کنندگان گردش و مدیران و حسابداران دامنه) -->
+          <!-- دستورهای پرداخت (دیدنی برای همهٔ شرکت‌کنندگان گردش و مدیران و حسابداران دامنه) -->
           <div *ngIf="selectedInvoiceDetail.id as invId">
             <h4 class="text-xs font-black text-slate-700 mb-2">سندهای واریز</h4>
             <app-attachments kind="expense_invoice" [entityId]="invId" [label]="receiptLabel"></app-attachments>
@@ -883,7 +883,7 @@
           size="sm"
           [disabled]="!canPrint || !selectedInvoiceDetail"
           (click)="printInvoice(selectedInvoiceDetail)"
-          hint="چاپ رسید پرداخت (PDF)">
+          hint="چاپ دستور پرداخت (PDF)">
         </button>
         <button
           type="button"
@@ -899,8 +899,8 @@
 
   <app-workflow-reason-dialog
     [open]="isDuplicateReasonOpen"
-    title="دلیل ارسال رسید پرداخت تکراری"
-    confirmLabel="ارسال رسید پرداخت"
+    title="دلیل ارسال دستور پرداخت تکراری"
+    confirmLabel="ارسال دستور پرداخت"
     [serverError]="duplicateReasonServerError"
     (confirmed)="onDuplicateReasonConfirmed($event)"
     (cancelled)="closeDuplicateReason()">

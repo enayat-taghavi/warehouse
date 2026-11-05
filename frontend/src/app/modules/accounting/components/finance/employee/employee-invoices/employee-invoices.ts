@@ -60,19 +60,19 @@ export interface InvoiceRoleActionSet { approve?: RoleActionButton; ret?: RoleAc
 /** دکمه‌های ردیف برای هر مرحلهٔ نقش (فهرست یکپارچهٔ فاکتورها، ح۲) */
 export const INVOICE_ROLE_ACTIONS: Record<InvoiceRoleStep, InvoiceRoleActionSet> = {
   supervisor_ok: {
-    approve: { label: 'تأیید', hint: 'تأیید رسید پرداخت و ارسال به حسابدار' },
-    ret: { label: 'عودت', hint: 'عودت رسید پرداخت برای اصلاح' },
+    approve: { label: 'تأیید', hint: 'تأیید دستور پرداخت و ارسال به حسابدار' },
+    ret: { label: 'عودت', hint: 'عودت دستور پرداخت برای اصلاح' },
   },
   accountant_review: {
     approve: { label: 'صدور', hint: 'صدور سند' },
-    ret: { label: 'عودت', hint: 'عودت رسید پرداخت برای اصلاح' },
+    ret: { label: 'عودت', hint: 'عودت دستور پرداخت برای اصلاح' },
   },
   manager_ok: {
     approve: { label: 'مجوز', hint: 'مجوز پرداخت' },
     ret: { label: 'بازنگری', hint: 'بازگرداندن برای بازنگری' },
   },
   treasury_pay: {
-    pay: { label: 'پرداخت', hint: 'پرداخت رسید پرداخت' },
+    pay: { label: 'پرداخت', hint: 'پرداخت دستور پرداخت' },
   },
 };
 
@@ -97,10 +97,10 @@ function toAsciiDigits(v: string): string {
   styleUrl: './employee-invoices.css'
 })
 export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
-  /** ستون سرفصل در فهرست مشترک رسیدهای پرداخت */
+  /** ستون سرفصل در فهرست مشترک دستورهای پرداخت */
   readonly headsColumn = (inv: ExpenseInvoice) => this.headsSummary(inv);
   protected perm = inject(PermissionService);
-  /** برچسب پیوست رسید پرداخت (فهرست فقط خواندنی در جزئیات فاکتور) */
+  /** برچسب پیوست دستور پرداخت (فهرست فقط خواندنی در جزئیات فاکتور) */
   readonly receiptLabel = PAYMENT_RECEIPT_LABEL;
   readonly Math = Math;
 
@@ -371,7 +371,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         error: (err: any) => {
           this.isLoadingDetail = false;
           if (silent) return;
-          this.toast.show('error', 'خطا در بارگذاری جزئیات رسید پرداخت: ' + (err.error?.error || err.message || 'نامشخص'));
+          this.toast.show('error', 'خطا در بارگذاری جزئیات دستور پرداخت: ' + (err.error?.error || err.message || 'نامشخص'));
           this.cdr.detectChanges();
         }
       });
@@ -409,10 +409,10 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
 
     if (this.confirmDialog) {
       const ok = await this.confirmDialog.open({
-        title: 'لغو رسید پرداخت هزینه',
-        message: 'آیا از لغو این رسید پرداخت هزینه اطمینان دارید؟ این عملیات غیرقابل بازگشت است.',
+        title: 'لغو دستور پرداخت هزینه',
+        message: 'آیا از لغو این دستور پرداخت هزینه اطمینان دارید؟ این عملیات غیرقابل بازگشت است.',
         type: 'danger',
-        confirmText: 'لغو رسید پرداخت',
+        confirmText: 'لغو دستور پرداخت',
         cancelText: 'انصراف'
       });
       if (!ok) return;
@@ -421,7 +421,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     if (this.treasuryOrgApi) {
       this.treasuryOrgApi.cancelExpenseInvoice(invoiceId, 'لغو توسط کاربر').subscribe({
         next: () => {
-          this.toast.show('success', 'رسید پرداخت هزینه با موفقیت لغو شد.');
+          this.toast.show('success', 'دستور پرداخت هزینه با موفقیت لغو شد.');
           this.loadInvoices();
           if (invoiceId) {
             this.openInvoiceDetail(invoiceId);
@@ -432,7 +432,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
             const detail = err.error?.detail || err.error?.message || 'امکان لغو وجود ندارد چون مرحله بعد اقدام شده است.';
             this.toast.show('warning', detail);
           } else {
-            const msg = err.error?.detail || err.error?.error || err.message || 'خطا در لغو رسید پرداخت';
+            const msg = err.error?.detail || err.error?.error || err.message || 'خطا در لغو دستور پرداخت';
             this.toast.show('error', msg);
           }
         }
@@ -631,7 +631,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         if (silent) return;
         this.loadError = (typeof err?.status === 'number' && isServerUnreachable(err.status)) || this.isOffline
           ? 'اتصال به سرور برقرار نیست.'
-          : 'خطا در بارگذاری رسیدهای پرداخت: ' + (err.error?.error || err.message || 'نامشخص');
+          : 'خطا در بارگذاری دستورهای پرداخت: ' + (err.error?.error || err.message || 'نامشخص');
         this.cdr.detectChanges();
       }
     });
@@ -723,7 +723,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
 
   openNewInvoiceModal(): void {
     if (this.mySections.length === 0) {
-      this.toast.show('warning', 'بخشی برای ثبت رسید پرداخت به شما داده نشده است.');
+      this.toast.show('warning', 'بخشی برای ثبت دستور پرداخت به شما داده نشده است.');
       return;
     }
     this.resetFormExtras();
@@ -770,7 +770,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   /** ویرایش پیش‌نویس یا ویرایش رسید در مرحلهٔ بررسی حسابدار */
   openEditInvoiceModal(inv: ExpenseInvoice): void {
     if (!inv.id || !this.canEditInvoice(inv)) {
-      this.toast.show('warning', 'فقط رسیدهای پرداخت پیش‌نویس قابل ویرایش‌اند.');
+      this.toast.show('warning', 'فقط دستورهای پرداخت پیش‌نویس قابل ویرایش‌اند.');
       return;
     }
     this.resetFormExtras();
@@ -1107,11 +1107,11 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   /** اعتبارسنجی سمت کاربر؛ سرور حرف آخر را می‌زند */
   private validateForm(): boolean {
     if (!this.newInvoice.counterparty) {
-      this.toast.show('warning', 'لطفاً طرف‌حساب رسید پرداخت را انتخاب کنید.');
+      this.toast.show('warning', 'لطفاً طرف‌حساب دستور پرداخت را انتخاب کنید.');
       return false;
     }
     if (!this.newInvoice.invoice_date_shamsi?.trim()) {
-      this.toast.show('warning', 'تاریخ رسید پرداخت الزامی است.');
+      this.toast.show('warning', 'تاریخ دستور پرداخت الزامی است.');
       return false;
     }
     this.lineErrors = {};
@@ -1123,11 +1123,11 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       else if (!l.expense_head) this.lineErrors[i] = 'سرفصل هزینهٔ این ردیف را انتخاب کنید.';
     });
     if (Object.keys(this.lineErrors).length) {
-      this.toast.show('warning', 'ردیف‌های رسید پرداخت را کامل کنید.');
+      this.toast.show('warning', 'ردیف‌های دستور پرداخت را کامل کنید.');
       return false;
     }
     if (this.subtotal <= 0) {
-      this.toast.show('warning', 'مبلغ رسید پرداخت باید بزرگتر از صفر ریال باشد.');
+      this.toast.show('warning', 'مبلغ دستور پرداخت باید بزرگتر از صفر ریال باشد.');
       return false;
     }
     if (this.discountAmount > this.subtotal) {
@@ -1190,15 +1190,15 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   /** mode: close = فقط ذخیره؛ send = ذخیره و ارسال به سرپرست (فقط آنلاین)؛ new = ذخیره و فرم خالی برای فاکتور بعدی */
   saveInvoice(mode: 'close' | 'send' | 'new' = 'close'): void {
     if (!this.formSectionId) {
-      this.toast.show('warning', 'لطفاً پروژه و بخش رسید پرداخت را انتخاب کنید.');
+      this.toast.show('warning', 'لطفاً پروژه و بخش دستور پرداخت را انتخاب کنید.');
       return;
     }
     if (mode === 'send' && this.isOffline) {
-      this.toast.show('warning', 'ارسال رسید پرداخت به گردش فقط در حالت آنلاین ممکن است؛ فعلاً فقط ذخیره کنید.');
+      this.toast.show('warning', 'ارسال دستور پرداخت به گردش فقط در حالت آنلاین ممکن است؛ فعلاً فقط ذخیره کنید.');
       return;
     }
     if (mode === 'send' && this.counterpartyShebaMissing) {
-      this.toast.show('warning', 'طرف‌حساب شبای معتبر ندارد؛ رسید پرداخت را پیش‌نویس ذخیره کنید و پس از ثبت شبا بفرستید.');
+      this.toast.show('warning', 'طرف‌حساب شبای معتبر ندارد؛ دستور پرداخت را پیش‌نویس ذخیره کنید و پس از ثبت شبا بفرستید.');
       return;
     }
     if (!this.validateForm()) return;
@@ -1261,11 +1261,11 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
           return;
         }
         if (isReviewEdit) {
-          this.toast.show('success', `تغییرات رسید پرداخت «${invLbl}» ذخیره شد و در سابقه ثبت شد.`);
+          this.toast.show('success', `تغییرات دستور پرداخت «${invLbl}» ذخیره شد و در سابقه ثبت شد.`);
         } else {
           this.toast.show('success', editingId
-            ? `رسید پرداخت «${invLbl}» ویرایش شد.`
-            : `رسید پرداخت${this.invoiceLabel(saved) ? ` «${this.invoiceLabel(saved)}»` : ''} با موفقیت در وضعیت پیش‌نویس ثبت شد.`);
+            ? `دستور پرداخت «${invLbl}» ویرایش شد.`
+            : `دستور پرداخت${this.invoiceLabel(saved) ? ` «${this.invoiceLabel(saved)}»` : ''} با موفقیت در وضعیت پیش‌نویس ثبت شد.`);
         }
         if (mode === 'new') {
           this.openNewInvoiceModal();
@@ -1296,7 +1296,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
         } else if (e?.detail) {
           this.toast.show('error', e.detail);
         } else {
-          this.toast.show('error', 'خطا در ثبت رسید پرداخت: ' + (e?.error || err.message || 'نامشخص'));
+          this.toast.show('error', 'خطا در ثبت دستور پرداخت: ' + (e?.error || err.message || 'نامشخص'));
         }
         this.cdr.detectChanges();
       }
@@ -1433,16 +1433,16 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   async sendToSupervisor(invoice: ExpenseInvoice): Promise<void> {
     if (!invoice.id) return;
     if (!this.isEditable(invoice)) {
-      this.toast.show('warning', 'فقط رسیدهای پرداخت پیش‌نویس یا برگشتی برای اصلاح قابلیت ارسال به سرپرست را دارند.');
+      this.toast.show('warning', 'فقط دستورهای پرداخت پیش‌نویس یا برگشتی برای اصلاح قابلیت ارسال به سرپرست را دارند.');
       return;
     }
 
-    if ((await this.confirmDialog?.open({ title: 'ارسال برای سرپرست', message: `آیا از ارسال رسید پرداخت شماره «${this.invoiceLabel(invoice)}» به سرپرست جهت بررسی و تایید اطمینان دارید؟`, type: 'info' })) !== true) {
+    if ((await this.confirmDialog?.open({ title: 'ارسال برای سرپرست', message: `آیا از ارسال دستور پرداخت شماره «${this.invoiceLabel(invoice)}» به سرپرست جهت بررسی و تایید اطمینان دارید؟`, type: 'info' })) !== true) {
       return;
     }
 
     if (this.isOffline) {
-      this.toast.show('warning', 'ارسال رسید پرداخت به گردش فقط در حالت آنلاین ممکن است.');
+      this.toast.show('warning', 'ارسال دستور پرداخت به گردش فقط در حالت آنلاین ممکن است.');
       return;
     }
     this.submitInvoice(invoice);
@@ -1456,7 +1456,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       next: () => {
         this.isSaving = false;
         this.closeDuplicateReason();
-        this.toast.show('success', `رسید پرداخت شماره «${this.invoiceLabel(invoice)}» با موفقیت جهت تایید به کارتابل سرپرست ارسال شد.`);
+        this.toast.show('success', `دستور پرداخت شماره «${this.invoiceLabel(invoice)}» با موفقیت جهت تایید به کارتابل سرپرست ارسال شد.`);
         this.loadInvoices();
       },
       error: (err: any) => {
@@ -1508,11 +1508,11 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   async deleteDraftInvoice(invoice: ExpenseInvoice): Promise<void> {
     if (!invoice.id) return;
     if (invoice.status !== 'draft') {
-      this.toast.show('warning', 'فقط رسیدهای پرداخت در وضعیت پیش‌نویس قابل حذف توسط کارمند هستند.');
+      this.toast.show('warning', 'فقط دستورهای پرداخت در وضعیت پیش‌نویس قابل حذف توسط کارمند هستند.');
       return;
     }
 
-    if ((await this.confirmDialog?.open({ title: 'حذف', message: `آیا از حذف رسید پرداخت پیش‌نویس شماره «${this.invoiceLabel(invoice)}» اطمینان دارید؟ این عملیات غیرقابل بازگشت است.`, type: 'danger', confirmText: 'حذف' })) !== true) {
+    if ((await this.confirmDialog?.open({ title: 'حذف', message: `آیا از حذف دستور پرداخت پیش‌نویس شماره «${this.invoiceLabel(invoice)}» اطمینان دارید؟ این عملیات غیرقابل بازگشت است.`, type: 'danger', confirmText: 'حذف' })) !== true) {
       return;
     }
 
@@ -1520,12 +1520,12 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
     this.personnelApi.deleteExpenseInvoice(invoice.id).subscribe({
       next: () => {
         this.isSaving = false;
-        this.toast.show('success', `رسید پرداخت پیش‌نویس «${this.invoiceLabel(invoice)}» حذف شد.`);
+        this.toast.show('success', `دستور پرداخت پیش‌نویس «${this.invoiceLabel(invoice)}» حذف شد.`);
         this.loadInvoices();
       },
       error: (err: any) => {
         this.isSaving = false;
-        this.toast.show('error', fiscalPeriodClosedMessage(err, 'invoice_date_shamsi') || expenseHeadErrorMessage(err) || ('خطا در حذف رسید پرداخت: ' + (err.error?.error || err.message || 'نامشخص')));
+        this.toast.show('error', fiscalPeriodClosedMessage(err, 'invoice_date_shamsi') || expenseHeadErrorMessage(err) || ('خطا در حذف دستور پرداخت: ' + (err.error?.error || err.message || 'نامشخص')));
       }
     });
   }
@@ -1534,7 +1534,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
   openAttachmentPreview(invoice: ExpenseInvoice): void {
     if (!invoice.attachment) return;
     this.previewAttachmentUrl = invoice.attachment;
-    this.previewInvoiceTitle = `پیوست رسید پرداخت شماره ${this.invoiceLabel(invoice)} - ${invoice.counterparty_name || ''}`;
+    this.previewInvoiceTitle = `پیوست دستور پرداخت شماره ${this.invoiceLabel(invoice)} - ${invoice.counterparty_name || ''}`;
     this.isAttachmentPreviewModalOpen = true;
     this.cdr.detectChanges();
   }
@@ -1560,7 +1560,7 @@ export class EmployeeInvoicesHubComponent implements OnInit, OnDestroy {
       status: this.statusFilter !== 'all' ? this.statusFilter : undefined
     };
 
-    this.toast.show('info', 'در حال تولید فایل اکسل رسیدهای پرداخت هزینه...');
+    this.toast.show('info', 'در حال تولید فایل اکسل دستورهای پرداخت هزینه...');
     this.personnelApi.exportExpenseInvoicesExcel(params).subscribe({
       next: (blob: Blob) => {
         void saveBlob(blob, `expense_invoices_${this.selectedSection?.code || 'all'}.xlsx`);

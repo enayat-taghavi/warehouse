@@ -281,7 +281,7 @@ class AccountingReportView(APIView):
 TOTAL_LABEL = 'جمع کل'
 TITLES = {
     'expense': 'گزارش هزینه',
-    'unpaid-invoices': 'ماندهٔ پرداخت‌نشدهٔ رسیدهای پرداخت',
+    'unpaid-invoices': 'ماندهٔ پرداخت‌نشدهٔ دستورهای پرداخت',
     'petty-cash': 'گزارش تنخواه',
     'bank-payments': 'پرداخت‌ها از حساب بانکی',
     'labor-cost': 'بهای نیروی انسانی',
@@ -303,24 +303,24 @@ def _sheets(key, data):
     if key == 'expense':
         if data['group_by'] == 'head':
             cols = [('گروه سرفصل', 'group_label', 'right'), ('کد سرفصل', 'code', 'num'), ('سرفصل', 'label', 'right'),
-                    ('هزینهٔ رسید پرداخت', 'invoice_amount', 'money'), ('هزینهٔ تنخواه', 'petty_amount', 'money'),
+                    ('هزینهٔ دستور پرداخت', 'invoice_amount', 'money'), ('هزینهٔ تنخواه', 'petty_amount', 'money'),
                     ('جمع هزینه', 'total', 'money')]
         else:
-            cols = [('عنوان', 'label', 'right'), ('هزینهٔ رسید پرداخت', 'invoice_amount', 'money'),
+            cols = [('عنوان', 'label', 'right'), ('هزینهٔ دستور پرداخت', 'invoice_amount', 'money'),
                     ('هزینهٔ تنخواه', 'petty_amount', 'money'), ('جمع هزینه', 'total', 'money'),
-                    ('مالیات بر ارزش افزوده', 'vat_amount', 'money'), ('تعداد رسید پرداخت', 'invoice_count', 'num')]
+                    ('مالیات بر ارزش افزوده', 'vat_amount', 'money'), ('تعداد دستور پرداخت', 'invoice_count', 'num')]
         label_key = 'group_label' if data['group_by'] == 'head' else 'label'
         return [(title, cols, _rows(cols, data['rows'], data['totals'], label_key))]
     if key == 'unpaid-invoices':
-        cols = [('طرف‌حساب', 'counterparty_name', 'right'), ('تعداد رسید پرداخت', 'count', 'num'),
+        cols = [('طرف‌حساب', 'counterparty_name', 'right'), ('تعداد دستور پرداخت', 'count', 'num'),
                 ('مانده', 'remaining', 'money'), *AGE_COLS]
-        detail = [('شمارهٔ داخلی', 'number', 'text'), ('شمارهٔ رسید پرداخت', 'invoice_number', 'text'),
-                  ('تاریخ رسید پرداخت', 'invoice_date', 'text'), ('تاریخ تأیید مدیر', 'approved_date', 'text'),
+        detail = [('شمارهٔ داخلی', 'number', 'text'), ('شمارهٔ دستور پرداخت', 'invoice_number', 'text'),
+                  ('تاریخ دستور پرداخت', 'invoice_date', 'text'), ('تاریخ تأیید مدیر', 'approved_date', 'text'),
                   ('سن بدهی (روز)', 'age_days', 'num'), ('بخش', 'section_name', 'right'),
                   ('طرف‌حساب', 'counterparty_name', 'right'), ('مبلغ', 'amount', 'money'),
                   ('پرداخت‌شده', 'paid_amount', 'money'), ('مانده', 'remaining', 'money')]
         return [(title, cols, _rows(cols, data['rows'], data['totals'], 'counterparty_name')),
-                ('فهرست رسیدهای پرداخت', detail, _rows(detail, data['details']))]
+                ('فهرست دستورهای پرداخت', detail, _rows(detail, data['details']))]
     if key == 'petty-cash':
         cols = [('تنخواه‌گردان', 'custodian_name', 'right'), ('شرکت', 'company_name', 'right'),
                 ('سقف', 'ceiling_amount', 'money'), ('موجودی اولیه', 'opening_balance', 'money'),
@@ -336,7 +336,7 @@ def _sheets(key, data):
                 ('تعداد پرداخت', 'count', 'num'), ('جمع پرداخت', 'total', 'money')]
         detail = [('تاریخ پرداخت', 'payment_date', 'text'), ('مبلغ', 'amount', 'money'),
                   ('کد رهگیری', 'tracking_code', 'text'), ('روش', 'method', 'text'),
-                  ('شمارهٔ رسید پرداخت', 'invoice_number', 'text'), ('طرف‌حساب', 'counterparty_name', 'right'),
+                  ('شمارهٔ دستور پرداخت', 'invoice_number', 'text'), ('طرف‌حساب', 'counterparty_name', 'right'),
                   ('بانک', 'bank_name', 'right'), ('شبا', 'sheba_number', 'text')]
         return [(title, cols, _rows(cols, data['rows'], data['totals'], 'company_name')),
                 ('فهرست پرداخت‌ها', detail, _rows(detail, data['details']))]

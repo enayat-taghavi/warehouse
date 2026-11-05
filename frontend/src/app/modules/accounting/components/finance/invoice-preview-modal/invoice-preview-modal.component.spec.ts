@@ -174,7 +174,7 @@ describe('InvoicePreviewModalComponent — پیش‌نمایش و سابقه ف�
 
     const text = fixture.nativeElement.textContent;
     expect(text).toContain('فروشگاه آذرخش');
-    expect(text).toContain('شماره رسید پرداخت:');
+    expect(text).toContain('شماره دستور پرداخت:');
 
     const historySection = fixture.nativeElement.querySelector('#inv-preview-history');
     expect(historySection).not.toBeNull();
@@ -184,14 +184,14 @@ describe('InvoicePreviewModalComponent — پیش‌نمایش و سابقه ف�
 
   it('6. modalTitle formats title with document/invoice number', () => {
     component.invoiceDetail = sampleInvoice;
-    expect(component.modalTitle).toBe('پیش‌نمایش و سابقه رسید پرداخت DOC-101');
+    expect(component.modalTitle).toBe('پیش‌نمایش و سابقه دستور پرداخت DOC-101');
 
     component.invoiceDetail = { id: 999, invoice_number: 'INV-999' };
-    expect(component.modalTitle).toBe('پیش‌نمایش و سابقه رسید پرداخت INV-999');
+    expect(component.modalTitle).toBe('پیش‌نمایش و سابقه دستور پرداخت INV-999');
 
     component.invoiceDetail = null;
     component.invoice = null;
-    expect(component.modalTitle).toBe('مشاهده و سابقه رسید پرداخت');
+    expect(component.modalTitle).toBe('مشاهده و سابقه دستور پرداخت');
   });
 
   it('7. printInvoice calls PrintService with expense_invoice and id', () => {

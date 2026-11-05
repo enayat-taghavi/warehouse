@@ -4,15 +4,15 @@
     <div class="p-4 border-b border-slate-100 flex items-center justify-between">
       <h3 class="text-sm font-black text-slate-800 flex items-center gap-2">
         <svg [appIcon]="invoiceIcon" class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
-        <span>رسیدهای پرداخت هزینه و اسناد خرید نیازمند مجوز پرداخت مدیریت</span>
+        <span>دستورهای پرداخت هزینه و اسناد خرید نیازمند مجوز پرداخت مدیریت</span>
       </h3>
       <button type="button" appAction="refresh" [busy]="isLoading" (click)="loadInvoices()"></button>
     </div>
 
     @if (isLoading && invoicesList.length === 0) {
-      <p class="p-10 text-center text-slate-400 text-xs" role="status">در حال بارگذاری رسیدهای پرداخت...</p>
+      <p class="p-10 text-center text-slate-400 text-xs" role="status">در حال بارگذاری دستورهای پرداخت...</p>
     } @else if (invoicesList.length === 0) {
-      <p class="p-8 text-center text-slate-400 font-medium">هیچ رسید پرداختی در انتظار تصویب مدیر نمی‌باشد.</p>
+      <p class="p-8 text-center text-slate-400 font-medium">هیچ دستور پرداختی در انتظار تصویب مدیر نمی‌باشد.</p>
     } @else {
       <app-payment-receipt-list [rows]="invoicesList" (preview)="openPreview($event, 'preview')">
         <ng-template #rowActions let-inv>
