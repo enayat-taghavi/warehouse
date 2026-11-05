@@ -411,6 +411,7 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   todayShamsi: string = '';
 
   private docSub?: Subscription;
+  private balanceCompanyId: number | null = null;
 
   constructor(
     public auth: AuthService,
@@ -459,6 +460,10 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
     });
     this.loadMySections();
     this.refreshData();
+    // کاربر چندشرکتی: مانده پس از انتخاب شرکت خوانده می‌شود
+    this.dateControlSubs.add(this.activeCompanyService?.activeCompany$.subscribe(c => {
+      if (c?.id && c.id !== this.balanceCompanyId) this.loadBalanceSummary();
+    }));
     this.route.queryParams.subscribe(params => {
       if (params['section_id']) {
         const sId = Number(params['section_id']);
@@ -728,6 +733,9 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
 
   // ─── مانده و بدهی حساب شرکت ───
   loadBalanceSummary(): void {
+    // بی شرکت فعال، سرور فقط برای کاربر تک‌شرکتی شرکت را می‌یابد؛ وگرنه ۴۰۰ «شرکت فعال مشخص نیست»
+    if (!this.companyId && (this.activeCompanyService?.availableCompanies.length ?? 0) > 1) return;
+    this.balanceCompanyId = this.companyId;
     this.isLoadingBalance = true;
     this.personnelApi.getPettyCashBalance(null, undefined, this.companyId).subscribe({
       next: (res: PettyCashBalanceSummary) => {

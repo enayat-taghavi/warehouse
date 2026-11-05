@@ -426,6 +426,15 @@ export class TrainingVideo {
       }
     }
     const entry = this.page.getByRole('button', { name: label, exact: true }).first();
+    if (this.mobile && await entry.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      // the picker handler may reload the page after the hamburger click: the sidebar is closed again
+      const inView = await expect(entry).toBeInViewport({ timeout: 1_500 }).then(() => true, () => false);
+      const show = this.page.getByRole('button', { name: /^(منوی کامل|نمایش منو)$/ }).first();
+      if (!inView && await show.isVisible().catch(() => false)) {
+        await this.act.click(show);
+        await this.page.waitForTimeout(400);
+      }
+    }
     if (await entry.isVisible({ timeout: 3_000 }).catch(() => false)) {
       await this.act.click(entry);
     } else {
