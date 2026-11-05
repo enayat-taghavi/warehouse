@@ -105,7 +105,7 @@ test('video 4-b: petty cash statement, line rejection and refill', async ({ page
   await tv.say('sup_approve');
   await tv.act.click(supRow.getByRole('button', { name: /^تأیید/ }));
   // پنجرهٔ تأیید سند؛ دکمهٔ تأیید آن آخرین «تأیید» روی صفحه است
-  await tv.act.click(page.getByRole('button', { name: 'تأیید', exact: true }).last());
+  await tv.act.click(page.locator('.confirm-panel').getByRole('button', { name: 'تأیید', exact: true }));
   await expect(supRow).toBeHidden({ timeout: 30_000 });
   await tv.expectNoErrors();
 

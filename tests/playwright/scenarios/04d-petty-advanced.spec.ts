@@ -162,7 +162,7 @@ test('video 4-d: petty cash approver, ceiling, two companies and debt', async ({
   await tv.say('supervisor');
   await tv.act.click(supRow.getByRole('button', { name: /^تأیید/ }));
   // پنجرهٔ تأیید سند؛ دکمهٔ تأیید آن آخرین «تأیید» روی صفحه است
-  await tv.act.click(page.getByRole('button', { name: 'تأیید', exact: true }).last());
+  await tv.act.click(page.locator('.confirm-panel').getByRole('button', { name: 'تأیید', exact: true }));
   await expect(supRow).toBeHidden({ timeout: 30_000 });
   await tv.expectNoErrors();
 
