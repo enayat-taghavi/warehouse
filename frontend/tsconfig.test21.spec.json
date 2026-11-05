@@ -31,6 +31,8 @@
     "src/app/modules/common/components/app-launcher/app-launcher.dom.spec.ts",
     "src/app/modules/common/components/operations/operations-layout/operations-layout.dom.spec.ts",
     "src/app/shared/components/user-menu/user-menu.component.spec.ts",
-    "src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.spec.ts"
+    "src/app/modules/common/components/communications/chat-drawer/chat-drawer.component.spec.ts",
+    "src/app/shared/components/person-role-picker/person-role-picker.dom.spec.ts",
+    "src/app/modules/accounting/components/finance/accountant/accountant-petty-cash/petty-account-manager/petty-account-manager.dom.spec.ts"
   ]
 }

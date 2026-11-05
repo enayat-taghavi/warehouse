@@ -41,22 +41,22 @@ const unwrap = (res: any): any[] => (Array.isArray(res) ? res : Array.isArray(re
   template: `
     <div class="relative min-w-0" dir="rtl">
       <div
-        class="flex flex-wrap items-center gap-1.5 min-w-0 bg-surface border border-line rounded-xl px-2 py-1.5 focus-within:ring-2 focus-within:ring-indigo-500"
+        class="flex flex-wrap items-center gap-1.5 min-w-0 bg-surface border border-line rounded-xl px-2.5 py-1 min-h-[40px] focus-within:ring-2 focus-within:ring-indigo-500"
         [class.opacity-60]="disabled()"
       >
         @for (v of value(); track v.type + ':' + v.id) {
-          <span class="inline-flex items-center gap-1 max-w-full min-w-0 bg-surface-muted border border-line rounded-lg ps-2 pe-1 text-xs font-bold text-fg">
+          <span class="inline-flex items-center gap-1 max-w-full min-w-0 bg-surface-muted border border-line rounded-lg ps-2 pe-1 py-0.5 text-xs font-bold text-fg">
             <svg [appIcon]="v.type === 'user' ? 'user' : 'users'" class="w-3.5 h-3.5 shrink-0 text-fg-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
             <span class="truncate min-w-0">{{ v.label }}</span>
             <button
               type="button"
-              class="inline-flex items-center justify-center w-10 h-10 -my-2 shrink-0 rounded-lg text-fg-muted hover:text-rose-600 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+              class="inline-flex items-center justify-center w-10 h-10 -my-2.5 -me-1 shrink-0 rounded-lg text-fg-muted hover:text-rose-600 outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               [attr.aria-label]="'حذف ' + v.label"
               [attr.title]="'حذف ' + v.label"
               [disabled]="disabled()"
               (click)="remove(v)"
             >
-              <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+              <svg appIcon="x" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
             </button>
           </span>
         }
@@ -64,7 +64,7 @@ const unwrap = (res: any): any[] => (Array.isArray(res) ? res : Array.isArray(re
           type="text"
           role="combobox"
           autocomplete="off"
-          class="flex-1 min-w-[8rem] min-h-[40px] bg-transparent outline-none text-sm text-fg placeholder:text-fg-subtle"
+          class="flex-1 min-w-[8rem] h-8 bg-transparent outline-none text-xs font-bold text-fg placeholder:text-fg-subtle placeholder:font-normal"
           [id]="inputId"
           [placeholder]="placeholder()"
           [attr.aria-label]="placeholder()"
