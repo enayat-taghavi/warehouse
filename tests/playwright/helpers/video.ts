@@ -350,10 +350,11 @@ export class TrainingVideo {
   }
 
   /** The company picker may open after entering the finance app; pick the demo company or close it. */
-  async pickCompany(name = 'شرکت نمایشی'): Promise<void> {
+  async pickCompany(name = 'شرکت نمایشی', waitMs = 8_000): Promise<void> {
+    this.lastCompany = name;
     // without an active company (user of two companies) the picker has no close button, so wait on its heading
-    const heading = this.page.locator('app-company-selection-modal').getByText('انتخاب شرکت کاری', { exact: true });
-    if (!(await heading.isVisible({ timeout: 5_000 }).catch(() => false))) return;
+    const heading = this.companyPickerHeading();
+    if (!(await heading.isVisible({ timeout: waitMs }).catch(() => false))) return;
     const close = this.page.getByTitle('انصراف و بستن');
     // company rows in the picker are clickable divs (not buttons)
     const option = this.page
@@ -365,11 +366,27 @@ export class TrainingVideo {
     await expect(heading).toBeHidden({ timeout: 15_000 });
   }
 
+  /** Company last picked; the picker of a two-company user can open late (after the shell loads its companies) or again after a reload. */
+  private lastCompany: string | undefined;
+
+  private companyPickerHeading(): Locator {
+    return this.page.locator('app-company-selection-modal').getByText('انتخاب شرکت کاری', { exact: true });
+  }
+
+  /** Picks the last company again when the picker is (still or again) open. */
+  private async repickCompanyIfOpen(waitMs: number): Promise<void> {
+    if (!this.lastCompany) return;
+    if (await this.companyPickerHeading().isVisible({ timeout: waitMs }).catch(() => false)) {
+      await this.pickCompany(this.lastCompany, 1_000);
+    }
+  }
+
   /**
    * Opens a sidebar menu entry by its Persian label (on mobile the menu is opened first).
    * Falls back to the route when the entry is not on screen (collapsed group), so the check still runs.
    */
   async openMenu(label: string, fallbackPath: string): Promise<void> {
+    await this.repickCompanyIfOpen(500);
     if (this.mobile) {
       // finance shell: hamburger «منوی کامل» in the brand bar; operations shell: «نمایش منو»
       const show = this.page.getByRole('button', { name: /^(منوی کامل|نمایش منو)$/ }).first();
@@ -389,6 +406,7 @@ export class TrainingVideo {
       await this.page.goto(fallbackPath);
     }
     await this.page.waitForLoadState('domcontentloaded');
+    await this.repickCompanyIfOpen(3_000);
   }
 
   /** No red error toast and no uncaught page error (console errors are attached as a warning). */
