@@ -27,7 +27,7 @@ describe('PaymentReceiptListComponent sticky actions column', () => {
 
   it('retains all standard actions in the actions template', () => {
     const html = fs.readFileSync(templatePath, 'utf-8');
-    expect(html).toContain('appAction="view"');
+    expect(html).toContain('appAction="history"');
     expect(html).toContain('appAction="share"');
     expect(html).toContain('appAction="print"');
   });

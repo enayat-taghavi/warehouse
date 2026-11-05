@@ -119,7 +119,7 @@
 <!-- دکمه‌های هر ردیف: کار نقش، سپس دکمه‌های مشترک، سپس نشان‌های پایانی -->
 <ng-template #actions let-row>
   @if (actionsTpl(); as tpl) { <ng-container *ngTemplateOutlet="tpl; context: { $implicit: row }"></ng-container> }
-  <button type="button" appAction="view" display="icon" label="پیش‌نمایش" size="sm" (click)="preview.emit(row)" hint="جزئیات و سابقه گردش کار رسید پرداخت"></button>
+  <button type="button" appAction="history" display="icon" label="سابقه و گردش کار" size="sm" (click)="preview.emit(row)" hint="جزئیات و سابقه گردش کار دستور پرداخت"></button>
   <button type="button" appAction="share" display="icon" label="همرسانی" size="sm" [busy]="sharingId() === row.id" (click)="share(row)" hint="همرسانی PDF رسید پرداخت"></button>
   <button type="button" appAction="print" display="icon" label="چاپ / PDF" size="sm" [disabled]="!canPrint()" (click)="print(row)" hint="چاپ رسید پرداخت (PDF)"></button>
   @if (isPaidPart(row)) { <app-invoice-receipt-button [invoiceId]="row.id!" display="icon"></app-invoice-receipt-button> }
