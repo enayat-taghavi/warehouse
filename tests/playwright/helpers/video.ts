@@ -262,8 +262,10 @@ export class TrainingVideo {
   }
 
   private async pointAt(target: Locator): Promise<void> {
-    await target.scrollIntoViewIfNeeded();
-    const box = await target.boundingBox();
+    // a list that re-renders (e.g. picker options) can detach the element mid-scroll; the real click re-resolves it
+    const scrolled = await target.scrollIntoViewIfNeeded({ timeout: 5_000 }).then(() => true, () => false);
+    if (!scrolled) return;
+    const box = await target.boundingBox().catch(() => null);
     if (!box) return;
     await this.keepCaptionOff(box);
     const x = box.x + box.width / 2;
@@ -440,7 +442,9 @@ export class TrainingVideo {
     } else {
       if (this.mobile) {
         const hide = this.page.getByRole('button', { name: 'بستن منو' });
-        if (await hide.isVisible().catch(() => false)) await this.act.click(hide);
+        // a closed sidebar slides off screen but stays "visible": tap «بستن منو» only when it is really on screen
+        const hideInView = await expect(hide).toBeInViewport({ timeout: 1_000 }).then(() => true, () => false);
+        if (hideInView) await this.act.click(hide);
       }
       await this.page.goto(fallbackPath);
     }
