@@ -229,6 +229,53 @@ PETTY_COMPANY_VIEW_PERMS = (PETTY_CASH_PERM, PETTY_REVIEW_PERM, PETTY_MANAGER_PE
 PETTY_EDITABLE_STATUSES = ('draft',)
 PETTY_STATEMENT_LOCKED_STATUSES = ('paid', 'settled_outside')
 PETTY_STATEMENT_LINE_REJECT_STEPS = ('accountant_review', 'manager_ok')
+# ت۳ طرح بازطراحی تنخواه: مرحلهٔ اول اختیاری «تأیید سرپرست» با سرپرست تأییدکنندهٔ حساب (قلاب assignees موتور).
+# نقش و مجوز فقط برچسب کارند؛ «نبودن نفر» قفلِ skip است: سرپرستِ غیرفعال/بیرون‌رفته سند را گیر نمی‌اندازد
+# (approver_pending تعویض را می‌بندد، پس انتظار = گیر ماندن همیشگی؛ حسابدار همچنان بررسی می‌کند)
+PETTY_SUPERVISOR_STEP = 'supervisor_ok'
+PETTY_SUPERVISOR_PERM = 'perm_invoice_approve'
+
+
+def petty_account_approver_ids(account):
+    """[approver_id] حساب، یا [] (مرحلهٔ supervisor_ok رد می‌شود و گردش مثل پیش است)."""
+    approver_id = getattr(account, 'approver_id', None) if account is not None else None
+    return [approver_id] if approver_id else []
+
+
+def _petty_supervisor_step():
+    return StepSpec(PETTY_SUPERVISOR_STEP, 'تأیید سرپرست', 'supervisor', PETTY_SUPERVISOR_PERM, APPROVE,
+                    actions=(ACT, RETURN), fixed_missing_action='skip', assignees=lambda obj: petty_account_approver_ids(getattr(obj, 'account', None)))
+
+
+def petty_supervisor_pending_counts(account_ids) -> dict:
+    """{account_id: شمار کارهای باز supervisor_ok} برای شارژها و صورت‌حساب‌های این حساب‌ها (دو یا سه پرس‌وجو)."""
+    from workflow.models import WorkflowInstance, WorkflowTask
+    from .models import PettyCashStatement, PettyCashTransaction
+    account_ids = [a for a in account_ids if a]
+    if not account_ids:
+        return {}
+    rows = list(WorkflowTask.objects.filter(
+        is_open=True, track=WorkflowTask.TRACK_STEP, step_key=PETTY_SUPERVISOR_STEP,
+        instance__status=WorkflowInstance.IN_PROGRESS,
+        instance__workflow_key__in=(PETTY_CHARGE_WORKFLOW, PETTY_STATEMENT_WORKFLOW),
+    ).values_list('instance__workflow_key', 'instance__entity_id'))
+    if not rows:
+        return {}
+    charge_ids = [e for k, e in rows if k == PETTY_CHARGE_WORKFLOW]
+    statement_ids = [e for k, e in rows if k == PETTY_STATEMENT_WORKFLOW]
+    owner = {}
+    if charge_ids:
+        owner.update({(PETTY_CHARGE_WORKFLOW, pk): acc for pk, acc in PettyCashTransaction.objects.filter(
+            pk__in=charge_ids, account_id__in=account_ids).values_list('pk', 'account_id')})
+    if statement_ids:
+        owner.update({(PETTY_STATEMENT_WORKFLOW, pk): acc for pk, acc in PettyCashStatement.objects.filter(
+            pk__in=statement_ids, account_id__in=account_ids).values_list('pk', 'account_id')})
+    counts = {}
+    for key, entity_id in rows:
+        acc = owner.get((key, entity_id))
+        if acc:
+            counts[acc] = counts.get(acc, 0) + 1
+    return counts
 
 
 def petty_fund_level_breakdown(account):
@@ -364,10 +411,13 @@ def resolve_petty_tx(entity_id):
 
 PETTY_CHARGE_WORKFLOW_SPEC = WorkflowSpec(
     key=PETTY_CHARGE_WORKFLOW,
-    version=1,
+    # نسخهٔ ۲ (ت۳ طرح بازطراحی): supervisor_ok پیش از همه افزوده شد. نمونهٔ در جریان نسخهٔ ۱ در مرحلهٔ جاری‌اش
+    # می‌ماند (_ensure_current_version: مرحلهٔ جاری در نسخهٔ تازه هست) و هرگز به supervisor_ok برنمی‌گردد
+    version=2,
     entity_kind=PETTY_CHARGE_ENTITY,
     title_fa='شارژ تنخواه',
     steps=(
+        _petty_supervisor_step(),
         # حسابدارِ ثبت‌کننده‌ای که تنها حسابدار شرکت است بررسی را رد می‌کند؛ واریز شارژ خودِ خزانه‌دار همچنان
         # با خزانه‌دار دیگر است (تصمیم کاربر ۹ آبان ۱۴۰۵: creator_may_act برای تنخواه نه)
         StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', PETTY_REVIEW_PERM, REVIEW,
@@ -478,10 +528,12 @@ def resolve_petty_statement(entity_id):
 
 PETTY_STATEMENT_WORKFLOW_SPEC = WorkflowSpec(
     key=PETTY_STATEMENT_WORKFLOW,
-    version=1,
+    # نسخهٔ ۲: مثل شارژ (supervisor_ok اول؛ رد ردیف همچنان فقط با حسابدار و مدیر)
+    version=2,
     entity_kind=PETTY_STATEMENT_ENTITY,
     title_fa='صورت‌حساب تنخواه',
     steps=(
+        _petty_supervisor_step(),
         # مثل شارژ: تنها حسابدارِ ثبت‌کننده بررسی را رد می‌کند (ردیف‌های باز هنگام شارژ دوباره تأیید می‌شوند)
         StepSpec('accountant_review', 'بررسی حسابدار', 'accountant', PETTY_REVIEW_PERM, REVIEW,
                  skip_when_creator_only=True),
@@ -547,6 +599,8 @@ def can_view_petty_tx(user, entity_id):
     if _petty_tx_in_scope(user, tx) or _petty_participant_or_overseer(user, PETTY_CHARGE_ENTITY, tx.pk,
                                                                       tx.wf_company_id):
         return True
+    if _petty_approver(user, tx.account, tx.wf_company_id):
+        return True
     return None
 
 
@@ -589,12 +643,20 @@ def _petty_deputy(user, account) -> bool:
     return account is not None and is_petty_deputy(user, account)
 
 
+def _petty_approver(user, account, company_id) -> bool:
+    """ت۳: سرپرست تأییدکنندهٔ حساب سندهای همان حساب را فقط می‌بیند (نه پیوست تازه، نه حساب‌های دیگر شرکت)."""
+    return (account is not None and bool(account.approver_id) and account.approver_id == user.pk
+            and petty_company_allowed(user, company_id))
+
+
 def can_view_petty_statement(user, entity_id):
     statement = resolve_petty_statement(entity_id)
     if statement is None:
         return None
     if _petty_statement_in_scope(user, statement) or _petty_participant_or_overseer(
             user, PETTY_STATEMENT_ENTITY, statement.pk, statement.company_id):
+        return True
+    if _petty_approver(user, statement.account, statement.company_id):
         return True
     return None
 

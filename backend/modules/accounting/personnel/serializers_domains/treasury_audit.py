@@ -597,6 +597,8 @@ class PettyCashAccountSerializer(serializers.ModelSerializer):
     project_id = serializers.SerializerMethodField()
     project_name = serializers.SerializerMethodField()
     custodian_name = serializers.SerializerMethodField()
+    # ت۳ بازطراحی: سرپرست تأییدکنندهٔ اختیاری (approver قابل نوشتن؛ سنجش عضویت و مجوز در perform_* ویو)
+    approver_name = serializers.SerializerMethodField()
     company_name = serializers.CharField(source='company.name', read_only=True, default=None)
     # بدهی = جمع ردیف‌های ردشده (ص۵)؛ queryset با PettyCashAccount.annotate_debt یک کوئری کمتر می‌زند
     debt = serializers.DecimalField(max_digits=15, decimal_places=0, read_only=True)
@@ -696,6 +698,11 @@ class PettyCashAccountSerializer(serializers.ModelSerializer):
     def get_custodian_name(self, obj):
         if obj.custodian:
             return f"{obj.custodian.first_name} {obj.custodian.last_name}".strip() or obj.custodian.username
+        return None
+
+    def get_approver_name(self, obj):
+        if obj.approver_id and obj.approver:
+            return f"{obj.approver.first_name} {obj.approver.last_name}".strip() or obj.approver.username
         return None
 
 class PettyCashTransactionSerializer(serializers.ModelSerializer):

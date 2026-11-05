@@ -98,5 +98,29 @@ class PettyMineEndpointTests(TestCase):
         PettyCashAccount.objects.create(company=self.co, custodian=other, ceiling_amount=Decimal('5'))
         self.assertEqual(self.mine(self.acc_user), [])
 
+    def test_approver_sees_open_accounts_with_pending_count(self):
+        """ت۳/ت۴ بازطراحی: سرپرست تأییدکنندهٔ حساب باز ردیف role=approver با نام تنخواه‌گردان و شمار منتظرها."""
+        sup = self.user('sup', 'employee')
+        UserCompanyAccess.objects.create(user=sup, company=self.co2)
+        grant_section_perms(sup, [], company=self.co2, role='employee', exact=False)
+        PettyCashAccount.objects.filter(pk__in=[self.active.pk, self.closed.pk]).update(approver=sup)
+        rows = self.mine(sup)
+        self.assertEqual(rows, [{'id': self.active.pk, 'company': self.co2.pk, 'company_name': 'ب شرکت',
+                                 'is_active': True, 'is_closed': False, 'role': 'approver',
+                                 'custodian_name': 'pm_emp', 'pending': 0}])
+        # شارژ منتظر سرپرست شمرده می‌شود
+        c = APIClient()
+        c.force_authenticate(self.emp)
+        with self.captureOnCommitCallbacks(execute=True):
+            res = c.post('/api/personnel/petty-cash-transactions/request-charge/', {'amount': '1'}, format='json',
+                         HTTP_X_COMPANY_ID=str(self.co2.pk))
+        self.assertEqual(res.status_code, 201, res.content)
+        self.assertEqual(self.mine(sup)[0]['pending'], 1)
+        # سرپرست بی دسترسی به شرکت حساب چیزی نمی‌بیند؛ حساب‌های خود تنخواه‌گردان همان ردیف‌های پیشین‌اند
+        stranger = self.user('stranger', 'employee')
+        PettyCashAccount.objects.filter(pk=self.active.pk).update(approver=stranger)
+        self.assertEqual(self.mine(stranger), [])
+        self.assertEqual([r['role'] for r in self.mine(self.emp)], ['custodian', 'custodian'])
+
     def test_requires_authentication(self):
         self.assertIn(APIClient().get(MINE).status_code, (401, 403))

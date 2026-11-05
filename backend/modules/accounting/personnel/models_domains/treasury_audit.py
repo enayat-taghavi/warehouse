@@ -553,6 +553,10 @@ class PettyCashAccount(models.Model):
     handover_to = models.ForeignKey(
         'self', on_delete=models.PROTECT, null=True, blank=True,
         related_name='handover_predecessors', verbose_name="تحویل‌شده به حساب")
+    # ت۳ طرح بازطراحی تنخواه: سرپرست تأییدکنندهٔ اختیاری؛ خالی = مرحلهٔ supervisor_ok رد می‌شود (مثل پیش)
+    approver = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='petty_approver_accounts', verbose_name="سرپرست تأییدکننده")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

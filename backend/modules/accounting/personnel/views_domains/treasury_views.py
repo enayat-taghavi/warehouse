@@ -197,6 +197,7 @@ from ..petty_settlements import (
 )
 from ..workflows import (
     petty_allocation_category, petty_charge_exceeds_ceiling, petty_fund_level_breakdown,
+    petty_supervisor_pending_counts,
 )
 from ..models import PettyCashReconciliation
 from ..serializers import PettyCashReconciliationSerializer
@@ -326,6 +327,7 @@ def scope_petty_transactions_for_user(user, qs, company_id=None):
             | _petty_tx_company_q(_petty_viewer_company_ids(user))
             | Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id'))
             | deputy_account_q(user, prefix='account__')  # د۸: حساب صاحب کار در بازهٔ جانشینی
+            | Q(account__approver=user)  # ت۳ بازطراحی: سرپرست تأییدکننده فقط اسناد حساب‌های خودش
         )
     return qs
 
@@ -343,6 +345,7 @@ def scope_petty_accounts_for_user(user, qs, company_id=None):
             | Q(company_id__in=_petty_viewer_company_ids(user))
             | Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id'))
             | deputy_account_q(user)
+            | Q(approver=user)  # ت۳ بازطراحی: حساب‌هایی که کاربر سرپرست تأییدکنندهٔ آن‌هاست
         )
     return qs
 
@@ -1149,7 +1152,7 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
     """
     مدیریت و تعریف حساب‌ها / سقف‌های تنخواه‌گردان کارمندان در بخش‌های پروژه
     """
-    queryset = PettyCashAccount.objects.all().select_related('section', 'section__project', 'custodian')
+    queryset = PettyCashAccount.objects.all().select_related('section', 'section__project', 'custodian', 'approver')
     serializer_class = PettyCashAccountSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = None
@@ -1227,20 +1230,58 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
         """
         user = request.user
         base = PettyCashAccount.objects.filter(
-            company_id__in=get_user_allowed_companies(user).values('id')).select_related('company')
+            company_id__in=get_user_allowed_companies(user).values('id')).select_related('company', 'custodian')
         own = base.filter(custodian=user)
         deputy = base.filter(deputy_account_q(user), is_active=True, closed_at__isnull=True).exclude(custodian=user)
-        rows = [(acc, 'custodian') for acc in own] + [(acc, 'deputy') for acc in deputy]
-        data = [{
-            'id': acc.pk,
-            'company': acc.company_id,
-            'company_name': acc.company.name if acc.company_id else None,
-            'is_active': acc.is_active,
-            'is_closed': acc.closed_at is not None,
-            'role': role,
-        } for acc, role in rows]
+        # ت۳/ت۴ بازطراحی: حساب‌های باز که کاربر سرپرست تأییدکنندهٔ آن‌هاست، با شمار سندهای منتظر سرپرست
+        approver = list(base.filter(approver=user, is_active=True, closed_at__isnull=True).exclude(custodian=user))
+        pending = petty_supervisor_pending_counts([acc.pk for acc in approver])
+        rows = ([(acc, 'custodian') for acc in own] + [(acc, 'deputy') for acc in deputy]
+                + [(acc, 'approver') for acc in approver])
+        data = []
+        for acc, role in rows:
+            row = {
+                'id': acc.pk,
+                'company': acc.company_id,
+                'company_name': acc.company.name if acc.company_id else None,
+                'is_active': acc.is_active,
+                'is_closed': acc.closed_at is not None,
+                'role': role,
+            }
+            if role == 'approver':
+                row['custodian_name'] = (f'{acc.custodian.first_name} {acc.custodian.last_name}'.strip()
+                                         or acc.custodian.username)
+                row['pending'] = pending.get(acc.pk, 0)
+            data.append(row)
         data.sort(key=lambda r: (not (r['is_active'] and not r['is_closed']), r['company_name'] or '', r['id']))
         return Response(data)
+
+    @staticmethod
+    def _validate_approver(company_id, custodian_id, approver):
+        """
+        ت۳ بازطراحی: سرپرست تأییدکنندهٔ اختیاری؛ نه خود تنخواه‌گردان، نه مدیر کل (فقط می‌بیند)، و عضو فعال همان شرکت
+        (همان قاعدهٔ عضویت گیرندهٔ موتور گردش).
+        """
+        if approver is None:
+            return
+        from workflow.recipients import company_member_pairs
+        if approver.pk == custodian_id:
+            raise ValidationError({'approver': "تنخواه‌گردان نمی‌تواند سرپرست حساب خودش باشد."})
+        if (not approver.is_active or approver.is_superuser
+                or (approver.pk, company_id) not in company_member_pairs([approver.pk], [company_id])):
+            raise ValidationError({'approver': "سرپرست تأییدکننده باید عضو فعال همین شرکت باشد."})
+
+    @staticmethod
+    def _ensure_not_own_approver(user, account):
+        """تنخواه‌گردان و جانشینش سرپرست حساب خود را تعیین یا عوض نمی‌کنند (مثل بستن و تحویل، د۶ و د۸)."""
+        if not user.is_superuser and (account.custodian_id == user.pk or is_petty_deputy(user, account)):
+            raise PermissionDenied("سرپرست تأییدکنندهٔ حساب را تنخواه‌گردان خودش تعیین نمی‌کند.")
+
+    @staticmethod
+    def _ensure_no_pending_supervisor(account):
+        """تا سندی از این حساب منتظر سرپرست است، سرپرست عوض یا پاک نمی‌شود (400 approver_pending)."""
+        if petty_supervisor_pending_counts([account.pk]).get(account.pk):
+            raise _PettyApiError('approver_pending', "اول سندهای منتظر سرپرست تمام شوند.")
 
     def _can_manage(self, user, account_or_company_id, section_id=None):
         company_id = getattr(account_or_company_id, 'company_id', account_or_company_id)
@@ -1265,6 +1306,9 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
         if vd.get('is_active', True) and PettyCashAccount.objects.filter(
                 company_id=company_id, custodian=custodian, is_active=True).exists():
             raise ValidationError({'custodian': "این شخص در این شرکت از قبل یک حساب تنخواه فعال دارد."})
+        if vd.get('approver') is not None and custodian.pk == user.pk and not user.is_superuser:
+            raise PermissionDenied("سرپرست تأییدکنندهٔ حساب را تنخواه‌گردان خودش تعیین نمی‌کند.")
+        self._validate_approver(company_id, custodian.pk, vd.get('approver'))
         ceiling = vd.get('ceiling_amount') or Decimal('0')
         if ceiling and not can_at_company_level(user, PETTY_MANAGER_PERM, company_id):
             raise PermissionDenied("سقف حساب تنخواه را فقط مدیر تعیین می‌کند.")
@@ -1276,6 +1320,9 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
             if ceiling:
                 _log_petty_audit(user, 'pettycashaccount', account.pk, 'ceiling_change', '0', str(int(ceiling)),
                                  company_id=company_id, custodian_id=account.custodian_id)
+            if account.approver_id:
+                _log_petty_audit(user, 'pettycashaccount', account.pk, 'petty_approver_change', '',
+                                 str(account.approver_id), company_id=company_id, custodian_id=account.custodian_id)
             # د۲: پیش از اولین گردش، سازندهٔ حساب موجودی اولیه را آزادانه تعیین می‌کند
             if account.opening_balance or account.opening_balance_date:
                 _log_opening_balance(user, account, None, None,
@@ -1302,12 +1349,21 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
         if vd.get('is_active') and not instance.is_active and PettyCashAccount.objects.filter(
                 company_id=instance.company_id, custodian_id=instance.custodian_id, is_active=True).exists():
             raise ValidationError({'custodian': "این شخص در این شرکت از قبل یک حساب تنخواه فعال دارد."})
+        old_approver_id = instance.approver_id
+        approver_changed = 'approver' in vd and getattr(vd['approver'], 'pk', None) != old_approver_id
+        if approver_changed:
+            self._ensure_not_own_approver(user, instance)
+            self._validate_approver(instance.company_id, instance.custodian_id, vd['approver'])
         old_opening, old_opening_date = instance.opening_balance, instance.opening_balance_date
         opening_changed = (vd.get('opening_balance', old_opening) != old_opening
                            or vd.get('opening_balance_date', old_opening_date) != old_opening_date)
         reason = str(self.request.data.get('reason') or '').strip()
         with transaction.atomic():
             had_activity = False
+            if approver_changed:
+                # قفل حساب و سنجش کارهای باز supervisor_ok در همان تراکنش ذخیره
+                PettyCashAccount.objects.select_for_update().filter(pk=instance.pk).order_by().first()
+                self._ensure_no_pending_supervisor(instance)
             if opening_changed:
                 # د۲: پس از اولین گردش فقط مدیر (مجوز تأیید پرداخت در سطح شرکت) و با دلیل
                 PettyCashAccount.objects.select_for_update().filter(pk=instance.pk).order_by().first()
@@ -1327,6 +1383,10 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
             if opening_changed:
                 _log_opening_balance(user, account, old_opening, old_opening_date, reason=reason,
                                      had_activity=had_activity)
+            if approver_changed:
+                _log_petty_audit(user, 'pettycashaccount', account.pk, 'petty_approver_change',
+                                 str(old_approver_id or ''), str(account.approver_id or ''),
+                                 company_id=account.company_id, custodian_id=account.custodian_id)
             if bank_changed:
                 self._log_bank_change(user, account, bank_before)
 
@@ -2053,7 +2113,7 @@ class PettyCashStatementViewSet(viewsets.ReadOnlyModelViewSet):
         if not user.is_superuser:
             qs = qs.filter(company_id__in=get_user_allowed_companies(user).values('id')).filter(
                 Q(custodian=user) | Q(company_id__in=_petty_viewer_company_ids(user))
-                | deputy_account_q(user, prefix='account__'))
+                | deputy_account_q(user, prefix='account__') | Q(account__approver=user))
         return qs.order_by('-statement_date_shamsi', '-created_at')
 
     def _statement_object(self, read_only=False):
