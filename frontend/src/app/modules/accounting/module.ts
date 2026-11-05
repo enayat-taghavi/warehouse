@@ -8,6 +8,7 @@ import {
   ACCOUNTANT_NAV_ITEMS,
   MANAGER_NAV_ITEMS,
   TREASURER_NAV_ITEMS,
+  PERSONAL_NAV_ITEMS,
   ORG_ADMIN_ROLE_MARKERS,
   EMPLOYEE_ROLE_MARKERS,
   SUPERVISOR_ROLE_MARKERS,
@@ -112,6 +113,7 @@ export const MODULE: WhFrontendModule = {
     accountantNavItems: ACCOUNTANT_NAV_ITEMS,
     managerNavItems: MANAGER_NAV_ITEMS,
     treasurerNavItems: TREASURER_NAV_ITEMS,
+    personalNavItems: PERSONAL_NAV_ITEMS,
   },
   entityIcons: ACCOUNTING_ENTITY_ICONS,
   extensions: {
@@ -161,6 +163,7 @@ export const MODULE: WhFrontendModule = {
         'supervisor-attendance', 'supervisor-new-profiles', 'accountant-new-profiles', 'manager-contracts'
       ],
       hasCompanyDocumentsArchive: true,
+      personalItems: PERSONAL_NAV_ITEMS,
       roleMenus: [
         { role: 'org_admin', items: ORG_ADMIN_NAV_ITEMS, roleMarkers: ORG_ADMIN_ROLE_MARKERS },
         { role: 'operator', items: EMPLOYEE_NAV_ITEMS, roleMarkers: EMPLOYEE_ROLE_MARKERS },

@@ -457,7 +457,7 @@ describe('Segregation of Duties (SoD) & DOM Verification for All 12 Database Use
 
       // ترتیب: راهبر تشکیلات، کارمند، سرپرست، حسابدار، مدیر، خزانه‌دار
       const expected: Record<string, number[]> = {
-        operator: [0, 6, 0, 0, 0, 0],
+        operator: [0, 5, 0, 0, 0, 0],
         // «ثبت فاکتور» (perm_invoice_record) در منوی سرپرست هم هست
         supervisor: [0, 0, 6, 0, 0, 0],
         accountant: [0, 0, 0, 9, 0, 0],

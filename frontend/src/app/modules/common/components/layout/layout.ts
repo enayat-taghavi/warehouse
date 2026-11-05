@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, computed, signal, ChangeDetectorRef, HostListener, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed, signal, ChangeDetectorRef, HostListener, inject, Injector } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterOutlet, Router, NavigationEnd, ActivatedRoute } from '@angular/router';
@@ -75,6 +75,7 @@ export class Layout implements OnInit, OnDestroy {
   public activeCompanyService = inject(ActiveCompanyService);
   private permissionService = inject(PermissionService, { optional: true });
   private shellRoute = inject(ActivatedRoute, { optional: true });
+  private injector = inject(Injector);
 
   /** پوستهٔ «شرکت‌ها» (حالت محدود استودیو، /app/companies) با همان هدر برنامه‌ها */
   get isCompaniesShell(): boolean {
@@ -1112,6 +1113,26 @@ export class Layout implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * آیتم‌های شخصی اپ فعال (layoutNav.personalItems): همان شرط بافت منوهای نقش ولی مستقل از پرسونا؛
+   * با visibleWhen (مثلاً «تن‌خواه من» فقط برای دارندهٔ حساب) یا مجوز خود آیتم دیده می‌شوند.
+   */
+  readonly personalNavItems = computed<ModuleNavItem[]>(() => {
+    const active = this.activeAppModule;
+    if (!active || active.extensions?.layoutNav?.showWarehouseSwitcher || this.store.isWarehouseContext()) {
+      return [];
+    }
+    const userPerms = this.auth.userPermissions();
+    const isAdmin = userPerms.includes('admin_all');
+    return this.moduleRegistry.getExtensions('layoutNav')
+      .filter(e => e.moduleCode === active.code)
+      .flatMap(e => e.extension.personalItems || [])
+      .filter(item => {
+        if (!this.sectionToggles.isEnabled(item.sectionKey)) return false;
+        return item.visibleWhen ? item.visibleWhen(this.injector) : (isAdmin || userPerms.includes(item.permission));
+      });
+  });
+
   readonly orgAdminNavItems = computed(() => this.roleNavItems('org_admin'));
   readonly employeeNavItems = computed(() => this.roleNavItems('operator'));
   readonly supervisorNavItems = computed(() => this.roleNavItems('supervisor'));
@@ -1185,6 +1206,7 @@ export class Layout implements OnInit, OnDestroy {
   }
 
   readonly navItems = computed(() => [
+    ...this.personalNavItems(),
     ...this.primaryNavItems(),
     ...this.orgAdminNavItems(),
     ...this.employeeNavItems(),
@@ -1229,6 +1251,7 @@ export class Layout implements OnInit, OnDestroy {
       return items;
     }
     const tabItems = [
+      ...this.personalNavItems(),
       ...this.primaryNavItems(),
       ...this.orgAdminNavItems(),
       ...this.employeeNavItems(),
@@ -1270,6 +1293,7 @@ export class Layout implements OnInit, OnDestroy {
   private tabOwnerModule(tabId: string): WhFrontendModule | undefined {
     for (const e of this.moduleRegistry.getExtensions('layoutNav')) {
       const owns = !!e.extension.extraRouteTabs?.includes(tabId) ||
+        !!e.extension.personalItems?.some(i => i.id === tabId) ||
         !!e.extension.roleMenus?.some(m => m.items.some(i => i.id === tabId));
       if (owns) return e.module ?? this.moduleRegistry.getSpec(e.moduleCode);
     }
@@ -1301,6 +1325,7 @@ export class Layout implements OnInit, OnDestroy {
       if (!layoutNav) continue;
 
       const allItems: ModuleNavItem[] = [
+        ...(layoutNav.personalItems || []),
         ...(layoutNav.primaryItems || []),
         ...(layoutNav.contextItems || []),
         ...(layoutNav.roleMenus?.flatMap(m => m.items) || [])

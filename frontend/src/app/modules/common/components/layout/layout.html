@@ -54,6 +54,18 @@
         </button>
       </div>
 
+      <!-- منوی شخصی مستقل از نقش (مثل «تن‌خواه من») -->
+      @if (!store.isWarehouseContext() && personalNavItems().length > 0) {
+        <div class="mt-3 pt-3 border-t border-slate-800/60 space-y-0.5 shrink-0">
+          @for (item of personalNavItems(); track item.id) {
+            <button type="button" (click)="switchTab(item.id)" [class.active]="currentTab === item.id" [attr.aria-current]="currentTab === item.id ? 'page' : null" class="sidebar-link w-full min-h-[40px] flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all group cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800/80" [title]="item.label" [attr.aria-label]="item.label">
+              <span class="shrink-0">@if (menuIcon(item.icon); as icon) {<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="icon"></svg>}</span>
+              <span>{{item.label}}</span>
+            </button>
+          }
+        </div>
+      }
+
       }
 
       <!-- Dedicated Standalone Company Documents Archive Link (دسترسی مستقل و فارغ از شغل به اسناد شرکت‌های مجاز) -->

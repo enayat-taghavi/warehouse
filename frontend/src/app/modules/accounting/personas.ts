@@ -148,7 +148,7 @@ export function isAccountingRouteDeniedForRole(role: string, cleanRoute: string)
     }
   } else if (role === 'supervisor') {
     // سرپرست نباید به منوی کارمند، حسابدار، مدیر یا خزانه‌دار دسترسی داشته باشد
-    if ((cleanRoute.includes('/employee-') && !isSharedInvoiceRoute(cleanRoute)) || cleanRoute.includes('/accountant-') || cleanRoute.includes('/manager-') || cleanRoute.includes('/treasurer-')) {
+    if ((cleanRoute.includes('/employee-') && !isSharedInvoiceRoute(cleanRoute) && !cleanRoute.endsWith('/employee-petty-cash')) || cleanRoute.includes('/accountant-') || cleanRoute.includes('/manager-') || cleanRoute.includes('/treasurer-')) {
       return true;
     }
     if (cleanRoute.includes('finance-cartable') || cleanRoute.includes('treasury-cartable')) {
@@ -170,7 +170,7 @@ export function isAccountingRouteDeniedForRole(role: string, cleanRoute: string)
   } else if (role === 'org_admin') {
     // راهبر تشکیلات فقط ساختار سازمانی را اداره می‌کند؛ هیچ کارتابل تایید، پرداخت یا ثبت کارکردی ندارد
     if (cleanRoute.startsWith('/app/finance')) {
-      const allowed = ['/app/finance/projects-and-sections', '/app/finance/health'];
+      const allowed = ['/app/finance/projects-and-sections', '/app/finance/health', '/app/finance/employee-petty-cash'];
       if (!allowed.some(a => cleanRoute === a || cleanRoute.startsWith(a + '/'))) {
         return true;
       }

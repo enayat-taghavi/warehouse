@@ -157,6 +157,11 @@ export interface ModuleNavItem {
   route?: string;
   /** کد بخش قابل خاموش شدن (بک‌اند `contribute('toggle_sections', ...)`)؛ تا بخش خاموش است آیتم پنهان می‌ماند */
   sectionKey?: string;
+  /**
+   * آیتم فقط وقتی دیده می‌شود که این تابع true برگرداند (به‌جای بررسی مجوز)؛ سیگنال‌هایی که داخل آن خوانده
+   * می‌شوند منو را واکنشی نگه می‌دارند.
+   */
+  visibleWhen?: (injector: Injector) => boolean;
 }
 
 /**
@@ -358,6 +363,8 @@ export interface ExtensionMap {
   layoutNav?: {
     primaryItems?: ModuleNavItem[];
     contextItems?: ModuleNavItem[];
+    /** آیتم‌های شخصی مستقل از پرسونا (مثل «تن‌خواه من»)؛ با هر نقشی و فقط با visibleWhen یا مجوز خودشان دیده می‌شوند */
+    personalItems?: ModuleNavItem[];
     roleMenus?: Array<{
       role: string;
       items: ModuleNavItem[];
@@ -623,6 +630,8 @@ export interface NotificationHandler {
 export interface ModuleRouteAccess {
   guardAccessPermissions: string[];
   pagePermissions: Record<string, string[]>;
+  /** صفحه (کلید = مسیر زیر پیشوند ماژول) وقتی این تابع true برگرداند هم باز است؛ افزون بر pagePermissions */
+  pageAccessWhen?: Record<string, (injector: Injector) => boolean>;
   loginPermissions: string[];
   loginActiveAppModule: string;
   resolveLoginRoute: (perms: string[]) => string;

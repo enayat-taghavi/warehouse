@@ -1,4 +1,6 @@
+import type { Injector } from '@angular/core';
 import { PLATFORM_ENTITY_ICONS } from '../../shared/icons/semantic-icons';
+import { MyPettyAccountsService } from './components/finance/employee/employee-petty-cash/my-petty-accounts.service';
 import { ACCOUNTING_ENTITY_ICONS } from './entity-icons';
 
 export interface NavItem {
@@ -11,7 +13,21 @@ export interface NavItem {
   module?: string;
   isAccounting?: boolean;
   sectionKey?: string;
+  /** آیتم فقط وقتی دیده می‌شود که true برگرداند (ModuleNavItem.visibleWhen) */
+  visibleWhen?: (injector: Injector) => boolean;
 }
+
+/**
+ * منوی شخصی مستقل از نقش (layoutNav.personalItems): «تن‌خواه من» فقط برای صاحب حساب تن‌خواه (باز یا بسته)
+ * یا جانشین فعال او؛ مسیر همان employee-petty-cash می‌ماند تا پیوندهای کارتابل (?charge= / ?statement=) کار کنند.
+ */
+export const PERSONAL_NAV_ITEMS: NavItem[] = [
+  {
+    id: 'employee-petty-cash', label: 'تن‌خواه من', shortLabel: 'تن‌خواه من', icon: ACCOUNTING_ENTITY_ICONS.pettyCash,
+    permission: '', module: 'accounting', isAccounting: true, sectionKey: 'accounting.petty_cash',
+    visibleWhen: (inj) => inj.get(MyPettyAccountsService).hasAccess()
+  },
+];
 
 // منوی عمومی «کارکرد و حسابداری» برچیده شد؛ هر آیتم به منوی نقش خودش منتقل یا بازنشسته شد.
 // مرجع: Documents/Organization_Admin_And_Menu_Architecture/implementation_plan_org_admin_menu.md
@@ -26,7 +42,6 @@ export const EMPLOYEE_NAV_ITEMS: NavItem[] = [
   { id: 'employee-attendance', label: 'کارکرد پرسنل', shortLabel: 'کارکرد', icon: ACCOUNTING_ENTITY_ICONS.attendance, permission: 'view_sys_personnel_attendance', module: 'accounting', isAccounting: true },
   { id: 'employee-fleet', label: 'تردد ناوگان', shortLabel: 'ناوگان', icon: ACCOUNTING_ENTITY_ICONS.fleet, permission: 'view_sys_fleet_attendance', module: 'accounting', isAccounting: true, sectionKey: 'accounting.fleet' },
   { id: 'employee-invoices', label: 'ثبت رسید پرداخت', shortLabel: 'رسیدها', icon: ACCOUNTING_ENTITY_ICONS.invoices, permission: 'perm_invoice_record', module: 'accounting', isAccounting: true, sectionKey: 'accounting.invoices' },
-  { id: 'employee-petty-cash', label: 'مدیریت تن‌خواه', shortLabel: 'تن‌خواه', icon: ACCOUNTING_ENTITY_ICONS.pettyCash, permission: 'perm_petty_cash_manage', module: 'accounting', isAccounting: true, sectionKey: 'accounting.petty_cash' },
   { id: 'employee-new-vehicle', label: 'تعریف خودرو', shortLabel: 'خودرو جدید', icon: ACCOUNTING_ENTITY_ICONS.fleet, permission: 'view_sys_fleet_attendance', module: 'accounting', isAccounting: true, sectionKey: 'accounting.fleet' },
   { id: 'employee-new-personnel', label: 'تعریف پرسنل', shortLabel: 'پرسنل جدید', icon: ACCOUNTING_ENTITY_ICONS.newPersonnel, permission: 'view_sys_personnel_attendance', module: 'accounting', isAccounting: true },
 ];

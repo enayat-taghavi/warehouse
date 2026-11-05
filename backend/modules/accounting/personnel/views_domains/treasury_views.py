@@ -1219,6 +1219,29 @@ class PettyCashAccountViewSet(viewsets.ModelViewSet):
             'new_account': self.get_serializer(qs.filter(pk=new.pk).first()).data,
         }, status=status.HTTP_201_CREATED)
 
+    @action(detail=False, methods=['get'], url_path='mine')
+    def mine(self, request):
+        """
+        «تن‌خواه من»: حساب‌های خود کاربر (باز یا بسته) و حساب‌های باز صاحب‌کاری که امروز جانشین اوست، در همهٔ
+        شرکت‌های مجاز کاربر (سرآیند شرکت نادیده گرفته می‌شود). شخصی است، نه قلمرو بیننده؛ فقط فیلدهای کمینه، بی کارت و شبا.
+        """
+        user = request.user
+        base = PettyCashAccount.objects.filter(
+            company_id__in=get_user_allowed_companies(user).values('id')).select_related('company')
+        own = base.filter(custodian=user)
+        deputy = base.filter(deputy_account_q(user), is_active=True, closed_at__isnull=True).exclude(custodian=user)
+        rows = [(acc, 'custodian') for acc in own] + [(acc, 'deputy') for acc in deputy]
+        data = [{
+            'id': acc.pk,
+            'company': acc.company_id,
+            'company_name': acc.company.name if acc.company_id else None,
+            'is_active': acc.is_active,
+            'is_closed': acc.closed_at is not None,
+            'role': role,
+        } for acc, role in rows]
+        data.sort(key=lambda r: (not (r['is_active'] and not r['is_closed']), r['company_name'] or '', r['id']))
+        return Response(data)
+
     def _can_manage(self, user, account_or_company_id, section_id=None):
         company_id = getattr(account_or_company_id, 'company_id', account_or_company_id)
         return (can_at_company_level(user, PETTY_CASH_MANAGE_PERM, company_id)

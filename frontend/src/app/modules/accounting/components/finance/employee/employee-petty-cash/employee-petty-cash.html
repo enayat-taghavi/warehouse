@@ -91,6 +91,53 @@
       </section>
     }
 
+    <!-- «تن‌خواه من»: حساب‌های کاربر در شرکت‌های دیگر؛ انتخاب حساب، شرکت فعال سربرگ را عوض می‌کند -->
+    @if (myAccounts.length > 1 && hasAccountInActiveCompany) {
+      <nav class="flex flex-wrap items-center gap-1.5 text-xs" aria-label="حساب‌های من" id="myPettyAccountsPicker">
+        <span class="text-[11px] text-slate-500 ml-1">حساب‌های من</span>
+        @for (acc of myAccounts; track acc.id) {
+          <button type="button" (click)="switchToAccount(acc)"
+                  class="min-h-[40px] px-3 rounded-xl border font-bold flex items-center gap-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                  [class.bg-indigo-50]="isActiveCompanyAccount(acc)" [class.border-indigo-300]="isActiveCompanyAccount(acc)" [class.text-indigo-800]="isActiveCompanyAccount(acc)"
+                  [class.bg-white]="!isActiveCompanyAccount(acc)" [class.border-slate-200]="!isActiveCompanyAccount(acc)" [class.text-slate-700]="!isActiveCompanyAccount(acc)"
+                  [attr.aria-current]="isActiveCompanyAccount(acc) ? 'true' : null"
+                  [title]="myAccountTitle(acc)" [attr.aria-label]="myAccountTitle(acc)">
+            <span>{{ acc.company_name || '-' }}</span>
+            @if (acc.is_closed || !acc.is_active) {
+              <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600">بسته‌شده</span>
+            }
+            @if (acc.role === 'deputy') {
+              <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800">جانشین</span>
+            }
+          </button>
+        }
+      </nav>
+    }
+
+    @if (!hasAccountInActiveCompany && otherCompanyAccounts.length > 0) {
+      <div class="bg-sky-50 border border-sky-200 text-sky-900 rounded-2xl p-3.5 text-xs space-y-2" role="status" id="noPettyAccountHere">
+        <p class="font-bold flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="info" aria-hidden="true" class="shrink-0"></svg>
+          در این شرکت حساب تن‌خواه ندارید.
+        </p>
+        <div class="flex flex-wrap gap-1.5">
+          @for (acc of otherCompanyAccounts; track acc.id) {
+            <button type="button" (click)="switchToAccount(acc)"
+                    class="min-h-[40px] px-3 rounded-xl border border-sky-300 bg-white text-sky-900 font-bold flex items-center gap-1.5 hover:bg-sky-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    [title]="'رفتن به ' + myAccountTitle(acc)" [attr.aria-label]="'رفتن به ' + myAccountTitle(acc)">
+              <span>{{ acc.company_name || '-' }}</span>
+              @if (acc.is_closed || !acc.is_active) {
+                <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600">بسته‌شده</span>
+              }
+              @if (acc.role === 'deputy') {
+                <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800">جانشین</span>
+              }
+            </button>
+          }
+        </div>
+      </div>
+    }
+
     @if (accountClosed) {
       <div class="bg-rose-50 border border-rose-200 text-rose-900 rounded-2xl p-3.5 flex items-start gap-2 text-xs" role="alert" id="accountClosedBanner">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="lock" aria-hidden="true" class="shrink-0 mt-0.5"></svg>

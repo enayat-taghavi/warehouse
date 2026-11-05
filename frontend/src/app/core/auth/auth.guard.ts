@@ -1,4 +1,4 @@
-import { inject } from '@angular/core';
+import { inject, Injector } from '@angular/core';
 import { Router, CanActivateFn, CanActivateChildFn } from '@angular/router';
 import { AuthService } from './auth.service';
 import { ModuleRegistryService, getModuleRegistry } from '../modules/module-registry.service';
@@ -151,6 +151,20 @@ export const AuthGuard: CanActivateFn = (route, state) => {
 
     const path = route.routeConfig?.path;
 
+    // pageAccessWhen ماژول: صفحه با شرط خود ماژول هم باز است (مثلاً «تن‌خواه من» برای دارندهٔ حساب)
+    const injector = inject(Injector);
+    const pageOpenByHook = (mod: WhFrontendModule, page: string | undefined): boolean => {
+      const hook = page ? getModuleRouteAccess(mod)?.pageAccessWhen?.[page] : undefined;
+      if (!hook) return false;
+      try { return hook(injector) === true; } catch { return false; }
+    };
+    const urlPage = (mod: WhFrontendModule): string | undefined => {
+      const prefix = mod.routePrefix || '';
+      const url = (state.url || '').split('?')[0];
+      if (!prefix || !url.startsWith(prefix)) return undefined;
+      return url.slice(prefix.length).replace(/^\//, '').split('/')[0] || undefined;
+    };
+
     // قلمرو ماژول: یک حلقه برای همهٔ ماژول‌های شناخته‌شده دارای routeAccess
     for (const mod of candidateModules) {
       const cleanPrefix = (mod.routePrefix || '').replace(/^\//, '');
@@ -162,7 +176,7 @@ export const AuthGuard: CanActivateFn = (route, state) => {
           return router.parseUrl(fallbackInstalled ? fallbackInstalled.defaultRoute : '/app/launcher');
         }
 
-        let hasModAccess = isAdmin || hasModuleAccess(mod);
+        let hasModAccess = isAdmin || hasModuleAccess(mod) || pageOpenByHook(mod, urlPage(mod));
 
         const activeCompany = inject(ActiveCompanyService, { optional: true });
         if (activeCompany?.activeCompany && !companyHasModule(activeCompany.activeCompany, mod.code)) {
@@ -192,7 +206,7 @@ export const AuthGuard: CanActivateFn = (route, state) => {
         for (const mod of installedWithRouteAccess) {
           const modRouteAccess = getModuleRouteAccess(mod)!;
           const isModRoute = Boolean(modRouteAccess.pagePermissions && path in modRouteAccess.pagePermissions);
-          if (isModRoute && !hasModuleAccess(mod)) {
+          if (isModRoute && !hasModuleAccess(mod) && !pageOpenByHook(mod, path)) {
             const otherAccessible = installedWithRouteAccess.find(m => m.code !== mod.code && hasModuleAccess(m));
             if (otherAccessible) {
               return modRouteAccess.deniedPageFallback === 'roleHome'
@@ -203,7 +217,8 @@ export const AuthGuard: CanActivateFn = (route, state) => {
           }
         }
 
-        const hasAccess = requiredPerms.some(p => userPerms.includes(p));
+        const hasAccess = requiredPerms.some(p => userPerms.includes(p))
+          || installedWithRouteAccess.some(m => pageOpenByHook(m, path));
         if (!hasAccess) {
           return roleHome();
         }

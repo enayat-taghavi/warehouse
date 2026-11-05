@@ -34,6 +34,7 @@ import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { ConfirmDialogService } from '../../../../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ActiveCompanyService } from '../../../../../../core/services/active-company.service';
+import { MyPettyAccount, MyPettyAccountsService } from './my-petty-accounts.service';
 import { firstErrorText } from '../../../../../../core/services/offline/offline-conflict-manager';
 import { isServerUnreachable } from '../../../../../../core/services/server-reachability';
 import { ModalComponent } from '../../../../../../shared/components/modal/modal.component';
@@ -133,6 +134,43 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   // ساخت دستی در آزمون‌ها بیرون از زمینهٔ تزریق است (مثل confirmDialog)
   private readonly activeCompanyService = (() => { try { return inject(ActiveCompanyService, { optional: true }); } catch { return null; } })();
   private readonly workflowApi = (() => { try { return inject(WorkflowApiService, { optional: true }); } catch { return null; } })();
+  private readonly myPetty = (() => { try { return inject(MyPettyAccountsService, { optional: true }); } catch { return null; } })();
+
+  // ─── «تن‌خواه من»: حساب‌های کاربر در شرکت‌های مختلف (انتخابگر و پیام نبود حساب در شرکت فعال) ───
+  get myAccounts(): MyPettyAccount[] {
+    return this.myPetty?.accounts() ?? [];
+  }
+
+  /** حساب‌های کاربر در شرکت‌های دیگر (برای پیام «در این شرکت حساب ندارید») */
+  get otherCompanyAccounts(): MyPettyAccount[] {
+    const cid = this.companyId;
+    return this.myAccounts.filter(a => a.company !== cid);
+  }
+
+  get hasAccountInActiveCompany(): boolean {
+    const cid = this.companyId;
+    return this.myAccounts.some(a => a.company === cid);
+  }
+
+  isActiveCompanyAccount(acc: MyPettyAccount): boolean {
+    return acc.company === this.companyId;
+  }
+
+  myAccountTitle(acc: MyPettyAccount): string {
+    const tags = [acc.is_closed || !acc.is_active ? 'بسته‌شده' : '', acc.role === 'deputy' ? 'جانشین' : ''].filter(Boolean);
+    return `تن‌خواه ${acc.company_name || '-'}${tags.length ? ' (' + tags.join('، ') + ')' : ''}`;
+  }
+
+  /** رفتن به حساب شرکتی دیگر: شرکت فعال سربرگ عوض می‌شود (صفحه دوباره بار می‌شود) */
+  switchToAccount(acc: MyPettyAccount): void {
+    if (this.isActiveCompanyAccount(acc)) return;
+    const company = this.activeCompanyService?.availableCompanies.find(c => c.id === acc.company);
+    if (!company) {
+      this.toast.show('warning', 'این شرکت در فهرست شرکت‌های شما نیست.');
+      return;
+    }
+    void this.activeCompanyService!.switchCompany(company);
+  }
 
   // ─── مودال ثبت هزینه از محل تنخواه (آفلاین مثل قبل ساخته می‌شود) ───
   isNewExpenseModalOpen: boolean = false;

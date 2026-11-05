@@ -1,5 +1,6 @@
 import { ModuleRouteAccess } from '../../core/modules/module-contract';
 import { permissionAlias } from '../../core/modules/permission-alias-token';
+import { MyPettyAccountsService } from './components/finance/employee/employee-petty-cash/my-petty-accounts.service';
 
 export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
   deniedPageFallback: 'otherModuleDefault',
@@ -12,6 +13,10 @@ export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
     'perm_invoice_record', 'perm_invoice_approve', 'perm_invoice_review', 'perm_petty_cash_manage', 'perm_counterparty_manage',
     'perm_accounting_reports'
   ],
+  // «تن‌خواه من»: صاحب حساب تن‌خواه یا جانشین فعال او با هر نقشی (افزون بر pagePermissions پایین)
+  pageAccessWhen: {
+    'employee-petty-cash': (inj) => inj.get(MyPettyAccountsService).hasAccess()
+  },
   pagePermissions: {
     'finance-audit': ['view_sys_payroll', 'perm_sys_logs', 'admin_all'],
     'personnel': ['view_sys_payroll', 'admin_all'],

@@ -10,6 +10,7 @@ import {
   ACCOUNTANT_ROLE_MARKERS,
   MANAGER_ROLE_MARKERS,
   TREASURER_ROLE_MARKERS,
+  PERSONAL_NAV_ITEMS,
   filterRoleNavItems,
   NavItem
 } from './nav-items';
@@ -90,10 +91,32 @@ describe('accounting role menus spec (step 3.5-c)', () => {
       'employee-attendance',
       'employee-fleet',
       'employee-invoices',
-      'employee-petty-cash',
       'employee-new-vehicle',
       'employee-new-personnel'
     ]);
+  });
+
+  it('petty cash is a personal item (not in the employee menu) gated by MyPettyAccountsService', () => {
+    expect(EMPLOYEE_NAV_ITEMS.some(i => i.id === 'employee-petty-cash')).toBe(false);
+    expect(PERSONAL_NAV_ITEMS.map(i => i.id)).toEqual(['employee-petty-cash']);
+    const item = PERSONAL_NAV_ITEMS[0];
+    expect(item.sectionKey).toBe('accounting.petty_cash');
+    const injectorWith = (has: boolean) => ({ get: () => ({ hasAccess: () => has }) }) as any;
+    expect(item.visibleWhen!(injectorWith(true))).toBe(true);
+    expect(item.visibleWhen!(injectorWith(false))).toBe(false);
+    const hook = ACCOUNTING_ROUTE_ACCESS.pageAccessWhen!['employee-petty-cash'];
+    expect(hook(injectorWith(true))).toBe(true);
+    expect(hook(injectorWith(false))).toBe(false);
+    // treasurer deep links from the cartable still rely on the page permission list
+    expect(ACCOUNTING_ROUTE_ACCESS.pagePermissions['employee-petty-cash']).toContain('perm_treasury_disburse_action');
+  });
+
+  it('every persona may open the personal petty cash page', () => {
+    for (const role of ['operator', 'supervisor', 'accountant', 'manager', 'treasury', 'org_admin']) {
+      expect(isAccountingRouteDeniedForRole(role, '/app/finance/employee-petty-cash')).toBe(false);
+    }
+    expect(isAccountingRouteDeniedForRole('supervisor', '/app/finance/employee-attendance')).toBe(true);
+    expect(isAccountingRouteDeniedForRole('org_admin', '/app/finance/employee-invoices')).toBe(true);
   });
 
   it('employee assignment shows operator beside supervisor and treasury', () => {

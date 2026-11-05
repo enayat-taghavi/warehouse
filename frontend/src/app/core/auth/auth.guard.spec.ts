@@ -105,6 +105,32 @@ describe('AuthGuards & Warehouse Routing Integrity', () => {
       expect(result).toBe(true);
     });
 
+    it('pageAccessWhen opens a module page without module permissions (additive only)', () => {
+      let open = true;
+      const fakeModule = {
+        code: 'fakepersonal', scopeKind: 'fake', routePrefix: '/app/fakepersonal', defaultRoute: '/app/fakepersonal',
+        routeAccess: {
+          guardAccessPermissions: ['perm_fake_module'], pagePermissions: {}, loginPermissions: [],
+          loginActiveAppModule: 'fakepersonal', resolveLoginRoute: () => '/app/fakepersonal',
+          pageAccessWhen: { 'my-page': () => open }
+        }
+      };
+      moduleRegistryMock.getInstalledModules.mockReturnValue([fakeModule]);
+      authServiceMock.user.mockReturnValue({ is_superuser: false, roles: [] });
+      authServiceMock.userPermissions.mockReturnValue(['view_sys_dashboard']);
+      const route = { routeConfig: { path: 'fakepersonal' } } as ActivatedRouteSnapshot;
+      const state = { url: '/app/fakepersonal/my-page?charge=3' } as RouterStateSnapshot;
+
+      expect(TestBed.runInInjectionContext(() => AuthGuard(route, state))).toBe(true);
+
+      open = false;
+      expect(TestBed.runInInjectionContext(() => AuthGuard(route, state))).not.toBe(true);
+      // the hook only covers its own page
+      open = true;
+      const other = { url: '/app/fakepersonal/other-page' } as RouterStateSnapshot;
+      expect(TestBed.runInInjectionContext(() => AuthGuard(route, other))).not.toBe(true);
+    });
+
     it('should redirect unauthenticated user to login with returnUrl', () => {
       authServiceMock.isLoggedIn.mockReturnValue(false);
 
