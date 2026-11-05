@@ -55,7 +55,6 @@ export const ACCOUNTING_ROUTE_ACCESS: ModuleRouteAccess = {
     'supervisor-attendance': ['perm_approve_personnel_supervisor', 'admin_all'],
     'supervisor-fleet': ['perm_approve_fleet_supervisor', 'admin_all'],
     'supervisor-invoices': ['perm_invoice_approve', 'admin_all'],
-    'supervisor-petty-cash': ['perm_invoice_approve', 'admin_all'],
     'supervisor-new-profiles': ['perm_approve_personnel_supervisor', 'admin_all'],
     'supervisor-period-lock': ['perm_lock_work_period', 'admin_all'],
     'accountant-payroll': ['view_sys_payroll', 'perm_approve_personnel_finance', 'admin_all'],

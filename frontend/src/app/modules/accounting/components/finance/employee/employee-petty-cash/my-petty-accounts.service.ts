@@ -12,14 +12,18 @@ export interface MyPettyAccount {
   company_name: string | null;
   is_active: boolean;
   is_closed: boolean;
-  role: 'custodian' | 'deputy';
+  role: 'custodian' | 'deputy' | 'approver';
+  /** فقط ردیف سرپرست تأییدکننده: نام تنخواه‌گردان حساب */
+  custodian_name?: string | null;
+  /** فقط ردیف سرپرست تأییدکننده: شمار سندهای منتظر تأیید او */
+  pending?: number;
 }
 
 export const MY_PETTY_ACCOUNTS_KEY = (uid: number) => `wh_my_petty_accounts:${uid}`;
 
 function isRow(r: unknown): r is MyPettyAccount {
   const x = r as MyPettyAccount;
-  return !!x && typeof x.id === 'number' && (x.role === 'custodian' || x.role === 'deputy');
+  return !!x && typeof x.id === 'number' && (x.role === 'custodian' || x.role === 'deputy' || x.role === 'approver');
 }
 
 /**
@@ -46,6 +50,11 @@ export class MyPettyAccountsService {
     const f = this.fresh();
     return f && f.uid === uid ? f.rows : this.readStored(uid);
   });
+  /** حساب‌های خود کاربر (صاحب یا جانشین)؛ ردیف‌های سرپرست تأییدکننده جدا هستند */
+  readonly ownAccounts = computed(() => this.accounts().filter(a => a.role !== 'approver'));
+  /** حساب‌هایی که کاربر سرپرست تأییدکنندهٔ آن‌هاست */
+  readonly approverAccounts = computed(() => this.accounts().filter(a => a.role === 'approver'));
+  /** منوی «تن‌خواه من» برای صاحب، جانشین و سرپرست تأییدکننده */
   readonly hasAccess = computed(() => this.accounts().length > 0);
 
   private inFlight = false;

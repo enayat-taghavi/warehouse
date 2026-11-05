@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, ViewChild, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, Optional, ViewChild, inject, effect, untracked } from '@angular/core';
 import { PermissionService } from '../../../../../../core/services/permission.service';
 import { AttachmentsComponent } from '../../../../../../shared/components/attachments/attachments.component';
 import { PAYMENT_RECEIPT_ACCEPT, PAYMENT_RECEIPT_LABEL, receiptFileError } from '../../../../payment-receipt';
@@ -20,6 +20,8 @@ import {
 } from '../../../../models/personnel.model';
 import { PersonnelApiService } from '../../../../api/personnel-api.service';
 import { WorkflowApiService } from '../../../../../../core/api/workflow-api.service';
+import { WorkflowTasksService } from '../../../../../../core/services/workflow-tasks.service';
+import { WorkflowTaskCard } from '../../../../../../core/models/workflow.model';
 import { AuthService } from '../../../../../../core/auth/auth.service';
 import { ToastService } from '../../../../../../shared/components/toast/toast.component';
 import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
@@ -47,10 +49,12 @@ import { ExpenseHeadOptionGroup, buildExpenseHeadOptions, expenseHeadErrorMessag
 /** تب‌های وضعیت ردیف‌های هزینه (۳.۶-د): وضعیت ردیف در گردش صورت‌حساب */
 export type PettyCashStatusTab = 'all' | 'draft' | 'approved' | 'rejected';
 /** زیرتب‌های صفحه: هزینه‌ها، درخواست شارژ، صورت‌حساب‌ها */
-export type PettyCashView = 'expenses' | 'charges' | 'statements';
+export type PettyCashView = 'expenses' | 'charges' | 'statements' | 'approvals';
 /** نوع موجودیت گردش کار برای سابقه و پیوند عمیق کارتابل */
 export type PettyCashDetailKind = 'petty_cash_charge' | 'petty_cash_statement';
 
+/** مرحلهٔ سرپرست تأییدکنندهٔ حساب در گردش شارژ و صورت‌حساب (backend personnel/workflows.py) */
+const PETTY_SUPERVISOR_STEP = 'supervisor_ok';
 const PERM_CEILING = 'perm_manager_payment_authorize';
 const PERM_REVIEW = 'perm_invoice_review';
 const PERM_TREASURY = 'perm_treasury_disburse_action';
@@ -135,10 +139,173 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   private readonly activeCompanyService = (() => { try { return inject(ActiveCompanyService, { optional: true }); } catch { return null; } })();
   private readonly workflowApi = (() => { try { return inject(WorkflowApiService, { optional: true }); } catch { return null; } })();
   private readonly myPetty = (() => { try { return inject(MyPettyAccountsService, { optional: true }); } catch { return null; } })();
+  private readonly workflowTasks = (() => { try { return inject(WorkflowTasksService, { optional: true }); } catch { return null; } })();
 
   // ─── «تن‌خواه من»: حساب‌های کاربر در شرکت‌های مختلف (انتخابگر و پیام نبود حساب در شرکت فعال) ───
+  /** حساب‌های خود کاربر (صاحب یا جانشین)؛ ردیف‌های سرپرست تأییدکننده در تب «تأیید» می‌آیند */
   get myAccounts(): MyPettyAccount[] {
-    return this.myPetty?.accounts() ?? [];
+    return this.myPetty?.ownAccounts() ?? [];
+  }
+
+  // ─── تب «تأیید»: سرپرست تأییدکنندهٔ حساب‌های دیگران (مرحلهٔ supervisor_ok گردش شارژ و صورت‌حساب) ───
+  /** حساب‌هایی که کاربر سرپرست تأییدکنندهٔ آن‌هاست */
+  get approverAccounts(): MyPettyAccount[] {
+    return this.myPetty?.approverAccounts() ?? [];
+  }
+
+  /** کاربر یا پیوند عمیق تب را انتخاب کرده است؛ جابه‌جایی خودکار دیگر انجام نمی‌شود */
+  private viewChosen = false;
+
+  /** فهرست حساب‌ها دیر می‌رسد یا عوض می‌شود: فقط‌سرپرست به تب «تأیید» می‌رود و غیرسرپرست از آن بیرون می‌آید */
+  private readonly approverViewSync = (() => {
+    try {
+      return effect(() => {
+        const own = this.myPetty?.ownAccounts() ?? [];
+        const approver = this.myPetty?.approverAccounts() ?? [];
+        untracked(() => {
+          if (this.activeView === 'approvals' && approver.length === 0) {
+            this.activeView = 'expenses';
+          } else if (!this.viewChosen && approver.length > 0 && own.length === 0 && this.activeView !== 'approvals') {
+            this.activeView = 'approvals';
+            void this.workflowTasks?.refresh();
+          }
+        });
+      });
+    } catch { return null; }
+  })();
+
+  /** خواندن کارتابل شکست خورد و چیزی در دستگاه نیست */
+  get approvalsUnavailable(): boolean {
+    return !!this.workflowTasks && !this.workflowTasks.loaded() && !this.workflowTasks.loading();
+  }
+
+  /** فهرست از حافظهٔ دستگاه است و تازه نشده */
+  get approvalsStale(): boolean {
+    return !!this.workflowTasks?.isStale();
+  }
+
+  retryApprovals(): void {
+    void this.workflowTasks?.refresh();
+  }
+
+  get isApprover(): boolean {
+    return this.approverAccounts.length > 0;
+  }
+
+  /** کارهای کارتابل کاربر که سند تنخواه منتظر تأیید سرپرست است */
+  get approvalTasks(): WorkflowTaskCard[] {
+    if (!this.isApprover || !this.workflowTasks) return [];
+    return this.workflowTasks.tasks().filter(t =>
+      t.step_key === PETTY_SUPERVISOR_STEP && (t.track ?? 'step') === 'step' &&
+      (t.workflow_key === 'petty_cash_charge' || t.workflow_key === 'petty_cash_statement'));
+  }
+
+  /** شمار منتظرها: پس از خواندن کارتابل از همان فهرست، وگرنه از پاسخ «تن‌خواه من» */
+  get approvalCount(): number {
+    if (this.workflowTasks?.loaded()) return this.approvalTasks.length;
+    return this.approverAccounts.reduce((sum, a) => sum + (a.pending || 0), 0);
+  }
+
+  get approvalsLoading(): boolean {
+    return !!this.workflowTasks?.loading() && !this.workflowTasks?.loaded();
+  }
+
+  isApprovalPending(task: WorkflowTaskCard): boolean {
+    return !!this.workflowTasks?.pendingTaskIds().has(task.task_id);
+  }
+
+  approvalTitle(task: WorkflowTaskCard): string {
+    const title = task.summary?.['title'];
+    return typeof title === 'string' && title ? title : task.workflow_title_fa;
+  }
+
+  approvalKindLabel(task: WorkflowTaskCard): string {
+    return task.workflow_key === 'petty_cash_charge' ? 'شارژ' : 'صورت‌حساب';
+  }
+
+  /** تب‌های بالای صفحه؛ تب «تأیید» فقط برای سرپرست تأییدکننده */
+  private viewTabsKey = '';
+  private viewTabsCache: TabDef[] = [];
+  get visibleViewTabs(): TabDef[] {
+    const approver = this.isApprover;
+    const count = this.approvalCount;
+    const key = `${approver}:${count}`;
+    if (key !== this.viewTabsKey) {
+      this.viewTabsKey = key;
+      this.viewTabsCache = approver
+        ? [...this.viewTabs, { id: 'approvals', label: 'تأیید سرپرست', shortLabel: 'تأیید', icon: 'check-circle', count }]
+        : this.viewTabs;
+    }
+    return this.viewTabsCache;
+  }
+
+  returnTaskId: number | null = null;
+  returnReason = '';
+  returnReasonError = '';
+  actingTaskId: number | null = null;
+
+  openApprovalDetail(task: WorkflowTaskCard): void {
+    const kind: PettyCashDetailKind = task.workflow_key === 'petty_cash_charge' ? 'petty_cash_charge' : 'petty_cash_statement';
+    this.openDetail(kind, task.entity_id);
+  }
+
+  async approveTask(task: WorkflowTaskCard): Promise<void> {
+    if (this.actingTaskId !== null) return;
+    const ok = await this.confirmDialog?.open({
+      title: 'تأیید سند',
+      message: `«${this.approvalTitle(task)}» تأیید و برای حسابدار فرستاده شود؟`,
+      type: 'info',
+      confirmText: 'تأیید',
+    });
+    if (this.confirmDialog && ok !== true) return;
+    await this.runTaskAction(task, 'act');
+  }
+
+  startReturnTask(task: WorkflowTaskCard): void {
+    this.returnTaskId = task.task_id;
+    this.returnReason = '';
+    this.returnReasonError = '';
+  }
+
+  cancelReturnTask(): void {
+    this.returnTaskId = null;
+    this.returnReason = '';
+    this.returnReasonError = '';
+  }
+
+  async confirmReturnTask(task: WorkflowTaskCard): Promise<void> {
+    if (!this.returnReason.trim()) {
+      this.returnReasonError = 'دلیل برگشت را بنویسید.';
+      return;
+    }
+    await this.runTaskAction(task, 'return', this.returnReason);
+  }
+
+  /** اقدام از همان مسیر کارتابل (`workflow/tasks/<id>/action/`)؛ آفلاین در صف می‌ماند */
+  private async runTaskAction(task: WorkflowTaskCard, action: 'act' | 'return', reason = ''): Promise<void> {
+    if (!this.workflowTasks) return;
+    this.actingTaskId = task.task_id;
+    try {
+      const out = await this.workflowTasks.act(task, action, reason);
+      if (out.status === 'done') {
+        this.toast.show('success', action === 'act' ? 'سند تأیید شد.' : 'سند برای اصلاح برگشت داده شد.');
+        if (action === 'return') this.cancelReturnTask();
+        this.myPetty?.refresh();
+      } else if (out.status === 'queued') {
+        this.toast.show('info', 'اقدام ذخیره شد و پس از اتصال فرستاده می‌شود.');
+        if (action === 'return') this.cancelReturnTask();
+      } else if (out.status === 'already-done') {
+        this.toast.show('warning', out.message);
+        if (action === 'return') this.cancelReturnTask();
+      } else if (out.code === 'reason_required') {
+        this.returnReasonError = out.message;
+      } else {
+        this.toast.show('error', out.message);
+      }
+    } finally {
+      this.actingTaskId = null;
+      this.cdr.detectChanges();
+    }
   }
 
   /** حساب‌های کاربر در شرکت‌های دیگر (برای پیام «در این شرکت حساب ندارید») */
@@ -305,9 +472,11 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
       const chargeId = Number(params['charge']);
       const statementId = Number(params['statement']);
       if (chargeId > 0) {
+        this.viewChosen = true;
         this.activeView = 'charges';
         this.openDetail('petty_cash_charge', chargeId, false);
       } else if (statementId > 0) {
+        this.viewChosen = true;
         this.activeView = 'statements';
         this.openDetail('petty_cash_statement', statementId, false);
       }
@@ -755,8 +924,12 @@ export class EmployeePettyCashHubComponent implements OnInit, OnDestroy {
   }
 
   setView(view: string): void {
+    this.viewChosen = true;
     if (view === 'expenses' || view === 'charges' || view === 'statements') {
       this.activeView = view;
+    } else if (view === 'approvals' && this.isApprover) {
+      this.activeView = view;
+      void this.workflowTasks?.refresh();
     }
   }
 

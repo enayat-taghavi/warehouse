@@ -109,7 +109,12 @@ describe('EmployeePettyCashHubComponent account picker', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: PermissionService, useValue: { canWriteDocuments: () => true } },
-        { provide: MyPettyAccountsService, useValue: { accounts, hasAccess: () => accounts().length > 0 } },
+        { provide: MyPettyAccountsService, useValue: {
+          accounts,
+          ownAccounts: () => accounts().filter(a => a.role !== 'approver'),
+          approverAccounts: () => accounts().filter(a => a.role === 'approver'),
+          hasAccess: () => accounts().length > 0,
+        } },
         {
           provide: ActiveCompanyService, useValue: {
             activeCompanyId: activeId,

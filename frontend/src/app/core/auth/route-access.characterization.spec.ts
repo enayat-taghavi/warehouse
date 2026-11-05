@@ -59,7 +59,6 @@ const ROUTE_PERMISSIONS_LITERAL: Record<string, string[]> = {
   'supervisor-attendance': ['perm_approve_personnel_supervisor', 'admin_all'],
   'supervisor-fleet': ['perm_approve_fleet_supervisor', 'admin_all'],
   'supervisor-invoices': ['perm_invoice_approve', 'admin_all'],
-  'supervisor-petty-cash': ['perm_invoice_approve', 'admin_all'],
   'supervisor-new-profiles': ['perm_approve_personnel_supervisor', 'admin_all'],
   'supervisor-period-lock': ['perm_lock_work_period', 'admin_all'],
   'accountant-payroll': ['view_sys_payroll', 'perm_approve_personnel_finance', 'admin_all'],
@@ -179,8 +178,8 @@ describe('Route Access Characterization Spec', () => {
       }
     });
 
-    it('validates Group 13: Supervisor Portal Basic (supervisor-attendance, supervisor-fleet, supervisor-invoices, supervisor-petty-cash)', () => {
-      for (const k of ['supervisor-attendance', 'supervisor-fleet', 'supervisor-invoices', 'supervisor-petty-cash']) {
+    it('validates Group 13: Supervisor Portal Basic (supervisor-attendance, supervisor-fleet, supervisor-invoices)', () => {
+      for (const k of ['supervisor-attendance', 'supervisor-fleet', 'supervisor-invoices']) {
         verifyRouteKey(k);
       }
     });

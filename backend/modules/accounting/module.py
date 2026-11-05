@@ -101,7 +101,7 @@ ACCOUNTING_PERMISSION_CATEGORIES = (
     {'key': 'payroll', 'label_fa': 'حقوق و تسویهٔ ناوگان', 'order': 50, 'menu': 'accountant-payroll'},
     {'key': 'treasury', 'label_fa': 'خزانه‌داری و پرداخت', 'order': 60, 'menu': 'treasurer-disbursements'},
     {'key': 'invoices', 'label_fa': 'رسیدهای پرداخت هزینه', 'order': 70, 'menu': 'employee-invoices'},
-    {'key': 'petty_cash', 'label_fa': 'تنخواه‌گردان', 'order': 80, 'menu': 'supervisor-petty-cash'},
+    {'key': 'petty_cash', 'label_fa': 'تنخواه‌گردان', 'order': 80, 'menu': 'employee-petty-cash'},
     {'key': 'counterparties', 'label_fa': 'طرف‌حساب‌های مالی', 'order': 90, 'menu': 'accountant-counterparties'},
     {'key': 'reports', 'label_fa': 'گزارش‌های حسابداری', 'order': 100, 'menu': 'manager-reports'},
 )

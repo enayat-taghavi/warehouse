@@ -135,7 +135,6 @@ describe('accounting role menus spec (step 3.5-c)', () => {
       'supervisor-personnel',
       'supervisor-fleet',
       'invoices',
-      'supervisor-petty-cash',
       'supervisor-period-lock'
     ]);
   });

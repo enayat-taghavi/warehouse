@@ -55,7 +55,7 @@ const FORMER_ROOT_REDIRECTS: [string, string][] = [
   ['supervisor-attendance', 'app/finance/supervisor-attendance'],
   ['supervisor-fleet', 'app/finance/supervisor-fleet'],
   ['supervisor-invoices', 'app/finance/supervisor-invoices'],
-  ['supervisor-petty-cash', 'app/finance/supervisor-petty-cash'],
+  ['supervisor-petty-cash', 'app/finance/employee-petty-cash'],
   ['supervisor-new-profiles', 'app/finance/supervisor-personnel'],
   ['supervisor-period-lock', 'app/finance/supervisor-period-lock'],
   ['accountant', 'app/finance/accountant-payroll'],

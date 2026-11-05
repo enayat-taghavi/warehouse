@@ -74,7 +74,7 @@ export const MODULE: WhFrontendModule = {
     { path: 'supervisor-attendance', redirectTo: 'app/finance/supervisor-attendance', pathMatch: 'full' },
     { path: 'supervisor-fleet', redirectTo: 'app/finance/supervisor-fleet', pathMatch: 'full' },
     { path: 'supervisor-invoices', redirectTo: 'app/finance/supervisor-invoices', pathMatch: 'full' },
-    { path: 'supervisor-petty-cash', redirectTo: 'app/finance/supervisor-petty-cash', pathMatch: 'full' },
+    { path: 'supervisor-petty-cash', redirectTo: 'app/finance/employee-petty-cash', pathMatch: 'full' },
     { path: 'supervisor-new-profiles', redirectTo: 'app/finance/supervisor-personnel', pathMatch: 'full' },
     { path: 'supervisor-period-lock', redirectTo: 'app/finance/supervisor-period-lock', pathMatch: 'full' },
     { path: 'accountant', redirectTo: 'app/finance/accountant-payroll', pathMatch: 'full' },

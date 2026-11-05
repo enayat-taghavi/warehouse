@@ -50,7 +50,6 @@ export const SUPERVISOR_NAV_ITEMS: NavItem[] = [
   { id: 'supervisor-personnel', label: 'پرسنل', shortLabel: 'پرسنل', icon: ACCOUNTING_ENTITY_ICONS.personnel, permission: 'perm_approve_personnel_supervisor', module: 'accounting', isAccounting: true },
   { id: 'supervisor-fleet', label: 'ناوگان', shortLabel: 'ناوگان', icon: ACCOUNTING_ENTITY_ICONS.fleet, permission: 'perm_approve_fleet_supervisor', module: 'accounting', isAccounting: true, sectionKey: 'accounting.fleet' },
   { id: 'invoices', label: 'رسیدهای پرداخت', shortLabel: 'رسیدها', icon: ACCOUNTING_ENTITY_ICONS.invoices, permission: 'perm_invoice_approve', module: 'accounting', isAccounting: true, sectionKey: 'accounting.invoices' },
-  { id: 'supervisor-petty-cash', label: 'تایید تن‌خواه', shortLabel: 'تن‌خواه', icon: ACCOUNTING_ENTITY_ICONS.pettyCash, permission: 'perm_invoice_approve', module: 'accounting', isAccounting: true, sectionKey: 'accounting.petty_cash' },
   { id: 'supervisor-period-lock', label: 'بستن دوره ماهانه', shortLabel: 'بستن دوره', icon: ACCOUNTING_ENTITY_ICONS.periodLock, permission: 'perm_lock_work_period', module: 'accounting', isAccounting: true },
 ];
 

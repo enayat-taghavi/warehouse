@@ -14,7 +14,6 @@ import { EmployeeNewVehicleHubComponent } from './components/finance/employee/em
 import { EmployeeNewPersonnelHubComponent } from './components/finance/employee/employee-new-personnel/employee-new-personnel';
 import { SupervisorAttendanceHubComponent } from './components/finance/supervisor/supervisor-attendance/supervisor-attendance';
 import { SupervisorFleetHubComponent } from './components/finance/supervisor/supervisor-fleet/supervisor-fleet';
-import { SupervisorPettyCashHubComponent } from './components/finance/supervisor/supervisor-petty-cash/supervisor-petty-cash';
 import { SupervisorNewProfilesHubComponent } from './components/finance/supervisor/supervisor-new-profiles/supervisor-new-profiles';
 import { SupervisorPersonnelHubComponent } from './components/finance/supervisor/supervisor-personnel/supervisor-personnel';
 import { SupervisorPeriodLockHubComponent } from './components/finance/supervisor/supervisor-period-lock/supervisor-period-lock';
@@ -65,14 +64,14 @@ export const ACCOUNTING_ROUTES: Routes = [
   { path: 'supervisor-attendance', component: SupervisorAttendanceHubComponent, data: { reuse: true } },
   { path: 'supervisor-fleet', component: SupervisorFleetHubComponent, data: { reuse: true, sectionKey: 'accounting.fleet' } },
   { path: 'supervisor-invoices', redirectTo: 'invoices', pathMatch: 'full' },
-  { path: 'supervisor-petty-cash', component: SupervisorPettyCashHubComponent, data: { reuse: true, sectionKey: 'accounting.petty_cash' } },
+  { path: 'supervisor-petty-cash', redirectTo: 'employee-petty-cash', pathMatch: 'full' },
   { path: 'supervisor-new-profiles', redirectTo: 'supervisor-personnel', pathMatch: 'full' },
   { path: 'supervisor-period-lock', component: SupervisorPeriodLockHubComponent, data: { reuse: true } },
   { path: 'supervisor/personnel', redirectTo: 'supervisor-personnel', pathMatch: 'full' },
   { path: 'supervisor/attendance', redirectTo: 'supervisor-attendance', pathMatch: 'full' },
   { path: 'supervisor/fleet', redirectTo: 'supervisor-fleet', pathMatch: 'full' },
   { path: 'supervisor/invoices', redirectTo: 'invoices', pathMatch: 'full' },
-  { path: 'supervisor/petty-cash', redirectTo: 'supervisor-petty-cash', pathMatch: 'full' },
+  { path: 'supervisor/petty-cash', redirectTo: 'employee-petty-cash', pathMatch: 'full' },
   { path: 'supervisor/new-profiles', redirectTo: 'supervisor-personnel', pathMatch: 'full' },
   { path: 'supervisor/period-lock', redirectTo: 'supervisor-period-lock', pathMatch: 'full' },
   { path: 'accountant', redirectTo: 'accountant-payroll', pathMatch: 'full' },

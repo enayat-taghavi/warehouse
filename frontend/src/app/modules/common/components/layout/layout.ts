@@ -1509,7 +1509,6 @@ export class Layout implements OnInit, OnDestroy {
       'supervisor-attendance': 'تایید کارکرد پرسنل (پنل سرپرست کارگاه)',
       'supervisor-fleet': 'تایید کارکرد ماشین‌آلات (پنل سرپرست کارگاه)',
       'supervisor-invoices': 'تایید رسیدهای پرداخت هزینه (پنل سرپرست کارگاه)',
-      'supervisor-petty-cash': 'تایید اسناد تن‌خواه (پنل سرپرست کارگاه)',
       'supervisor-new-profiles': 'تایید پرسنل و ناوگان جدید (پنل سرپرست کارگاه)',
       'supervisor-period-lock': 'بستن دوره کارکرد ماهانه (پنل سرپرست کارگاه)',
       'accountant-personnel': 'پرسنل، احکام مالی و درخواست‌های تغییر (پنل حسابدار)',
