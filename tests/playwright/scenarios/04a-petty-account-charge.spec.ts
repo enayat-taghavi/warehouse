@@ -47,7 +47,14 @@ test('video 4-a: petty account and charge', async ({ page, tv }) => {
   await tv.say('accounts');
   await tv.act.click(page.getByRole('button', { name: /حساب جدید/ }).first());
   const form = page.getByRole('dialog').filter({ hasText: 'حساب تنخواه جدید' });
+  // شرکت عامل گاهی از پیش پر نیست؛ آن را انتخاب کن تا جست‌وجوی تنخواه‌گردان باز شود
+  const company = form.getByRole('combobox', { name: 'شرکت عامل تنخواه' });
+  await expect(company).toBeVisible({ timeout: 30_000 });
   const picker = form.getByRole('combobox', { name: 'جست‌وجوی تنخواه‌گردان' });
+  if (!(await picker.isVisible({ timeout: 3_000 }).catch(() => false))) {
+    const label = (await company.locator('option', { hasText: 'شرکت نمایشی' }).first().innerText()).trim();
+    await company.selectOption({ label });
+  }
   await expect(picker).toBeVisible({ timeout: 30_000 });
   await tv.say('custodian');
   await tv.act.fill(picker, 'مریم');

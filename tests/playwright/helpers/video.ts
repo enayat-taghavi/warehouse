@@ -178,6 +178,8 @@ export class TrainingVideo {
   readonly consoleErrors: string[] = [];
   readonly toastErrors: string[] = [];
   readonly apiErrors: string[] = [];
+  /** true while loginAs drops the previous user's session: its in-flight calls end in 401 and toasts that are not app errors */
+  switchingUser = false;
   private captionTop: boolean;
 
   constructor(page: Page, info: TestInfo, captions: Captions) {
@@ -193,7 +195,7 @@ export class TrainingVideo {
     });
     // failed API calls, so a red toast in the log names its request
     page.on('response', res => {
-      if (res.status() >= 400 && res.url().includes('/api/')) {
+      if (res.status() >= 400 && res.url().includes('/api/') && !this.switchingUser) {
         this.apiErrors.push(`${res.request().method()} ${res.url().replace(/^https?:\/\/[^/]+/, '')} ${res.status()}`);
       }
     });
@@ -300,6 +302,7 @@ export class TrainingVideo {
 
   /** Clears the session and logs in with a demo user from scratch/video_demo_credentials.json. */
   async loginAs(username: string, captionId?: string): Promise<void> {
+    this.switchingUser = true;
     await this.page.context().clearCookies();
     await this.page.goto('/login');
     // the offline cache (IndexedDB) of the previous user would otherwise be read first by the next one
@@ -314,6 +317,7 @@ export class TrainingVideo {
       })));
     });
     await this.page.goto('/login');
+    this.switchingUser = false;
     await this.act.fill(this.page.getByLabel('نام کاربری', { exact: true }), username);
     await this.act.fillSecret(this.page.getByLabel('رمز عبور', { exact: true }), password(username));
     await this.act.click(this.page.getByRole('button', { name: 'ورود به سامانه' }));
@@ -347,16 +351,18 @@ export class TrainingVideo {
 
   /** The company picker may open after entering the finance app; pick the demo company or close it. */
   async pickCompany(name = 'شرکت نمایشی'): Promise<void> {
+    // without an active company (user of two companies) the picker has no close button, so wait on its heading
+    const heading = this.page.locator('app-company-selection-modal').getByText('انتخاب شرکت کاری', { exact: true });
+    if (!(await heading.isVisible({ timeout: 5_000 }).catch(() => false))) return;
     const close = this.page.getByTitle('انصراف و بستن');
-    if (!(await close.isVisible({ timeout: 5_000 }).catch(() => false))) return;
     // company rows in the picker are clickable divs (not buttons)
     const option = this.page
       .locator('app-company-selection-modal div.cursor-pointer')
       .filter({ has: this.page.locator('span.font-black', { hasText: new RegExp(name) }) })
       .first();
-    if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) await this.act.click(option);
+    if (await option.isVisible({ timeout: 5_000 }).catch(() => false)) await this.act.click(option);
     else await this.act.click(close);
-    await expect(close).toBeHidden({ timeout: 15_000 });
+    await expect(heading).toBeHidden({ timeout: 15_000 });
   }
 
   /**
@@ -453,7 +459,7 @@ export function videoTest(captions: Captions) {
   return base.extend<{ tv: TrainingVideo }>({
     tv: async ({ page }, use, info) => {
       const tv = new TrainingVideo(page, info, captions);
-      await page.exposeFunction('__tvToastError', (text: string) => { tv.toastErrors.push(text); });
+      await page.exposeFunction('__tvToastError', (text: string) => { if (!tv.switchingUser) tv.toastErrors.push(text); });
       await page.addInitScript(TOAST_WATCH);
       await page.addInitScript(PRINT_STUB);
       if (TRAINING) await page.addInitScript(OVERLAY_SCRIPT);
