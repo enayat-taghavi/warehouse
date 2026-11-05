@@ -34,6 +34,7 @@
 | ۴-الف. حساب و شارژ تنخواه | [دیدن](../Training_Videos/videos/04a-petty-account-charge-desktop.mp4) | [دیدن](../Training_Videos/videos/04a-petty-account-charge-mobile.mp4) |
 | ۴-ب. صورت‌حساب تنخواه | [دیدن](../Training_Videos/videos/04b-petty-statement-desktop.mp4) | [دیدن](../Training_Videos/videos/04b-petty-statement-mobile.mp4) |
 | ۴-ج. بستن تنخواه | [دیدن](../Training_Videos/videos/04c-petty-close-desktop.mp4) | [دیدن](../Training_Videos/videos/04c-petty-close-mobile.mp4) |
+| ۴-د. سرپرست، سقف و بدهی تنخواه | [دیدن](../Training_Videos/videos/04d-petty-advanced-desktop.mp4) | [دیدن](../Training_Videos/videos/04d-petty-advanced-mobile.mp4) |
 | ۵. پروندهٔ پرسنلی | [دیدن](../Training_Videos/videos/05-personnel-file-desktop.mp4) | [دیدن](../Training_Videos/videos/05-personnel-file-mobile.mp4) |
 | ۶. کارکرد | [دیدن](../Training_Videos/videos/06-attendance-desktop.mp4) | [دیدن](../Training_Videos/videos/06-attendance-mobile.mp4) |
 | ۷. حقوق | [دیدن](../Training_Videos/videos/07-payroll-desktop.mp4) | [دیدن](../Training_Videos/videos/07-payroll-mobile.mp4) |
