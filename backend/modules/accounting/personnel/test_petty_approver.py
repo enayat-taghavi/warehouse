@@ -192,6 +192,20 @@ class PettyApproverTests(TestCase):
             content_type='pettycashaccount', object_id=self.account.pk, action='petty_approver_change',
             from_status=str(self.sup.pk), to_status='').exists())
 
+    def test_inactive_approver_does_not_strand_pending_charge(self):
+        # سرپرستِ غیرفعال‌شده سند منتظر را گیر نمی‌اندازد: بازمحاسبه مرحله را رد می‌کند و حسابدار ادامه می‌دهد
+        from workflow.recompute import recompute_open_tasks
+        self.set_approver(self.sup)
+        tx_id = self.charge()
+        self.assertEqual(self.step(PETTY_CHARGE_WORKFLOW, tx_id), 'supervisor_ok')
+        self.sup.is_active = False
+        self.sup.save(update_fields=['is_active'])
+        with self.captureOnCommitCallbacks(execute=True):
+            recompute_open_tasks(user_ids={self.sup.pk})
+        self.assertEqual(self.step(PETTY_CHARGE_WORKFLOW, tx_id), 'accountant_review')
+        wf_engine.act(self.acc, wf_engine.open_task(PETTY_CHARGE_WORKFLOW, tx_id))
+        self.assertEqual(self.step(PETTY_CHARGE_WORKFLOW, tx_id), 'treasury_pay')
+
     # ─── قلمرو دیدن ─────────────────────────────────────────────────────────
     def test_approver_sees_only_own_accounts_documents(self):
         self.set_approver(self.sup)
@@ -216,6 +230,46 @@ class PettyApproverTests(TestCase):
         # بی سرپرستی هیچ چیز دیده نمی‌شود
         PettyCashAccount.objects.filter(pk=self.account.pk).update(approver=None)
         self.assertEqual(self.call(self.sup, 'get', ACC).json(), [])
+
+    def test_approver_does_not_see_custodian_private_drafts(self):
+        # پیش‌نویس ارسال‌نشدهٔ تنخواه‌گردان خصوصی است؛ شارژ در گردش و ردیف‌های صورت‌حساب ارسال‌شده دیده می‌شوند
+        from personnel.models import PettyCashStatement
+        from personnel.workflows import can_view_petty_statement, can_view_petty_tx
+        self.set_approver(self.sup)
+        charge_id = self.charge()
+        private, in_draft_st = self.lines()
+        draft_st = PettyCashStatement.objects.create(
+            company=self.co, account=self.account, custodian=self.emp, created_by=self.emp,
+            statement_date_shamsi='1405/08/01', status='draft')
+        PettyCashTransaction.objects.filter(pk=in_draft_st.pk).update(statement=draft_st)
+        sent_line = self.lines()[0]
+        res = self.call(self.emp, 'post', ST, {'line_ids': [sent_line.pk]})
+        self.assertEqual(res.status_code, 201, res.content)
+        sent_st = res.json()['id']
+        txs = ids(self.call(self.sup, 'get', TX))
+        self.assertIn(charge_id, txs)
+        self.assertIn(sent_line.pk, txs)
+        self.assertNotIn(private.pk, txs)
+        self.assertNotIn(in_draft_st.pk, txs)
+        self.assertEqual(self.call(self.sup, 'get', f'{TX}{private.pk}/').status_code, 404)
+        self.assertIsNone(can_view_petty_tx(self.sup, private.pk))
+        self.assertIsNone(can_view_petty_tx(self.sup, in_draft_st.pk))
+        self.assertTrue(can_view_petty_tx(self.sup, sent_line.pk))
+        sts = ids(self.call(self.sup, 'get', ST))
+        self.assertIn(sent_st, sts)
+        self.assertNotIn(draft_st.pk, sts)
+        self.assertIsNone(can_view_petty_statement(self.sup, draft_st.pk))
+        # خود تنخواه‌گردان همه را می‌بیند
+        self.assertTrue({private.pk, in_draft_st.pk} <= ids(self.call(self.emp, 'get', TX)))
+
+    def test_approver_who_created_the_document_is_skipped(self):
+        # سرپرستی که جانشین تنخواه‌گردان است و خودش شارژ را می‌سازد، مرحلهٔ خودش را رد می‌کند
+        from personnel.workflows import petty_account_approver_ids
+        self.set_approver(self.sup)
+        self.account.refresh_from_db()
+        self.assertEqual(petty_account_approver_ids(self.account, self.emp.pk), [self.sup.pk])
+        self.assertEqual(petty_account_approver_ids(self.account, self.sup.pk), [])
+        self.assertEqual(petty_account_approver_ids(None, self.sup.pk), [])
 
     # ─── نمونهٔ در جریان نسخهٔ ۱ ────────────────────────────────────────────
     def test_v1_instance_at_accountant_keeps_step_after_version_bump(self):

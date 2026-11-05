@@ -197,7 +197,7 @@ from ..petty_settlements import (
 )
 from ..workflows import (
     petty_allocation_category, petty_charge_exceeds_ceiling, petty_fund_level_breakdown,
-    petty_supervisor_pending_counts,
+    petty_approver_tx_q, petty_supervisor_pending_counts,
 )
 from ..models import PettyCashReconciliation
 from ..serializers import PettyCashReconciliationSerializer
@@ -327,7 +327,7 @@ def scope_petty_transactions_for_user(user, qs, company_id=None):
             | _petty_tx_company_q(_petty_viewer_company_ids(user))
             | Q(section_id__in=sections_where(user, PETTY_CASH_MANAGE_PERM).values('id'))
             | deputy_account_q(user, prefix='account__')  # د۸: حساب صاحب کار در بازهٔ جانشینی
-            | Q(account__approver=user)  # ت۳ بازطراحی: سرپرست تأییدکننده فقط اسناد حساب‌های خودش
+            | petty_approver_tx_q(user)  # ت۳ بازطراحی: سرپرست تأییدکننده فقط اسناد حساب‌های خودش
         )
     return qs
 
@@ -2113,7 +2113,8 @@ class PettyCashStatementViewSet(viewsets.ReadOnlyModelViewSet):
         if not user.is_superuser:
             qs = qs.filter(company_id__in=get_user_allowed_companies(user).values('id')).filter(
                 Q(custodian=user) | Q(company_id__in=_petty_viewer_company_ids(user))
-                | deputy_account_q(user, prefix='account__') | Q(account__approver=user))
+                | deputy_account_q(user, prefix='account__')
+                | (Q(account__approver=user) & ~Q(status='draft')))
         return qs.order_by('-statement_date_shamsi', '-created_at')
 
     def _statement_object(self, read_only=False):

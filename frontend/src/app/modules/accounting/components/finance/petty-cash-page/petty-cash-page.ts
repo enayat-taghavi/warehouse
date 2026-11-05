@@ -18,6 +18,7 @@ import { PettyAccountManagerComponent } from '../accountant/accountant-petty-cas
 import { WebSocketService, patchDocumentRow } from '../../../../../core/http/websocket.service';
 import { attendanceActionErrorMessage } from '../../../attendance-period-error';
 import { PettyPageConfig, PettyTabId, pettyPageConfig } from './petty-cash-page.config';
+import { LoadingSkeletonComponent } from '../../../../../shared/components/loading-skeleton/loading-skeleton.component';
 
 /**
  * صفحهٔ مشترک تن‌خواه حسابدار، مدیر و خزانه‌دار (طرح بازطراحی تن‌خواه ت۱/ت۲).
@@ -33,6 +34,7 @@ import { PettyPageConfig, PettyTabId, pettyPageConfig } from './petty-cash-page.
     ActionButtonComponent,
     CommandCenterComponent,
     ModalComponent,
+    LoadingSkeletonComponent,
     WorkflowReasonDialogComponent,
     PettyAccountManagerComponent,
     SvgIconDirective

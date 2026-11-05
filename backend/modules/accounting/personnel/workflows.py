@@ -236,15 +236,19 @@ PETTY_SUPERVISOR_STEP = 'supervisor_ok'
 PETTY_SUPERVISOR_PERM = 'perm_invoice_approve'
 
 
-def petty_account_approver_ids(account):
-    """[approver_id] حساب، یا [] (مرحلهٔ supervisor_ok رد می‌شود و گردش مثل پیش است)."""
+def petty_account_approver_ids(account, created_by_id=None):
+    """
+    [approver_id] حساب، یا [] (مرحلهٔ supervisor_ok رد می‌شود و گردش مثل پیش است). سرپرستی که خودش سند را ساخته
+    (مثلاً جانشین تنخواه‌گردان) سند خودش را تأیید نمی‌کند: مرحله رد می‌شود و حسابدار بررسی می‌کند.
+    """
     approver_id = getattr(account, 'approver_id', None) if account is not None else None
-    return [approver_id] if approver_id else []
+    return [approver_id] if approver_id and approver_id != created_by_id else []
 
 
 def _petty_supervisor_step():
     return StepSpec(PETTY_SUPERVISOR_STEP, 'تأیید سرپرست', 'supervisor', PETTY_SUPERVISOR_PERM, APPROVE,
-                    actions=(ACT, RETURN), fixed_missing_action='skip', assignees=lambda obj: petty_account_approver_ids(getattr(obj, 'account', None)))
+                    actions=(ACT, RETURN), fixed_missing_action='skip', assignees=lambda obj: petty_account_approver_ids(getattr(obj, 'account', None),
+                                                                     getattr(obj, 'created_by_id', None)))
 
 
 def petty_supervisor_pending_counts(account_ids) -> dict:
@@ -599,7 +603,7 @@ def can_view_petty_tx(user, entity_id):
     if _petty_tx_in_scope(user, tx) or _petty_participant_or_overseer(user, PETTY_CHARGE_ENTITY, tx.pk,
                                                                       tx.wf_company_id):
         return True
-    if _petty_approver(user, tx.account, tx.wf_company_id):
+    if _petty_approver_sees_tx(user, tx):
         return True
     return None
 
@@ -649,6 +653,23 @@ def _petty_approver(user, account, company_id) -> bool:
             and petty_company_allowed(user, company_id))
 
 
+def petty_approver_tx_q(user, prefix=''):
+    """
+    ت۳: اسناد حساب‌هایی که کاربر سرپرست آن‌هاست، بی پیش‌نویس خصوصی تنخواه‌گردان (هزینه/عودتِ ارسال‌نشده و بیرون از
+    صورت‌حساب). شارژ در گردش و ردیف‌های صورت‌حساب با وضعیت draft می‌مانند چون سرپرست باید آن‌ها را تأیید کند.
+    """
+    from django.db.models import Q
+    unsent = Q(**{f'{prefix}statement__isnull': True}) | Q(**{f'{prefix}statement__status': 'draft'})
+    private_draft = (Q(**{f'{prefix}status': 'draft'}) & ~Q(**{f'{prefix}transaction_type': 'allocation'}) & unsent)
+    return Q(**{f'{prefix}account__approver': user}) & ~private_draft
+
+
+def _petty_approver_sees_tx(user, tx) -> bool:
+    unsent = tx.statement_id is None or tx.statement.status == 'draft'
+    private_draft = tx.status == 'draft' and tx.transaction_type != 'allocation' and unsent
+    return not private_draft and _petty_approver(user, tx.account, tx.wf_company_id)
+
+
 def can_view_petty_statement(user, entity_id):
     statement = resolve_petty_statement(entity_id)
     if statement is None:
@@ -656,7 +677,7 @@ def can_view_petty_statement(user, entity_id):
     if _petty_statement_in_scope(user, statement) or _petty_participant_or_overseer(
             user, PETTY_STATEMENT_ENTITY, statement.pk, statement.company_id):
         return True
-    if _petty_approver(user, statement.account, statement.company_id):
+    if statement.status != 'draft' and _petty_approver(user, statement.account, statement.company_id):
         return True
     return None
 
