@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -59,7 +59,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   settlement_pending: 'تسویهٔ در انتظار دارد؛ اول آن را نهایی یا باطل کنید.',
   invalid_custodian: 'تنخواه‌گردان جدید درست نیست.',
   custodian_has_account: 'این فرد از قبل حساب تنخواه دارد.',
-  not_voidable: 'این تسویه قابل ابطال نیست.'
+  not_voidable: 'این تسویه قابل ابطال نیست.',
+  approver_pending: 'اول سندهای منتظر سرپرست تمام شوند.'
 };
 
 @Component({
@@ -89,6 +90,11 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
   private readonly network = NetworkStatusService.getInstance();
   private netSub?: Subscription;
 
+  /** صفحهٔ مشترک تنخواه دکمه‌های بازخوانی و «حساب جدید» را در کادر بالای خودش دارد */
+  @Input() showHeaderActions = true;
+  /** مدیر تسویه و تطبیق ندارد؛ سقف، تحویل و بستن می‌ماند */
+  @Input() role: 'accountant' | 'manager' | 'treasurer' = 'accountant';
+
   readonly offlineTitle = OFFLINE_TITLE;
   isOnline = this.network.isOnline;
 
@@ -111,6 +117,8 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
 
   // فرم حساب
   custodianPick: PersonRoleValue[] = [];
+  approverPick: PersonRoleValue[] = [];
+  private originalApprover: number | null = null;
   form = { companyId: null as number | null, ceiling: null as string | number | null, opening: null as string | number | null, openingDate: '', reason: '', card: '', bank_name: '', sheba: '', description: '' };
   isFormDatePickerOpen = false;
   readonly openingDateControl = new FormControl<string>('');
@@ -170,7 +178,7 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
       this.isOnline = this.network.isOnline;
       this.cdr.markForCheck();
     });
-    if (this.activeCompany && this.availableCompanies.length === 0) {
+    if (typeof this.activeCompany?.loadAvailableCompanies === 'function' && this.availableCompanies.length === 0) {
       this.activeCompany.loadAvailableCompanies().subscribe({
         next: () => this.cdr.markForCheck(),
         error: () => {}
@@ -212,7 +220,7 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
     if (isServerUnreachable(err?.status)) {
       return 'اتصال به سرور برقرار نیست؛ کمی بعد دوباره تلاش کنید.';
     }
-    if (err?.status === 403 && !code) return 'اجازهٔ این کار را ندارید.';
+    if (err?.status === 403 && !code && !(typeof body?.detail === 'string' && body.detail)) return 'اجازهٔ این کار را ندارید.';
     if (typeof body?.error === 'string' && body.error) return body.error;
     if (typeof body?.detail === 'string' && body.detail) return body.detail;
     // استخراج اولین خطای فیلدی از پاسخ اعتبارسنجی جنگو
@@ -313,11 +321,14 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
   onCompanyChange(companyId: number | null): void {
     this.form.companyId = companyId;
     this.custodianPick = [];
+    this.approverPick = [];
     this.cdr.markForCheck();
   }
 
   openCreate(): void {
     this.custodianPick = [];
+    this.approverPick = [];
+    this.originalApprover = null;
     const defaultCompanyId = this.companyId || (this.availableCompanies[0]?.id ?? null);
     this.form = {
       companyId: defaultCompanyId,
@@ -352,6 +363,10 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
       description: acc.description || ''
     };
     this.openingDateControl.setValue(openingDate, { emitEvent: false });
+    this.originalApprover = acc.approver ?? null;
+    this.approverPick = acc.approver
+      ? [{ type: 'user', id: acc.approver, label: acc.approver_name || 'سرپرست' }]
+      : [];
     this.original = {
       opening: Number(acc.opening_balance || 0),
       openingDate,
@@ -612,6 +627,7 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
   }
 
   saveAccount(): void {
+    if (this.isBusy) return;
     if (!this.isOnline) { this.modalError = OFFLINE_TITLE; return; }
     const opening = this.num(this.form.opening);
     if (opening > 0 && !this.form.openingDate) { this.modalError = 'برای موجودی اولیه، تاریخ آن لازم است.'; return; }
@@ -631,6 +647,9 @@ export class PettyAccountManagerComponent implements OnInit, OnDestroy {
     if (this.form.card !== this.original.card) body.card_or_account_number = this.form.card.trim();
     if (this.form.sheba !== this.original.sheba) body.sheba_number = this.form.sheba.trim();
     if (this.current && this.openingChanged && this.form.reason.trim()) body.reason = this.form.reason.trim();
+    // سرپرست تأییدکننده فقط وقتی عوض شده فرستاده می‌شود (null یعنی حذف سرپرست)
+    const approver = this.approverPick[0] ? Number(this.approverPick[0].id) : null;
+    if (approver !== this.originalApprover) body.approver = approver;
     this.isBusy = true;
     this.modalError = '';
     let req;

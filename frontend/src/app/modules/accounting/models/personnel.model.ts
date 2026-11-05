@@ -1184,6 +1184,9 @@ export interface PettyCashAccount {
   /** تحویل به تنخواه‌گردان تازه (د۷) */
   handover_from?: number | null;
   handover_to?: number | null;
+  /** سرپرست تأییدکنندهٔ اختیاری (ت۳ بازطراحی)؛ null یعنی بدون سرپرست */
+  approver?: number | null;
+  approver_name?: string | null;
   created_at?: string;
   updated_at?: string;
 }

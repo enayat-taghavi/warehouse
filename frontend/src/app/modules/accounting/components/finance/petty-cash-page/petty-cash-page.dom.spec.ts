@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@angular/compiler';
-import { Component, forwardRef, ɵresolveComponentResources } from '@angular/core';
+import { Component, Input, forwardRef, ɵresolveComponentResources } from '@angular/core';
 import { ComponentFixture, TestBed, getTestBed } from '@angular/core/testing';
 import { BrowserTestingModule, platformBrowserTesting } from '@angular/platform-browser/testing';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -30,6 +30,8 @@ try {
   ]
 })
 class StubPettyAccountManagerComponent {
+  @Input() showHeaderActions = true;
+  @Input() role = 'accountant';
   load = vi.fn();
   openCreate = vi.fn();
 }

@@ -83,7 +83,7 @@
   </div>
 
   <!-- ── حساب‌های تنخواه (سطح شرکت) ── -->
-  <app-petty-account-manager *ngIf="isAccountsTab"></app-petty-account-manager>
+  <app-petty-account-manager *ngIf="isAccountsTab" [showHeaderActions]="false" [role]="config.role"></app-petty-account-manager>
 
   <!-- ── جدول اسناد ── -->
   <div *ngIf="!isAccountsTab" class="bg-surface rounded-2xl border border-line shadow-sm overflow-hidden">

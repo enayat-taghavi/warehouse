@@ -1,7 +1,7 @@
 <section class="space-y-3" dir="rtl" aria-label="حساب‌های تنخواه">
   <div class="flex flex-wrap items-center justify-between gap-2">
     <h2 class="text-sm font-black text-fg">حساب‌های تنخواه</h2>
-    <div class="flex items-center gap-2">
+    <div *ngIf="showHeaderActions" class="flex items-center gap-2">
       <button type="button" appAction="refresh" [busy]="isLoading" (click)="load()"></button>
       <button
         type="button"
@@ -40,6 +40,7 @@
             <span *ngIf="acc.is_closed" class="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-surface-muted text-fg-muted border-line">بسته‌شده</span>
           </div>
           <p class="text-[11px] text-fg-muted mt-0.5">{{ acc.company_name || acc.section_name || '' }}</p>
+          <p *ngIf="acc.approver_name" class="text-[11px] text-fg-muted mt-0.5">سرپرست: <span class="font-bold text-fg">{{ acc.approver_name }}</span></p>
         </div>
         <dl class="flex flex-wrap items-center gap-x-6 gap-y-1 text-[11px]">
           <div *ngIf="isManager">
@@ -64,12 +65,12 @@
             <button type="button" appAction="edit" label="ویرایش" display="label" size="sm"
               [disabled]="!canManageAccounts || !isOnline"
               [attr.title]="!isOnline ? offlineTitle : 'ویرایش حساب'" (click)="openEdit(acc)"></button>
-            <button type="button" class="inline-flex items-center justify-center gap-1 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            <button *ngIf="role !== 'manager'" type="button" class="inline-flex items-center justify-center gap-1 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'ثبت تسویهٔ بدهی'" aria-label="تسویهٔ بدهی" (click)="openSettle(acc)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card" aria-hidden="true"></svg>
               <span class="hidden sm:inline">تسویه</span>
             </button>
-            <button type="button" class="inline-flex items-center justify-center gap-1 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            <button *ngIf="role !== 'manager'" type="button" class="inline-flex items-center justify-center gap-1 min-h-[40px] min-w-[40px] px-3 rounded-xl border border-line bg-surface text-xs font-bold text-fg hover:bg-surface-muted cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'تطبیق دوره‌ای نقد'" aria-label="تطبیق نقد" (click)="openReconcile(acc)">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calculator" aria-hidden="true"></svg>
               <span class="hidden sm:inline">تطبیق</span>
@@ -164,37 +165,41 @@
   </div>
 
   <!-- ── پنجرهٔ ساخت و ویرایش حساب ── -->
-  <app-modal [isOpen]="modal === 'form'" size="lg" [title]="current ? 'ویرایش حساب تنخواه' : 'حساب تنخواه جدید'" (closed)="closeModal()">
-    <form class="space-y-3" (ngSubmit)="saveAccount()" novalidate>
+  <app-modal [isOpen]="modal === 'form'" size="md" [title]="current ? 'ویرایش حساب تنخواه' : 'حساب تنخواه جدید'" (closed)="closeModal()">
+    <form id="pam_account_form" class="space-y-3.5" (ngSubmit)="saveAccount()" novalidate>
       <!-- ۱. انتخاب صریح شرکت عامل تنخواه -->
       <div *ngIf="!current">
-        <label for="pam_company_select" class="block text-[11px] font-bold text-fg mb-1">
+        <label for="pam_company_select" class="block text-xs font-bold text-fg mb-1">
           شرکت عامل تنخواه <span class="text-rose-600" aria-hidden="true">*</span>
         </label>
-        <select
-          id="pam_company_select"
-          [(ngModel)]="form.companyId"
-          (ngModelChange)="onCompanyChange($event)"
-          name="companyId"
-          class="w-full text-xs font-bold p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer">
-          <option [ngValue]="null" disabled>-- انتخاب شرکت عامل --</option>
-          <option *ngFor="let c of availableCompanies" [ngValue]="c.id">
-            {{ c.name }} (کد: {{ c.code }})
-          </option>
-        </select>
+        <div class="relative">
+          <select
+            id="pam_company_select"
+            [(ngModel)]="form.companyId"
+            (ngModelChange)="onCompanyChange($event)"
+            name="companyId"
+            class="w-full text-xs font-bold h-10 ps-3 pe-8 rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer appearance-none">
+            <option [ngValue]="null" disabled>-- انتخاب شرکت عامل --</option>
+            <option *ngFor="let c of availableCompanies" [ngValue]="c.id">
+              {{ c.name }} (کد: {{ c.code }})
+            </option>
+          </select>
+          <svg class="w-4 h-4 text-fg-muted absolute end-2.5 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down" aria-hidden="true"></svg>
+        </div>
       </div>
 
       <!-- ۲. انتخاب تنخواه‌گردان محدود به همان شرکت -->
       <div *ngIf="!current">
         <div class="flex items-center justify-between mb-1">
-          <label class="block text-[11px] font-bold text-fg">
+          <label class="block text-xs font-bold text-fg">
             تنخواه‌گردان <span class="text-rose-600" aria-hidden="true">*</span>
           </label>
-          <span *ngIf="form.companyId" class="text-[10px] text-fg-muted font-bold">
+          <span *ngIf="form.companyId" class="text-[11px] text-fg-muted font-normal">
             (فقط کاربران و پرسنل شرکت انتخاب‌شده)
           </span>
-          <span *ngIf="!form.companyId" class="text-[10px] text-amber-700 font-bold">
-            ⚠ ابتدا شرکت عامل را انتخاب کنید
+          <span *ngIf="!form.companyId" class="text-[11px] text-amber-700 font-bold flex items-center gap-1">
+            <svg class="w-3.5 h-3.5 text-amber-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" aria-hidden="true"></svg>
+            <span>ابتدا شرکت عامل را انتخاب کنید</span>
           </span>
         </div>
         <app-person-role-picker
@@ -207,33 +212,53 @@
         </app-person-role-picker>
       </div>
 
-      <div *ngIf="current" class="flex items-center gap-3 text-xs font-bold text-fg bg-surface-muted/60 p-2.5 rounded-xl border border-line">
-        <span *ngIf="current.company_name" class="inline-flex items-center gap-1 text-indigo-700">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building" aria-hidden="true"></svg>
+      <div *ngIf="current" class="flex flex-wrap items-center gap-3 text-xs font-bold text-fg bg-surface-muted/80 p-3 rounded-xl border border-line">
+        <span *ngIf="current.company_name" class="inline-flex items-center gap-1.5 text-indigo-700">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="building" aria-hidden="true"></svg>
           <span>شرکت: {{ current.company_name }}</span>
         </span>
-        <span>تنخواه‌گردان: {{ current.custodian_name }}</span>
+        <span class="inline-flex items-center gap-1.5 text-fg">
+          <svg class="w-4 h-4 text-fg-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="user" aria-hidden="true"></svg>
+          <span>تنخواه‌گردان: {{ current.custodian_name }}</span>
+        </span>
+      </div>
+
+      <!-- ۳. سرپرست تأییدکنندهٔ اختیاری؛ اولین مرحلهٔ گردش سندهای این حساب -->
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="block text-xs font-bold text-fg">سرپرست تأییدکننده</label>
+          <span class="text-[11px] text-fg-muted font-normal">(اختیاری)</span>
+        </div>
+        <app-person-role-picker
+          [allowRoles]="false"
+          [max]="1"
+          [companyId]="form.companyId"
+          [disabled]="!form.companyId"
+          [placeholder]="form.companyId ? 'جست‌وجوی سرپرست در این شرکت...' : 'ابتدا شرکت عامل را انتخاب کنید'"
+          [(ngModel)]="approverPick"
+          name="approver">
+        </app-person-role-picker>
       </div>
 
       <div *ngIf="isManager">
-        <label for="pam_ceiling" class="block text-[11px] font-bold text-fg mb-1">سقف تنخواه (ریال)</label>
+        <label for="pam_ceiling" class="block text-xs font-bold text-fg mb-1">سقف تنخواه (ریال)</label>
         <app-amount-input inputId="pam_ceiling" placeholder="۰" [(ngModel)]="form.ceiling" name="ceiling"></app-amount-input>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label for="pam_opening" class="block text-[11px] font-bold text-fg mb-1">موجودی اولیه (ریال)</label>
+          <label for="pam_opening" class="block text-xs font-bold text-fg mb-1">موجودی اولیه (ریال)</label>
           <app-amount-input inputId="pam_opening" placeholder="۰" [(ngModel)]="form.opening" name="opening"></app-amount-input>
         </div>
         <div>
-          <label for="pam_opening_date" class="block text-[11px] font-bold text-fg mb-1">تاریخ موجودی اولیه</label>
-          <div class="flex items-center border border-line rounded-xl ps-2.5 pe-0.5 py-0.5 bg-surface focus-within:ring-2 focus-within:ring-indigo-500 relative to-datepicker">
+          <label for="pam_opening_date" class="block text-xs font-bold text-fg mb-1">تاریخ موجودی اولیه</label>
+          <div class="flex items-center h-10 border border-line rounded-xl ps-3 pe-1 bg-surface focus-within:ring-2 focus-within:ring-indigo-500 relative to-datepicker">
             <ng-persian-datepicker [(uiIsVisible)]="isFormDatePickerOpen" [dateInitValue]="false" (dateOnSelect)="onFormDateSelect($event)" class="w-full block relative cursor-pointer to-datepicker">
               <input id="pam_opening_date" type="text" [formControl]="openingDateControl" (click)="isFormDatePickerOpen = !isFormDatePickerOpen"
-                placeholder="۱۴۰۵/۰۱/۰۱" class="w-full text-xs font-bold text-fg bg-transparent focus:outline-none cursor-pointer" />
+                placeholder="۱۴۰۵/۰۱/۰۱" class="w-full h-8 text-xs font-bold text-fg bg-transparent focus:outline-none cursor-pointer" />
             </ng-persian-datepicker>
             <button type="button" (click)="isFormDatePickerOpen = !isFormDatePickerOpen; $event.stopPropagation()" title="انتخاب تاریخ از تقویم" aria-label="انتخاب تاریخ از تقویم"
-              class="w-10 h-10 flex items-center justify-center text-fg-muted hover:text-indigo-600 rounded-lg hover:bg-surface-muted cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+              class="w-8 h-8 flex items-center justify-center text-fg-muted hover:text-indigo-600 rounded-lg hover:bg-surface-muted cursor-pointer shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="calendar" aria-hidden="true"></svg>
             </button>
           </div>
@@ -242,26 +267,34 @@
       <p *ngIf="current && !isManager" class="text-[11px] text-fg-muted">بعد از اولین گردش حساب، فقط مدیر می‌تواند موجودی اولیه را تغییر دهد.</p>
 
       <div *ngIf="current && openingChanged">
-        <label for="pam_reason" class="block text-[11px] font-bold text-fg mb-1">دلیل تغییر موجودی اولیه</label>
+        <label for="pam_reason" class="block text-xs font-bold text-fg mb-1">دلیل تغییر موجودی اولیه</label>
         <textarea id="pam_reason" rows="2" [(ngModel)]="form.reason" name="reason" placeholder="اگر حساب گردش داشته باشد نوشتن دلیل لازم است"
           class="w-full text-xs p-2.5 rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"></textarea>
       </div>
 
       <!-- بخش اطلاعات بانکی، شبا و حساب با پشتیبانی تبدیل دوطرفه -->
-      <div class="space-y-3 p-3 rounded-2xl border border-line bg-surface-muted/40">
+      <div class="space-y-3 p-3.5 rounded-2xl border border-line bg-surface-muted/50">
+        <div class="flex items-center justify-between pb-1.5 border-b border-line/60">
+          <span class="text-xs font-bold text-fg flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="credit-card" aria-hidden="true"></svg>
+            <span>اطلاعات بانکی تنخواه</span>
+          </span>
+          <span class="text-[10px] text-fg-muted font-normal">تبدیل هوشمند شبا و حساب</span>
+        </div>
+
         <!-- ۱. شماره شبا با پیشوند ثابت IR، گروه‌بندی ۴ رقمی، دکمهٔ کپی و بازخورد اعتبارسنجی -->
         <div>
           <div class="flex items-center justify-between mb-1">
-            <label for="pam_sheba" class="block text-[11px] font-bold text-fg">شماره شبا (۲۴ رقم بدون IR)</label>
-            <span *ngIf="shebaValidation" class="text-[10px] font-bold flex items-center gap-1"
+            <label for="pam_sheba" class="block text-xs font-bold text-fg">شماره شبا (۲۴ رقم بدون IR)</label>
+            <span *ngIf="shebaValidation" class="text-[11px] font-bold flex items-center gap-1"
                   [ngClass]="shebaValidation.isValid ? 'text-emerald-600' : 'text-rose-600'">
               <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" [appIcon]="shebaValidation.isValid ? 'check' : 'x'" aria-hidden="true"></svg>
               <span>{{ shebaValidation.isValid ? 'معتبر و تأییدشده' : 'نامعتبر' }}</span>
             </span>
           </div>
-          <div dir="ltr" class="relative flex items-center rounded-xl overflow-hidden border border-line bg-surface focus-within:ring-2 focus-within:ring-indigo-500 transition-all"
+          <div dir="ltr" class="relative flex items-center h-10 rounded-xl overflow-hidden border border-line bg-surface focus-within:ring-2 focus-within:ring-indigo-500 transition-all"
                [ngClass]="shebaValidation?.isValid ? 'border-emerald-300' : (shebaValidation ? 'border-rose-300' : '')">
-            <span class="px-3 py-2 bg-surface-muted border-r border-line font-mono font-bold text-xs text-fg-muted select-none">IR</span>
+            <span class="h-full px-3 flex items-center bg-surface-muted border-r border-line font-mono font-bold text-xs text-fg-muted select-none">IR</span>
             <input
               id="pam_sheba"
               type="text"
@@ -273,7 +306,7 @@
               (paste)="onShebaPaste($event)"
               placeholder="12 3456 7890 1234 5678 9012 34"
               dir="ltr"
-              class="w-full bg-transparent border-0 text-left font-mono font-bold tracking-wider text-xs px-3 py-2 pr-12 focus:outline-none text-fg disabled:opacity-60" />
+              class="w-full h-full bg-transparent border-0 text-left font-mono font-bold tracking-wider text-xs px-3 pe-11 focus:outline-none text-fg disabled:opacity-60" />
             <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
               <button *ngIf="form.sheba" type="button" (click)="copyShebaToClipboard()" class="w-7 h-7 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isShebaCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-surface hover:bg-surface-muted text-fg-muted border-line shadow-sm'" title="کپی شماره شبا" aria-label="کپی شماره شبا">
                 <svg *ngIf="!isShebaCopied" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy" aria-hidden="true"></svg>
@@ -283,24 +316,24 @@
           </div>
 
           <!-- بازخورد اعتبارسنجی آنلاین شبا -->
-          <div *ngIf="shebaValidation" class="text-[10px] mt-1 font-bold" aria-live="polite"
+          <div *ngIf="shebaValidation" class="text-[11px] mt-1 font-bold" aria-live="polite"
                [ngClass]="shebaValidation.isValid ? 'text-emerald-600' : 'text-rose-600'">
             <span *ngIf="shebaValidation.isValid" class="inline-flex items-center gap-1">
               <svg appIcon="building" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
               <span>بانک شناسایی‌شده: {{ shebaValidation.bank?.name }} (الگوریتم ISO 7064 Mod 97)</span>
             </span>
             <span *ngIf="!shebaValidation.isValid" class="flex items-center gap-1">
-              <svg class="w-3 h-3 text-rose-500 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" aria-hidden="true"></svg>
+              <svg class="w-3.5 h-3.5 text-rose-500 inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" aria-hidden="true"></svg>
               <span>{{ shebaValidation.errorMessage || 'شماره شبا نامعتبر است' }}</span>
             </span>
           </div>
         </div>
 
         <!-- ۲. نام بانک عامل و شماره حساب (پشتیبانی از تبدیل دوطرفه و تولید خودکار شبا ⚡) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
           <!-- نام بانک (کومبوباکس هوشمند و جستجوپذیر) -->
           <div class="relative">
-            <label for="pam_bank_search" class="block text-[11px] font-bold text-fg mb-1">بانک عامل:</label>
+            <label for="pam_bank_search" class="block text-xs font-bold text-fg mb-1">بانک عامل</label>
             <div class="relative">
               <input
                 id="pam_bank_search"
@@ -308,10 +341,10 @@
                 [value]="isBankDropdownOpen ? bankSearchQuery : (form.bank_name || '')"
                 (focus)="openBankDropdown()"
                 (input)="bankSearchQuery = $any($event.target).value; isBankDropdownOpen = true"
-                placeholder="-- انتخاب یا جستجوی بانک عامل --"
+                placeholder="-- انتخاب بانک عامل --"
                 [disabled]="!canManageAccounts"
-                class="w-full bg-surface border border-line rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-fg placeholder:text-fg-subtle disabled:opacity-60 cursor-pointer" />
-              <svg class="w-4 h-4 text-fg-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down" aria-hidden="true"></svg>
+                class="w-full h-10 bg-surface border border-line rounded-xl px-3 pe-8 text-xs font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 text-fg placeholder:text-fg-subtle disabled:opacity-60 cursor-pointer" />
+              <svg class="w-4 h-4 text-fg-muted absolute end-2.5 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="chevron-down" aria-hidden="true"></svg>
 
               <!-- پوشش کلیک بیرونی جهت بستن کومبوباکس -->
               <div *ngIf="isBankDropdownOpen" (click)="isBankDropdownOpen = false" class="fixed inset-0 z-40 bg-transparent"></div>
@@ -335,7 +368,7 @@
           <!-- شماره حساب با دکمه‌های کپی و تبدیل دوطرفه به شبا ⚡ -->
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label for="pam_account_number" class="block text-[11px] font-bold text-fg">شماره حساب یا کارت بانکی:</label>
+              <label for="pam_account_number" class="block text-xs font-bold text-fg">شماره حساب یا کارت</label>
               <button
                 *ngIf="form.card && form.bank_name"
                 type="button"
@@ -347,7 +380,7 @@
                 <span>تبدیل به شبا ⚡</span>
               </button>
             </div>
-            <div dir="ltr" class="relative flex items-center rounded-xl overflow-hidden border border-line bg-surface focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
+            <div dir="ltr" class="relative flex items-center h-10 rounded-xl overflow-hidden border border-line bg-surface focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
               <input
                 id="pam_account_number"
                 type="text"
@@ -356,9 +389,9 @@
                 [disabled]="!canManageAccounts"
                 (input)="onAccountNumberInput($event)"
                 (paste)="onAccountNumberPaste($event)"
-                placeholder="مثلاً: 0101111111001 یا ۱۶ رقم کارت"
+                placeholder="شماره حساب یا کارت"
                 dir="ltr"
-                class="w-full bg-transparent border-0 text-left font-mono text-xs px-3 py-2 pr-16 focus:outline-none text-fg placeholder:text-fg-subtle disabled:opacity-60" />
+                class="w-full h-full bg-transparent border-0 text-left font-mono font-bold text-xs px-3 pe-16 focus:outline-none text-fg placeholder:text-fg-subtle placeholder:font-sans placeholder:text-right disabled:opacity-60" />
               <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
                 <button *ngIf="form.card" type="button" (click)="copyAccountNumberToClipboard()" class="w-6 h-6 rounded-lg transition-all flex items-center justify-center cursor-pointer border text-xs" [ngClass]="isAccountCopied ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' : 'bg-surface hover:bg-surface-muted text-fg-muted border-line shadow-sm'" title="کپی شماره حساب یا کارت" aria-label="کپی شماره حساب یا کارت">
                   <svg *ngIf="!isAccountCopied" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy" aria-hidden="true"></svg>
@@ -372,21 +405,29 @@
           </div>
         </div>
 
-        <p class="text-[10px] text-fg-muted pt-0.5">اطلاعات حساب و شبا برای عموم کاربران پوشیده نمایش داده می‌شود؛ با تایپ یا چسباندن (Paste) شماره شبا، بانک و حساب به صورت خودکار شناسایی و استخراج می‌گردند.</p>
+        <p class="text-[10px] text-fg-muted pt-0.5 leading-relaxed flex items-start gap-1.5">
+          <svg class="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="info" aria-hidden="true"></svg>
+          <span>اطلاعات حساب و شبا برای عموم کاربران پوشیده نمایش داده می‌شود؛ با تایپ یا چسباندن شماره شبا، بانک و حساب به صورت خودکار شناسایی و استخراج می‌گردند.</span>
+        </p>
       </div>
 
       <div>
-        <label for="pam_desc" class="block text-[11px] font-bold text-fg mb-1">توضیحات</label>
+        <label for="pam_desc" class="block text-xs font-bold text-fg mb-1">توضیحات</label>
         <input id="pam_desc" type="text" [(ngModel)]="form.description" name="description"
-          class="w-full text-xs p-2.5 min-h-[40px] rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
+          placeholder="یادداشت اختیاری درباره حساب تنخواه..."
+          class="w-full h-10 text-xs px-3 rounded-xl border border-line bg-surface text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 placeholder:text-fg-subtle" />
       </div>
 
-      <div *ngIf="modalError" role="alert" class="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">{{ modalError }}</div>
-      <div class="flex items-center justify-end gap-2">
-        <button type="button" appAction="close" label="انصراف" size="sm" (click)="closeModal()"></button>
-        <button type="submit" appAction="save" label="ذخیره" display="label" size="sm" [busy]="isBusy" [disabled]="!isOnline" [attr.title]="!isOnline ? offlineTitle : 'ذخیرهٔ حساب'"></button>
+      <div *ngIf="modalError" role="alert" class="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 flex items-center gap-1.5">
+        <svg class="w-4 h-4 text-rose-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="alert-triangle" aria-hidden="true"></svg>
+        <span>{{ modalError }}</span>
       </div>
     </form>
+
+    <div modal-footer class="px-6 py-3 bg-surface-muted/50 border-t border-line flex items-center justify-between gap-2">
+      <button type="button" appAction="close" display="label" label="انصراف" size="sm" (click)="closeModal()"></button>
+      <button type="submit" form="pam_account_form" appAction="save" display="label" label="ذخیره" size="sm" [busy]="isBusy" [disabled]="!isOnline" [hint]="!isOnline ? offlineTitle : ''"></button>
+    </div>
   </app-modal>
 
   <!-- ── پنجرهٔ تسویهٔ بدهی ── -->
