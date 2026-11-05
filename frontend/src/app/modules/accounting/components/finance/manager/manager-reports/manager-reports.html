@@ -87,7 +87,7 @@
               [dateInitValue]="false"
               (dateOnSelect)="onDateSelect('from', $event)"
               class="block relative">
-              <input id="rep_from" type="text" [formControl]="dateFromCtrl" (click)="fromPickerOpen = !fromPickerOpen"
+              <input id="rep_from" type="text" [formControl]="dateFromCtrl" (click)="fromPickerOpen = true"
                      placeholder="۱۴۰۵/۰۱/۰۱" dir="ltr" autocomplete="off"
                      class="w-full text-xs font-bold bg-surface border border-line rounded-xl px-2.5 py-2 min-h-[40px] text-fg text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
             </ng-persian-datepicker>
@@ -99,7 +99,7 @@
               [dateInitValue]="false"
               (dateOnSelect)="onDateSelect('to', $event)"
               class="block relative">
-              <input id="rep_to" type="text" [formControl]="dateToCtrl" (click)="toPickerOpen = !toPickerOpen"
+              <input id="rep_to" type="text" [formControl]="dateToCtrl" (click)="toPickerOpen = true"
                      placeholder="۱۴۰۵/۰۱/۳۱" dir="ltr" autocomplete="off"
                      class="w-full text-xs font-bold bg-surface border border-line rounded-xl px-2.5 py-2 min-h-[40px] text-fg text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" />
             </ng-persian-datepicker>

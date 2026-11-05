@@ -77,7 +77,7 @@
             <input
               type="text"
               [formControl]="fiscalStartControl"
-              (click)="isFiscalStartDatePickerOpen = !isFiscalStartDatePickerOpen"
+              (click)="isFiscalStartDatePickerOpen = true"
               placeholder="۱۴۰۳/۰۱/۰۱"
               aria-label="تاریخ شروع دوره"
               [attr.aria-invalid]="!!fieldErrors.start_date"
@@ -109,7 +109,7 @@
             <input
               type="text"
               [formControl]="fiscalEndControl"
-              (click)="isFiscalEndDatePickerOpen = !isFiscalEndDatePickerOpen"
+              (click)="isFiscalEndDatePickerOpen = true"
               placeholder="۱۴۰۳/۱۲/۲۹"
               aria-label="تاریخ پایان دوره"
               [attr.aria-invalid]="!!fieldErrors.end_date"
