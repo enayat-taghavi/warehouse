@@ -121,6 +121,25 @@ class SeedVideoDemoTests(TestCase):
         self._run(purge=True)
         self.assertFalse(PettyCashAccount.objects.filter(pk=account.pk).exists())
 
+    def test_with_petty_approver_and_second_company_and_purge(self):
+        from personnel.models import PettyCashAccount
+
+        with self.assertRaises(CommandError):
+            self._run(admin=True, with_second_company=True)
+        other = Company.objects.create(code='OTHER-CO', name='شرکت دیگر')
+        for _ in range(2):
+            self._run(base=True, with_petty_approver=True, with_second_company=True)
+        account = PettyCashAccount.objects.get(company__code='DEMO-VID', custodian__username='demo_employee')
+        self.assertEqual(account.approver.username, 'demo_supervisor')
+        second = PettyCashAccount.objects.get(company__code='DEMO-VID2', custodian__username='demo_employee')
+        self.assertEqual((second.ceiling_amount, second.opening_balance, second.approver_id), (20_000_000, 5_000_000, None))
+        employee = get_user_model().objects.get(username='demo_employee')
+        self.assertEqual(SectionAssignment.objects.filter(user=employee).count(), 2)
+        self._run(purge=True)
+        self.assertFalse(Company.objects.filter(code__in=('DEMO-VID', 'DEMO-VID2')).exists())
+        self.assertFalse(PettyCashAccount.objects.filter(pk__in=(account.pk, second.pk)).exists())
+        self.assertTrue(Company.objects.filter(pk=other.pk).exists())
+
     def test_with_personnel_and_attendance_and_purge(self):
         from personnel.models import DailyAttendance, MonthlyWorkPeriod, PersonnelProfile
         self._run(base=True, with_personnel=True, with_attendance=True)

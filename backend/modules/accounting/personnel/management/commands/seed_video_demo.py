@@ -20,6 +20,11 @@
 
 `--with-petty-account` (فقط با `--base`) حساب تنخواه `demo_employee` را با سقف و موجودی اولیه می‌سازد تا
 قسمت‌های ۴-ب و ۴-ج فیلم تنخواه جدا ضبط شوند (۴-الف حساب را خودش از راه صفحه می‌سازد).
+
+`--with-petty-approver` (فقط با `--base`) همان حساب را می‌سازد و `demo_supervisor` را سرپرست تأییدکنندهٔ آن
+می‌کند (فیلم ۴-د). `--with-second-company` (فقط با `--base`) «شرکت نمایشی دوم» (DEMO-VID2) را با دسترسی کارمند
+نمایشی و حسابدار و یک حساب تنخواه دیگر برای `demo_employee` می‌سازد تا «تن‌خواه من» دو شرکت را نشان دهد؛
+`--purge` آن را هم پاک می‌کند.
 """
 import json
 import os
@@ -35,6 +40,7 @@ from django.db.models import ProtectedError, RestrictedError
 from companies.models import Company, Project, ProjectSection, SectionAssignment, UserCompanyAccess
 
 COMPANY_CODE = 'DEMO-VID'
+COMPANY2_CODE = 'DEMO-VID2'
 ADMIN = 'demo_admin'
 CREDENTIALS_FILE = Path(settings.BASE_DIR).parent / 'scratch' / 'video_demo_credentials.json'
 # نام کاربری، نام، نام خانوادگی، نقش، سطح انتساب (section1، section2، project، company)
@@ -52,6 +58,8 @@ INVOICE_STAGES = ('submitted', 'approved')
 DEMO_INVOICE_NUMBER = 'DEMO-INV-100'
 PETTY_CEILING = 50_000_000
 PETTY_OPENING = 30_000_000
+PETTY2_CEILING = 20_000_000
+PETTY2_OPENING = 5_000_000
 PURGE_ROUNDS = 25
 OWNER_DEPTH = 4
 
@@ -72,6 +80,8 @@ class Command(BaseCommand):
         group.add_argument('--purge', action='store_true', help="شرکت DEMO-VID و کاربرهای demo_* را پاک کن")
         parser.add_argument('--with-invoice', choices=INVOICE_STAGES, help="با --base: فاکتور نمایشی تا این مرحله")
         parser.add_argument('--with-petty-account', action='store_true', help="با --base: حساب تنخواه demo_employee با سقف و موجودی اولیه")
+        parser.add_argument('--with-petty-approver', action='store_true', help="با --base: حساب تنخواه با سرپرست تأییدکنندهٔ demo_supervisor")
+        parser.add_argument('--with-second-company', action='store_true', help="با --base: شرکت نمایشی دوم با حساب تنخواه دوم demo_employee")
         parser.add_argument('--with-personnel', action='store_true', help="با --base: پرسنل مصوب علی رضایی در بخش اداری")
         parser.add_argument('--with-attendance', action='store_true', help="با --base: پرسنل مصوب + کارکرد و دوره آماده محاسبه حقوق")
         parser.add_argument('--_unused_seed_flag', action='store_true', help="internal")
@@ -83,7 +93,9 @@ class Command(BaseCommand):
         if opts['purge']:
             self._purge()
             return
-        if (opts.get('with_invoice') or opts.get('with_petty_account') or opts.get('with_personnel') or opts.get('with_attendance')) and not opts['base']:
+        extras = ('with_invoice', 'with_petty_account', 'with_petty_approver', 'with_second_company',
+                  'with_personnel', 'with_attendance')
+        if any(opts.get(name) for name in extras) and not opts['base']:
             raise CommandError("--with-invoice و --with-petty-account فقط همراه --base می‌آیند.")
         credentials = self._read_credentials()
         with transaction.atomic():
@@ -93,8 +105,12 @@ class Command(BaseCommand):
         self._write_credentials(credentials)
         if opts.get('with_invoice'):
             self._invoice(opts['with_invoice'])
-        if opts.get('with_petty_account'):
+        if opts.get('with_petty_account') or opts.get('with_petty_approver'):
             self._petty_account()
+        if opts.get('with_petty_approver'):
+            self._petty_approver()
+        if opts.get('with_second_company'):
+            self._second_company()
         if opts.get('with_personnel') or opts.get('with_attendance'):
             self._personnel()
         if opts.get('with_attendance'):
@@ -206,6 +222,42 @@ class Command(BaseCommand):
             opening_balance=PETTY_OPENING, opening_balance_date='1405/01/01')
 
     @staticmethod
+    def _petty_approver():
+        """سرپرست نمایشی را سرپرست تأییدکنندهٔ حساب تنخواه کارمند نمایشی می‌کند (فقط اگر حساب سرپرست ندارد)."""
+        from personnel.models import PettyCashAccount
+
+        supervisor = get_user_model().objects.get(username='demo_supervisor')
+        PettyCashAccount.objects.filter(
+            company__code=COMPANY_CODE, custodian__username='demo_employee', is_active=True, approver__isnull=True,
+        ).update(approver=supervisor)
+
+    @staticmethod
+    def _second_company():
+        """شرکت نمایشی دوم با کارمند و حسابدار نمایشی و حساب تنخواه دوم کارمند (برای «تن‌خواه من» در دو شرکت)."""
+        from personnel.models import CompanyFiscalPeriod, PettyCashAccount
+
+        User = get_user_model()
+        with transaction.atomic():
+            company, _ = Company.objects.get_or_create(code=COMPANY2_CODE, defaults={'name': 'شرکت نمایشی دوم'})
+            project, _ = Project.objects.get_or_create(company=company, code='DEMO2-P1', defaults={'name': 'کارگاه'})
+            section, _ = ProjectSection.objects.get_or_create(project=project, code='DEMO2-S1',
+                                                              defaults={'name': 'بخش کارگاه'})
+            CompanyFiscalPeriod.objects.get_or_create(
+                company=company, fiscal_year='1405',
+                defaults={'title': 'سال مالی ۱۴۰۵', 'start_date': '1405/01/01', 'end_date': '1405/12/29'})
+            members = (('demo_employee', 'employee', {'section': section}),
+                       ('demo_accountant', 'accountant', {'company': company}))
+            for username, role, target in members:
+                user = User.objects.get(username=username)
+                UserCompanyAccess.objects.get_or_create(user=user, company=company, defaults={'is_default': False})
+                SectionAssignment.objects.get_or_create(user=user, role=role, **target)
+            employee = User.objects.get(username='demo_employee')
+            if not PettyCashAccount.objects.filter(company=company, custodian=employee, is_active=True).exists():
+                PettyCashAccount.objects.create(
+                    company=company, custodian=employee, ceiling_amount=PETTY2_CEILING,
+                    opening_balance=PETTY2_OPENING, opening_balance_date='1405/01/01')
+
+    @staticmethod
     def _personnel():
         from decimal import Decimal
         from personnel.models import (
@@ -295,8 +347,7 @@ class Command(BaseCommand):
         # فقط نام‌های دقیقی که همین دستور می‌سازد، نه هر کاربری با پیشوند demo_
         users = User.objects.filter(username__in=DEMO_USERNAMES)
         with transaction.atomic():
-            company = Company.objects.filter(code=COMPANY_CODE).first()
-            if company is not None:
+            for company in Company.objects.filter(code__in=(COMPANY2_CODE, COMPANY_CODE)).order_by('-code'):
                 self._delete_company(company)
             count = users.count()
             try:
