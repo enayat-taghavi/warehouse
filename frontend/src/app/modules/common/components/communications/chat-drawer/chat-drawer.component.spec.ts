@@ -1519,7 +1519,7 @@ describe('ChatDrawerComponent - Phase 8 (Delivery Double Ticks, Bulk Delete, Per
     expect(fixture.nativeElement.querySelector('[data-testid="tick-sent"]')).toBeNull();
     expect(fixture.nativeElement.querySelector('[data-testid="tick-read"]')).toBeNull();
 
-    // 3) Double blue tick: read by recipient
+    // 3) Double green tick: read by recipient
     const msgRead: ChatMessage = {
       ...msgSent,
       is_delivered: true,
@@ -1532,6 +1532,7 @@ describe('ChatDrawerComponent - Phase 8 (Delivery Double Ticks, Bulk Delete, Per
 
     const tickRead = fixture.nativeElement.querySelector('[data-testid="tick-read"]');
     expect(tickRead).not.toBeNull();
+    expect(tickRead.classList.contains('text-emerald-600')).toBe(true);
     expect(fixture.nativeElement.querySelector('[data-testid="tick-sent"]')).toBeNull();
     expect(fixture.nativeElement.querySelector('[data-testid="tick-delivered"]')).toBeNull();
   });
