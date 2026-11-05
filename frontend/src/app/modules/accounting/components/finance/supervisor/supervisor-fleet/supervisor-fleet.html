@@ -788,7 +788,7 @@
                   <button
                     *ngIf="acc.sheba_number && acc.id"
                     type="button"
-                    (click)="copyToClipboard('IR' + acc.sheba_number, acc.id)"
+                    (click)="copySheba(acc.sheba_number, acc.id)"
                     class="text-muted hover:text-indigo-600 cursor-pointer"
                     title="کپی شماره شبا"
                     aria-label="کپی شماره شبا">

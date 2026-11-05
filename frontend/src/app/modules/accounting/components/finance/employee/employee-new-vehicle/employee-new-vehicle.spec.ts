@@ -201,7 +201,7 @@ describe('EmployeeNewVehicleHubComponent Vitest Suite (Phase 4 & Refactor)', () 
       });
       component.copyShebaToClipboard('IR780170000000101111111001');
       await Promise.resolve();
-      expect(writeTextMock).toHaveBeenCalledWith('IR780170000000101111111001');
+      expect(writeTextMock).toHaveBeenCalledWith('780170000000101111111001');
       expect(mockToast.show).toHaveBeenCalledWith('success', expect.stringContaining('کلیپ‌بورد'));
     });
 

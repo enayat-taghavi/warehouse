@@ -15,6 +15,7 @@ import { CommandCenterComponent } from '../../../../../../shared/components/comm
 import { ExternalLinkDirective } from '../../../../../../shared/directives/external-link.directive';
 import { SvgIconDirective } from '../../../../../../shared/icons/svg-icon.directive';
 import { isServerUnreachable } from '../../../../../../core/services/server-reachability';
+import { shebaCopyText } from '../../../../../../core/utils/sheba-utils';
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { attendanceActionErrorMessage } from '../../../../attendance-period-error';
 
@@ -457,10 +458,11 @@ export class SupervisorPersonnelHubComponent implements OnInit, OnDestroy {
 
   // ─── ابزارهای کپی سریع ───
   copyField(val: string | undefined | null, key: string): void {
-    if (!val) return;
-    navigator.clipboard.writeText(String(val)).then(() => {
+    const textToCopy = key.startsWith('acc_sh_') ? shebaCopyText(val) : String(val ?? '');
+    if (!textToCopy) return;
+    navigator.clipboard.writeText(textToCopy).then(() => {
       this.copiedKey = key;
-      this.toast.showSuccess(`کپی شد: ${val}`);
+      this.toast.showSuccess(`کپی شد: ${textToCopy}`);
       setTimeout(() => {
         if (this.copiedKey === key) {
           this.copiedKey = null;

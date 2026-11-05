@@ -232,7 +232,7 @@
               <td class="p-3">
                 <div *ngIf="item.sheba_number" class="flex items-center gap-1 font-mono text-[11px] font-bold text-fg">
                   <span><bdi dir="ltr">IR{{ item.sheba_number }}</bdi></span>
-                  <button *ngIf="item.id" type="button" (click)="copyToClipboard('IR' + item.sheba_number, item.id)" title="کپی شبا" aria-label="کپی شبا" class="text-muted hover:text-indigo-600 cursor-pointer min-w-10 min-h-10 inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg">
+                  <button *ngIf="item.id" type="button" (click)="copySheba(item.sheba_number, item.id)" title="کپی شبا" aria-label="کپی شبا" class="text-muted hover:text-indigo-600 cursor-pointer min-w-10 min-h-10 inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy" class="w-3 h-3"></svg>
                   </button>
                 </div>
@@ -721,7 +721,7 @@
             <button
               *ngIf="shebaDigitsDisplay && editingVehicle.id"
               type="button"
-              (click)="copyToClipboard('IR' + (editingVehicle.sheba_number || shebaDigitsDisplay), editingVehicle.id)"
+              (click)="copySheba(editingVehicle.sheba_number || shebaDigitsDisplay, editingVehicle.id)"
               title="کپی شماره شبا"
               aria-label="کپی شماره شبا"
               class="min-w-10 min-h-10 inline-flex items-center justify-center text-muted hover:text-indigo-600 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg">

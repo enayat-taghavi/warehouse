@@ -296,13 +296,13 @@ describe('CompanyTreasuryTabComponent (تب «بانک و شبا»، مشارک�
       });
 
       component.copySheba('IR120120000000001234567890');
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('IR120120000000001234567890');
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('120120000000001234567890');
 
       await Promise.resolve();
       await new Promise(r => setTimeout(r, 10));
 
       expect(mockToast.success).toHaveBeenCalledWith('شماره شبا در حافظه کپی شد.');
-      expect(component.copiedSheba).toBe('IR120120000000001234567890');
+      expect(component.copiedSheba).toBe('120120000000001234567890');
     });
   });
 

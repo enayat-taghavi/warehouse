@@ -7,6 +7,8 @@ import {
   formatShebaDisplay,
   cleanShebaInput,
   extractShebaDigits,
+  shebaCopyText,
+  shebaPasteText,
   formatShebaDigitsDisplay,
   extractAccountNumberFromSheba,
   generateShebaFromAccount,
@@ -134,5 +136,32 @@ describe('ShebaUtils - Iranian IBAN Validator & Bank Directory', () => {
     const res2 = validateSheba(tooShort);
     expect(res2.isValid).toBe(false);
     expect(res2.errorMessage).toContain('ناقص');
+  });
+});
+
+describe('sheba copy and paste helpers', () => {
+  it('shebaCopyText drops IR, spaces and Persian digits; masked values copy nothing', () => {
+    expect(shebaCopyText('IR12 0170 0000 0010 1111 1110 01')).toBe('120170000000101111111001');
+    expect(shebaCopyText('ir120170000000101111111001')).toBe('120170000000101111111001');
+    expect(shebaCopyText('IR12017000000010111111****')).toBe('');
+    expect(shebaCopyText(null)).toBe('');
+  });
+
+  it('shebaPasteText returns the pasted text and blocks the default paste; read-only boxes return null', () => {
+    const make = (readOnly: boolean) => {
+      let prevented = false;
+      const event = {
+        target: { readOnly },
+        clipboardData: { getData: () => 'IR12 0170 0000 0010 1111 1110 01' },
+        preventDefault: () => { prevented = true; }
+      } as unknown as ClipboardEvent;
+      return { event, prevented: () => prevented };
+    };
+    const editable = make(false);
+    expect(shebaPasteText(editable.event)).toBe('IR12 0170 0000 0010 1111 1110 01');
+    expect(editable.prevented()).toBe(true);
+    const locked = make(true);
+    expect(shebaPasteText(locked.event)).toBeNull();
+    expect(locked.prevented()).toBe(false);
   });
 });

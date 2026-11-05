@@ -30,6 +30,7 @@ import {
   formatShebaDisplay,
   cleanShebaInput,
   extractShebaDigits,
+  shebaPasteText,
   generateShebaFromAccount,
   getBankByName,
   validateAccountNumber
@@ -663,6 +664,11 @@ export class AccountantNewProfilesHubComponent implements OnInit, OnDestroy {
       }
     }
     this.cdr.detectChanges();
+  }
+
+  onShebaPaste(event: ClipboardEvent): void {
+    const pasted = shebaPasteText(event);
+    if (pasted !== null) this.onShebaInput(pasted);
   }
 
   convertAccountToShebaNow(): void {

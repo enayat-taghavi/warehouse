@@ -5,6 +5,7 @@ import {
   validateSheba,
   ShebaValidationResult,
   extractShebaDigits,
+  shebaPasteText,
   generateShebaFromAccount,
   validateAccountNumber
 } from '../../../../../../core/utils/sheba-utils';
@@ -196,6 +197,11 @@ export class CounterpartyFormState {
       this.isSyncingBank = false;
     }
     this.changed();
+  }
+
+  onShebaPaste(event: ClipboardEvent): void {
+    const pasted = shebaPasteText(event);
+    if (pasted !== null) this.onShebaInput(pasted);
   }
 
   onAccountNumberInput(event: any): void {

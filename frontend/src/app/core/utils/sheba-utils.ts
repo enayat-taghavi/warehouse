@@ -155,6 +155,26 @@ export function extractShebaDigits(input: string): string {
 }
 
 /**
+ * متن کپی شبا برای چسباندن در سایت بانک: فقط ۲۴ رقم، بی «IR» (کادر بانک‌ها IR را خودش دارد).
+ * شبای پوشیدهٔ سرور (دارای *) رشتهٔ خالی می‌دهد تا تکهٔ ناقص کپی نشود.
+ */
+export function shebaCopyText(input?: string | null): string {
+  if (!input || input.includes('*')) return '';
+  return extractShebaDigits(input);
+}
+
+/**
+ * متن چسبانده‌شده در کادر شبا؛ کادر فقط‌خواندنی (شبای پوشیده) null می‌دهد و چیزی جایگزین نمی‌شود.
+ * چسباندن پیش‌فرض مرورگر گرفته می‌شود تا maxlength متن بلند (با فاصله و IR) را نبُرد.
+ */
+export function shebaPasteText(event: ClipboardEvent): string | null {
+  const input = event.target as HTMLInputElement | null;
+  if (input?.readOnly) return null;
+  event.preventDefault();
+  return event.clipboardData?.getData('text') ?? '';
+}
+
+/**
  * پاکسازی و نرمال‌سازی شماره شبا و افزودن قطعی پیشوند IR به ابتدای ۲۴ رقم
  */
 export function cleanShebaInput(input: string): string {

@@ -28,6 +28,7 @@ import {
   cleanShebaInput,
   validateSheba,
   extractShebaDigits,
+  shebaCopyText,
   extractAccountNumberFromSheba,
   generateShebaFromAccount,
   validateAccountNumber,
@@ -2827,7 +2828,9 @@ export class EmployeeNewPersonnelHubComponent implements OnInit, OnDestroy {
   // ─── مدیریت کپی سریع با تیک سبز ۲ ثانیه‌ای (فاز ۷ - تسک ۷.۱) ───
   copyValue(val?: string, key?: string, label: string = 'مقدار'): void {
     if (!val || isMaskedValue(val)) return;
-    this.copyToClipboard(val, label);
+    const textToCopy = key?.startsWith('sheba') ? shebaCopyText(val) : val;
+    if (!textToCopy) return;
+    this.copyToClipboard(textToCopy, label);
     if (key) {
       if (this.copiedTimeout) {
         clearTimeout(this.copiedTimeout);

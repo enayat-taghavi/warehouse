@@ -167,7 +167,7 @@
               <td class="p-3">
                 <div *ngIf="item.sheba_number" class="flex items-center gap-1 font-mono text-[11px] font-bold text-slate-700">
                   <span><bdi dir="ltr">IR{{ item.sheba_number }}</bdi></span>
-                  <button type="button" *ngIf="item.id && !isMasked(item.sheba_number)" (click)="copyField('IR' + item.sheba_number, 'sh-' + item.id, 'شماره شبا')" [title]="isFieldCopied('sh-' + item.id) ? 'کپی شد' : 'کپی شبا'" [attr.aria-label]="isFieldCopied('sh-' + item.id) ? 'کپی شد' : 'کپی شبا'" class="text-slate-400 hover:text-blue-600 cursor-pointer min-w-[40px] min-h-[40px] inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg">
+                  <button type="button" *ngIf="item.id && !isMasked(item.sheba_number)" (click)="copyField(item.sheba_number, 'sh-' + item.id, 'شماره شبا')" [title]="isFieldCopied('sh-' + item.id) ? 'کپی شد' : 'کپی شبا'" [attr.aria-label]="isFieldCopied('sh-' + item.id) ? 'کپی شد' : 'کپی شبا'" class="text-slate-400 hover:text-blue-600 cursor-pointer min-w-[40px] min-h-[40px] inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg">
                     <svg *ngIf="isFieldCopied('sh-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check" class="text-emerald-600"></svg>
                     <svg *ngIf="!isFieldCopied('sh-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
                   </button>
@@ -265,7 +265,7 @@
             <span class="text-slate-500 block">شماره شبا:</span>
             <div *ngIf="item.sheba_number" class="font-mono font-bold text-slate-700 flex items-center gap-1">
               <span><bdi dir="ltr">IR{{ item.sheba_number }}</bdi></span>
-              <button type="button" *ngIf="item.id && !isMasked(item.sheba_number)" (click)="copyField('IR' + item.sheba_number, 'sh-m-' + item.id, 'شماره شبا')" title="کپی شماره شبا" aria-label="کپی شماره شبا" class="text-slate-400 hover:text-blue-600 cursor-pointer min-w-[40px] min-h-[40px] inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg">
+              <button type="button" *ngIf="item.id && !isMasked(item.sheba_number)" (click)="copyField(item.sheba_number, 'sh-m-' + item.id, 'شماره شبا')" title="کپی شماره شبا" aria-label="کپی شماره شبا" class="text-slate-400 hover:text-blue-600 cursor-pointer min-w-[40px] min-h-[40px] inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg">
                 <svg *ngIf="isFieldCopied('sh-m-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="check" class="text-emerald-600"></svg>
                 <svg *ngIf="!isFieldCopied('sh-m-' + item.id)" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" appIcon="copy"></svg>
               </button>

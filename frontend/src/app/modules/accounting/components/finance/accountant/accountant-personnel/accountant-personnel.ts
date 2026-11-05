@@ -28,6 +28,7 @@ import {
   formatShebaDisplay,
   cleanShebaInput,
   extractShebaDigits,
+  shebaCopyText,
   generateShebaFromAccount,
   getBankByName,
   validateAccountNumber
@@ -889,11 +890,12 @@ export class AccountantPersonnelHubComponent implements OnInit, OnDestroy {
   }
 
   copyField(value: string | undefined | null, key: string, label: string = 'مقدار'): void {
-    if (!value) return;
+    const textToCopy = key.startsWith('sh-') ? shebaCopyText(value) : value;
+    if (!textToCopy) return;
     this.copiedFieldKey = key;
-    this.toast.showSuccess(`${label} در حافظه کپی شد: ${value}`);
+    this.toast.showSuccess(`${label} در حافظه کپی شد: ${textToCopy}`);
     if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(value).catch(() => {});
+      navigator.clipboard.writeText(textToCopy).catch(() => {});
     }
     setTimeout(() => {
       if (this.copiedFieldKey === key) {

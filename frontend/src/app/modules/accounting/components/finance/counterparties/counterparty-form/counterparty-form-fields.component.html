@@ -139,9 +139,10 @@
       dir="ltr"
       [value]="form.shebaDigitsDisplay"
       (input)="form.onShebaInput($event)"
+      (paste)="form.onShebaPaste($event)"
       [readonly]="form.isShebaMasked"
       placeholder="000000000000000000000000"
-      maxlength="32"
+      maxlength="35"
       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono font-bold focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors pl-14 text-left"
       [ngClass]="form.shebaValidationResult?.isValid ? 'border-emerald-300' : (form.shebaValidationResult ? 'border-rose-300' : '')"
     />

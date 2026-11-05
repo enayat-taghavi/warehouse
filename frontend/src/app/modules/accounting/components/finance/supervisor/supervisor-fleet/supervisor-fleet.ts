@@ -21,6 +21,7 @@ import { ExternalLinkDirective } from '../../../../../../shared/directives/exter
 import { ACCOUNTING_ENTITY_ICONS } from '../../../../entity-icons';
 import { saveBlob } from '../../../../../../core/platform/file-output';
 import { gregorianToJalali } from '../../../../../../core/utils/date-utils';
+import { shebaCopyText } from '../../../../../../core/utils/sheba-utils';
 
 export type SupervisorFleetSubTab = 'new' | 'work_logs' | 'changes' | 'all';
 
@@ -683,6 +684,10 @@ export class SupervisorFleetHubComponent implements OnInit, OnDestroy {
         this.toast.showError('خطا در دریافت خروجی اکسل ناوگان.');
       }
     });
+  }
+
+  copySheba(raw: string, id?: number): void {
+    this.copyToClipboard(shebaCopyText(raw), id);
   }
 
   copyToClipboard(text: string, id?: number): void {

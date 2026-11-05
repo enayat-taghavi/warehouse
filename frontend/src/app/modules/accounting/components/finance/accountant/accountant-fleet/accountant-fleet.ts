@@ -16,6 +16,7 @@ import {
   validateSheba,
   ShebaValidationResult,
   cleanShebaInput,
+  shebaCopyText,
   generateShebaFromAccount,
   getBankByName
 } from '../../../../../../core/utils/sheba-utils';
@@ -1026,5 +1027,9 @@ export class AccountantFleetHubComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       }, 2000);
     });
+  }
+
+  copySheba(raw: string, id: number): void {
+    this.copyToClipboard(shebaCopyText(raw), id);
   }
 }

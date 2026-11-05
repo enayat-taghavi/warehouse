@@ -247,8 +247,8 @@ describe('AccountantPersonnelHubComponent Phase 9 Tests', () => {
     });
 
     component.copyField('IR123456789012345678901234', 'sh-101', 'شماره شبا');
-    expect(writeTextSpy).toHaveBeenCalledWith('IR123456789012345678901234');
+    expect(writeTextSpy).toHaveBeenCalledWith('123456789012345678901234');
     expect(component.isFieldCopied('sh-101')).toBe(true);
-    expect(mockToast.showSuccess).toHaveBeenCalledWith('شماره شبا در حافظه کپی شد: IR123456789012345678901234');
+    expect(mockToast.showSuccess).toHaveBeenCalledWith('شماره شبا در حافظه کپی شد: 123456789012345678901234');
   });
 });

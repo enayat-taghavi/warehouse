@@ -17,6 +17,7 @@ import {
   ShebaValidationResult,
   cleanShebaInput,
   extractShebaDigits,
+  shebaCopyText,
   generateShebaFromAccount,
   getBankByName,
   validateAccountNumber
@@ -386,10 +387,11 @@ export class CompanyTreasuryTabComponent implements OnInit, OnChanges, OnDestroy
   }
 
   copySheba(sheba: string, id?: number | string): void {
-    if (!sheba) return;
-    navigator.clipboard.writeText(sheba).then(() => {
+    const cleanDigits = shebaCopyText(sheba);
+    if (!cleanDigits) return;
+    navigator.clipboard.writeText(cleanDigits).then(() => {
       this.copiedShebaId = id ?? null;
-      this.copiedSheba = sheba;
+      this.copiedSheba = cleanDigits;
       this.toast.success('شماره شبا در حافظه کپی شد.');
       setTimeout(() => {
         this.copiedShebaId = null;

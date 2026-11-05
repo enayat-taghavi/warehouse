@@ -26,6 +26,8 @@ import {
   cleanShebaInput,
   validateSheba,
   extractShebaDigits,
+  shebaCopyText,
+  shebaPasteText,
   extractAccountNumberFromSheba,
   generateShebaFromAccount,
   validateAccountNumber,
@@ -1310,9 +1312,8 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   }
 
   onShebaPaste(event: ClipboardEvent): void {
-    event.preventDefault();
-    const pastedText = event.clipboardData?.getData('text') || '';
-    this.onShebaInput({ target: { value: pastedText } });
+    const pastedText = shebaPasteText(event);
+    if (pastedText !== null) this.onShebaInput({ target: { value: pastedText } });
   }
 
   onAccountNumberInput(event: any): void {
@@ -1411,8 +1412,7 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   copyShebaToClipboard(val?: string): void {
     const text = val || this.newVehicle.sheba_number;
     if (!text) return;
-    const clean = 'IR' + extractShebaDigits(text);
-    this.copyValue(clean, 'sheba', 'شماره شبا');
+    this.copyValue(text, 'sheba', 'شماره شبا');
     this.isShebaCopied = true;
     setTimeout(() => {
       this.isShebaCopied = false;
@@ -1462,7 +1462,9 @@ export class EmployeeNewVehicleHubComponent implements OnInit, OnDestroy {
   // ─── تسک ۷.۱: کپی سریع با فیدبک ۲ ثانیه‌ای ───
   copyValue(val: string, key?: string, label: string = 'مقدار'): void {
     if (!val) return;
-    this.copyToClipboard(val, label);
+    const textToCopy = key?.startsWith('sheba') ? shebaCopyText(val) : val;
+    if (!textToCopy) return;
+    this.copyToClipboard(textToCopy, label);
     if (key) {
       if (this.copiedTimeout) {
         clearTimeout(this.copiedTimeout);
