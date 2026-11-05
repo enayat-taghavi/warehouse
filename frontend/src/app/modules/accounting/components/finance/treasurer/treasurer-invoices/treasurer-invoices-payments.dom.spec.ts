@@ -470,7 +470,7 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
     expect(writeText).toHaveBeenLastCalledWith('0123456789');
     (box.querySelector('[data-copy-sheba]') as HTMLButtonElement).click();
     await fixture.whenStable();
-    expect(writeText).toHaveBeenLastCalledWith('IR120170000000000000000001');
+    expect(writeText).toHaveBeenLastCalledWith('120170000000000000000001');
     expect(panel().copiedKey).toBe('sheba');
     expect(mockToast.success).toHaveBeenCalled();
   });
@@ -621,5 +621,51 @@ describe('TreasurerInvoicesComponent — Invoice Payment Modal and Payments DOM 
 
     expect(component.invoices.length).toBe(2);
     expect(mockPersonnelApi.getTreasuryCartable.mock.calls.length).toBe(callsBeforeFilter);
+  });
+
+  it('drag & drop on the payment form attaches, replaces, and clears the receipt file', () => {
+    component.payInvoice(component.invoices[0]);
+    fixture.detectChanges();
+
+    const form = fixture.nativeElement.querySelector('form') as HTMLFormElement;
+    expect(form).toBeTruthy();
+
+    // 1. Drag enter with Files sets isDraggingOver
+    const dragEnterEvent = new Event('dragenter', { bubbles: true, cancelable: true }) as any;
+    dragEnterEvent.dataTransfer = { types: ['Files'] };
+    form.dispatchEvent(dragEnterEvent);
+    fixture.detectChanges();
+    expect(panel().isDraggingOver).toBe(true);
+
+    // 2. Drop attaches the file
+    const file1 = new File(['%PDF-1'], 'receipt-1.pdf', { type: 'application/pdf' });
+    const dropEvent1 = new Event('drop', { bubbles: true, cancelable: true }) as any;
+    dropEvent1.dataTransfer = { types: ['Files'], files: [file1] };
+    form.dispatchEvent(dropEvent1);
+    fixture.detectChanges();
+
+    expect(panel().isDraggingOver).toBe(false);
+    expect(panel().payReceipt?.name).toBe('receipt-1.pdf');
+    expect(fixture.nativeElement.querySelector('[data-receipt-attached]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-receipt-attached]').textContent).toContain('receipt-1.pdf');
+
+    // 3. Drop a second file replaces the first file
+    const file2 = new File(['%PDF-2'], 'receipt-2.pdf', { type: 'application/pdf' });
+    const dropEvent2 = new Event('drop', { bubbles: true, cancelable: true }) as any;
+    dropEvent2.dataTransfer = { types: ['Files'], files: [file2] };
+    form.dispatchEvent(dropEvent2);
+    fixture.detectChanges();
+
+    expect(panel().payReceipt?.name).toBe('receipt-2.pdf');
+    expect(fixture.nativeElement.querySelector('[data-receipt-attached]').textContent).toContain('receipt-2.pdf');
+
+    // 4. Click clear button removes the file
+    const clearBtn = fixture.nativeElement.querySelector('[data-clear-receipt]') as HTMLButtonElement;
+    expect(clearBtn).toBeTruthy();
+    clearBtn.click();
+    fixture.detectChanges();
+
+    expect(panel().payReceipt).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-receipt-attached]')).toBeNull();
   });
 });

@@ -22,6 +22,8 @@ import { isServerUnreachable } from '../../../../../core/services/server-reachab
 import { gregorianToJalali } from '../../../../../core/utils/date-utils';
 import { fiscalPeriodClosedMessage } from '../../../fiscal-period-error';
 import { PAYMENT_RECEIPT_ACCEPT, PAYMENT_RECEIPT_LABEL, receiptFileError } from '../../../payment-receipt';
+import { shebaCopyText } from '../../../../../core/utils/sheba-utils';
+import { formatFileSizeFa } from '../../../../../core/utils/file-size';
 
 export interface PayableInvoiceItem {
   id: number;
@@ -159,6 +161,8 @@ export class InvoicePaymentPanelComponent implements OnDestroy {
   readonly receiptLabel = PAYMENT_RECEIPT_LABEL;
   readonly receiptAccept = PAYMENT_RECEIPT_ACCEPT;
   private payReceiptInput: HTMLInputElement | null = null;
+  isDraggingOver = false;
+  private dragCounter = 0;
   companyAccounts: CompanyBankAccount[] = [];
   partyAccounts: PartyBankAccount[] = [];
   readonly methodOptions: { value: InvoicePaymentMethod; label: string }[] = [
@@ -217,7 +221,7 @@ export class InvoicePaymentPanelComponent implements OnDestroy {
 
   /** کپی شماره حساب یا شبا برای چسباندن در سایت بانک؛ مرورگر بی Clipboard API (آیفون قدیمی) از execCommand */
   async copyValue(value: string | null | undefined, key: string, labelFa: string): Promise<void> {
-    const text = (value || '').replace(/\s+/g, '');
+    const text = key === 'sheba' ? shebaCopyText(value) : (value || '').replace(/\s+/g, '');
     if (!text) return;
     let ok = false;
     try {
@@ -402,15 +406,72 @@ export class InvoicePaymentPanelComponent implements OnDestroy {
     const input = event.target as HTMLInputElement;
     this.payReceiptInput = input;
     const file = input.files?.[0] ?? null;
-    const error = file ? receiptFileError(file) : '';
-    this.payReceipt = file && !error ? file : null;
-    const { receipt: _old, ...rest } = this.payFieldErrors;
-    this.payFieldErrors = error ? { ...rest, receipt: error } : rest;
+    this.handleReceiptFile(file);
   }
 
-  private clearPayReceipt(): void {
+  /** فایل سند واریز از انتخاب یا رها کردن؛ نام فایل پیوست‌شده و خطای زیر کادر بازخورد آن است (بی toast) */
+  private handleReceiptFile(file: File | null): void {
+    if (!file) {
+      this.clearPayReceipt();
+      return;
+    }
+    const error = receiptFileError(file);
+    this.payReceipt = !error ? file : null;
+    const { receipt: _old, ...rest } = this.payFieldErrors;
+    this.payFieldErrors = error ? { ...rest, receipt: error } : rest;
+    this.cdr.markForCheck();
+  }
+
+  clearPayReceipt(): void {
     this.payReceipt = null;
     if (this.payReceiptInput) this.payReceiptInput.value = '';
+    const { receipt: _old, ...rest } = this.payFieldErrors;
+    this.payFieldErrors = rest;
+    this.cdr.markForCheck();
+  }
+
+  readonly fileSizeFa = formatFileSizeFa;
+
+  /** شمارندهٔ dragenter/dragleave تا رفتن نشانگر روی بچه‌های فرم لایه را خاموش نکند */
+  onDragEnter(event: DragEvent): void {
+    if (!this.hasFiles(event)) return;
+    event.preventDefault();
+    this.dragCounter++;
+    this.isDraggingOver = true;
+    this.cdr.markForCheck();
+  }
+
+  onDragOver(event: DragEvent): void {
+    if (!this.hasFiles(event)) return;
+    event.preventDefault();
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+  }
+
+  onDragLeave(event: DragEvent): void {
+    if (!this.hasFiles(event)) return;
+    this.dragCounter = Math.max(0, this.dragCounter - 1);
+    if (this.dragCounter === 0) {
+      this.isDraggingOver = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  /** فایل رهاشده در کادر فایل هم گذاشته می‌شود تا کادر و پیوست یکی باشند */
+  onDrop(event: DragEvent, input?: HTMLInputElement): void {
+    if (!this.hasFiles(event)) return;
+    event.preventDefault();
+    this.dragCounter = 0;
+    this.isDraggingOver = false;
+    const files = event.dataTransfer?.files;
+    if (input && files?.length) {
+      this.payReceiptInput = input;
+      try { input.files = files; } catch { /* مرورگر قدیمی: فقط پیوست عوض می‌شود */ }
+    }
+    this.handleReceiptFile(files?.[0] ?? null);
+  }
+
+  private hasFiles(event: DragEvent): boolean {
+    return Array.from(event.dataTransfer?.types ?? []).includes('Files');
   }
 
   submitPayment(): void {

@@ -26,6 +26,7 @@ import { SKIP_GLOBAL_ERROR_TOAST } from '../../../../../core/error/error.interce
 import { NetworkStatusService } from '../../../../../core/services/network-status.service';
 import { isServerUnreachable } from '../../../../../core/services/server-reachability';
 import { isNativePlatform } from '../../../../../core/platform/platform';
+import { formatFileSizeFa } from '../../../../../core/utils/file-size';
 
 /** بخشی از متن پیام: متن ساده یا نشانی http/https */
 export interface TextSegment { url: boolean; text: string }
@@ -2362,12 +2363,7 @@ export class ChatDrawerComponent implements OnInit, OnDestroy, AfterViewChecked 
 
   /** حجم فایل به فارسی، مثل «۱٫۲ مگابایت» */
   public fileSizeFa(bytes?: number | null): string {
-    const b = Number(bytes);
-    if (!Number.isFinite(b) || b < 0) return '';
-    const fmt = (v: number) => new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 1 }).format(v);
-    if (b < 1024) return `${fmt(b)} بایت`;
-    if (b < 1024 * 1024) return `${fmt(b / 1024)} کیلوبایت`;
-    return `${fmt(b / (1024 * 1024))} مگابایت`;
+    return formatFileSizeFa(bytes);
   }
 
   /** خط توضیح کارت فایل، مثل «۳ صفحه · ۱٫۲ مگابایت» */

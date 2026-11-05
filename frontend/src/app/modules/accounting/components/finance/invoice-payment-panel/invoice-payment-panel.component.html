@@ -117,7 +117,24 @@
         <span>این رسید هنوز آمادهٔ پرداخت نیست.</span>
       </div>
 
-      <form *ngIf="it.remaining > 0 && payable" (ngSubmit)="submitPayment()" class="space-y-3" novalidate>
+      <form *ngIf="it.remaining > 0 && payable" (ngSubmit)="submitPayment()"
+        class="relative space-y-3 transition-colors duration-150"
+        (dragenter)="onDragEnter($event)"
+        (dragover)="onDragOver($event)"
+        (dragleave)="onDragLeave($event)"
+        (drop)="onDrop($event, receiptInput)"
+        novalidate>
+
+        <!-- لایهٔ رها کردن فایل سند واریز روی کل فرم -->
+        <div *ngIf="isDraggingOver" data-drop-overlay
+          class="absolute inset-0 z-30 rounded-2xl border-2 border-dashed border-indigo-500 bg-surface/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center shadow-lg pointer-events-none"
+          role="status" aria-live="polite">
+          <div class="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-3 shadow-sm">
+            <svg appIcon="file-text" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+          </div>
+          <p class="text-sm font-black text-fg">سند واریز را اینجا رها کنید</p>
+          <p class="text-xs text-fg-muted mt-1">PDF، تصویر یا فایل مجاز تا ۲۵ مگابایت؛ جای فایل قبلی را می‌گیرد.</p>
+        </div>
         <h3 class="text-xs font-black pb-1 border-b border-line">پرداخت تازه</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -221,10 +238,28 @@
 
           <div class="sm:col-span-2">
             <label for="pay-receipt" class="block font-bold mb-1">سند واریز <span class="text-rose-500" aria-hidden="true">*</span></label>
-            <input id="pay-receipt" name="payReceipt" type="file" [attr.accept]="receiptAccept" (change)="onPayReceiptChange($event)"
+
+            <!-- فایل پیوست‌شده با دکمهٔ حذف -->
+            <div *ngIf="payReceipt as r" data-receipt-attached
+              class="mb-2 ps-2.5 pe-0.5 py-0.5 rounded-xl border border-indigo-200 bg-indigo-50/80 flex items-center justify-between gap-3 text-xs fade-in">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <svg appIcon="file-check" class="w-4 h-4 shrink-0 text-indigo-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+                <div class="min-w-0">
+                  <p class="font-bold text-fg truncate" [title]="r.name"><bdi>{{ r.name }}</bdi></p>
+                  <p class="text-[10px] text-fg-muted">{{ fileSizeFa(r.size) }}</p>
+                </div>
+              </div>
+              <button type="button" (click)="clearPayReceipt()"
+                class="shrink-0 w-10 h-10 inline-flex items-center justify-center rounded-lg text-fg-muted hover:text-rose-600 hover:bg-rose-50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                title="حذف سند واریز پیوست‌شده" aria-label="حذف سند واریز" data-clear-receipt>
+                <svg appIcon="x" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"></svg>
+              </button>
+            </div>
+
+            <input #receiptInput id="pay-receipt" name="payReceipt" type="file" [attr.accept]="receiptAccept" (change)="onPayReceiptChange($event)"
               aria-required="true" [attr.aria-invalid]="payFieldErrors['receipt'] ? 'true' : 'false'" [attr.aria-describedby]="payFieldErrors['receipt'] ? 'pay-receipt-hint pay-receipt-err' : 'pay-receipt-hint'"
               class="block w-full min-h-[40px] text-xs text-fg file:me-3 file:min-h-[40px] file:px-3 file:rounded-xl file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-bold file:cursor-pointer cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-xl" />
-            <p id="pay-receipt-hint" class="mt-1 text-[10px] text-fg-muted">تصویر یا PDF رسید بانکی؛ همهٔ کسانی که در گردش این رسید پرداخت بوده‌اند آن را می‌بینند.</p>
+            <p id="pay-receipt-hint" class="mt-1 text-[10px] text-fg-muted">تصویر یا PDF رسید بانکی؛ همهٔ کسانی که در گردش این پرداخت بوده‌اند آن را می‌بینند.<span class="hidden [@media(pointer:fine)]:inline"> می‌توانید فایل را روی فرم بکشید و رها کنید.</span></p>
             <p *ngIf="payFieldErrors['receipt']" id="pay-receipt-err" role="alert" class="mt-1 text-[11px] font-bold text-rose-600">{{ payFieldErrors['receipt'] }}</p>
           </div>
         </div>
