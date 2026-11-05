@@ -1,9 +1,10 @@
 /**
  * Video 4-b: petty cash expenses, statement, line rejection & refill (plan §4 row 4-b).
- * Seed: --purge, then --base --with-petty-account.
+ * Seed: --purge, then --base --with-petty-approver (account has approver demo_supervisor).
  * demo_employee records 2 expenses (one with receipt attachment) and creates/sends a statement;
+ * demo_supervisor opens «تن‌خواه من» -> «تأیید سرپرست» and approves the statement;
  * demo_accountant opens statement detail from My Tasks, rejects the second line with a reason,
- * and marks the statement reviewed; demo_manager approves; demo_treasury pays/refills with tracking code;
+ * and marks the statement reviewed; demo_manager sees his «تن‌خواه» page and approves in My Tasks; demo_treasury pays/refills with tracking code and receipt;
  * demo_employee views updated balance and open debt from the rejected line.
  */
 import type { Locator, Page } from '@playwright/test';
@@ -46,7 +47,7 @@ test('video 4-b: petty cash statement, line rejection and refill', async ({ page
   await tv.say('login');
   await tv.loginAs('demo_employee');
   await tv.pickCompany();
-  await tv.openMenu('مدیریت تن‌خواه', '/app/finance/employee-petty-cash');
+  await tv.openMenu('تن‌خواه من', '/app/finance/employee-petty-cash');
   await expect(page.locator('#balanceCard')).toBeVisible({ timeout: 30_000 });
   await tv.say('balance');
 
@@ -91,6 +92,23 @@ test('video 4-b: petty cash statement, line rejection and refill', async ({ page
   await page.waitForTimeout(1500);
   await tv.expectNoErrors();
 
+  // ─── ۱-ب. سرپرست: تأیید صورت‌حساب در «تأیید سرپرست» ───
+  await tv.loginAs('demo_supervisor');
+  await tv.pickCompany();
+  await tv.openMenu('تن‌خواه من', '/app/finance/employee-petty-cash');
+  await tv.say('sup_open');
+  await tv.act.click(page.getByRole('tab', { name: /تأیید/ }));
+  const approvals = page.locator('#pettyApprovals');
+  await expect(approvals).toBeVisible({ timeout: 30_000 });
+  const supRow = approvals.locator('li').filter({ hasText: 'صورت‌حساب' }).first();
+  await expect(supRow).toBeVisible({ timeout: 30_000 });
+  await tv.say('sup_approve');
+  await tv.act.click(supRow.getByRole('button', { name: /^تأیید/ }));
+  // پنجرهٔ تأیید سند؛ دکمهٔ تأیید آن آخرین «تأیید» روی صفحه است
+  await tv.act.click(page.getByRole('button', { name: 'تأیید', exact: true }).last());
+  await expect(supRow).toBeHidden({ timeout: 30_000 });
+  await tv.expectNoErrors();
+
   // ─── ۲. حسابدار: رد یک ردیف با دلیل و تأیید بررسی صورت‌حساب ───
   await tv.loginAs('demo_accountant');
   await tv.pickCompany();
@@ -123,6 +141,9 @@ test('video 4-b: petty cash statement, line rejection and refill', async ({ page
   // ─── ۳. مدیر: تأیید صورت‌حساب ───
   await tv.loginAs('demo_manager');
   await tv.pickCompany();
+  await tv.openMenu('تن‌خواه', '/app/finance/manager-petty-cash');
+  await expect(page.getByRole('tab', { name: 'همه' })).toBeVisible({ timeout: 30_000 });
+  await tv.say('manager_page');
   await openMyTasks(tv, page);
   await tv.say('manager');
   await tv.act.click(statementCard(page).getByRole('button', { name: 'تأیید' }));
@@ -139,6 +160,7 @@ test('video 4-b: petty cash statement, line rejection and refill', async ({ page
   const tracking = page.locator('#trackingCodeSt');
   await expect(tracking).toBeVisible({ timeout: 30_000 });
   await tv.act.fill(tracking, 'TRK-4002');
+  await page.locator('#payReceiptSt').setInputFiles({ name: 'refill-4002.png', mimeType: 'image/png', buffer: PNG });
   await tv.act.click(page.getByRole('button', { name: 'ثبت پرداخت' }));
   await expect(tracking).toBeHidden({ timeout: 30_000 });
   await page.waitForTimeout(1500);
@@ -147,7 +169,7 @@ test('video 4-b: petty cash statement, line rejection and refill', async ({ page
   // ─── ۵. کارمند: مشاهدهٔ ماندهٔ شارژشده و بدهی ردیف ردشده ───
   await tv.loginAs('demo_employee');
   await tv.pickCompany();
-  await tv.openMenu('مدیریت تن‌خواه', '/app/finance/employee-petty-cash');
+  await tv.openMenu('تن‌خواه من', '/app/finance/employee-petty-cash');
   await expect(page.locator('#balanceCard')).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('#balanceCard').getByText('ردیف‌های ردشده')).toBeVisible({ timeout: 30_000 });
   await tv.say('final_balance');

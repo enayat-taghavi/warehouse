@@ -1,7 +1,7 @@
 /**
  * Video 4-c: petty cash reconciliation, debt settlement, handover & closing (plan §4 row 4-c).
  * Seed: --purge, then --base --with-petty-account.
- * demo_accountant opens "رسیدگی تن‌خواه" -> "حساب‌های تنخواه", records a periodic cash reconciliation
+ * demo_accountant opens "رسیدگی تن‌خواه" -> tab «حساب‌ها» (tabs: همه، بررسی، پرداخت‌شده، حساب‌ها), records a periodic cash reconciliation
  * with a 2,000,000 Rial shortage, settles the resulting debt by cash reference, hands the account over
  * to demo_employee2 ("سارا کارمند دوم"), and closes the new account with a treasury return reference.
  */
@@ -31,7 +31,7 @@ test('video 4-c: petty cash reconcile, settle, handover and close', async ({ pag
   await tv.loginAs('demo_accountant');
   await tv.pickCompany();
   await tv.openMenu('رسیدگی تن‌خواه', '/app/finance/accountant-petty-cash');
-  await tv.act.click(page.getByRole('tab', { name: /حساب/ }));
+  await tv.act.click(page.getByRole('tab', { name: /حساب‌ها/ }));
 
   const maryamCard = accountCard(page, 'مریم کارمند');
   await expect(maryamCard).toBeVisible({ timeout: 30_000 });

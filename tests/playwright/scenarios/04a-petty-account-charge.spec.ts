@@ -3,7 +3,7 @@
  * demo_treasury (seed: --purge, then --base). The accountant opens a petty account for the employee (the manager
  * cannot open «رسیدگی تن‌خواه»; the ceiling field is manager-only, so it stays 0), the employee asks for a charge,
  * the accountant reviews it and, being over the ceiling, the manager approves it in «کارهای من»; the treasurer
- * pays it with a tracking code.
+ * pays it with a tracking code and a receipt file (required). The employee menu entry is «تن‌خواه من».
  */
 import type { Locator, Page } from '@playwright/test';
 import captions from './04a-petty-account-charge.captions.json';
@@ -12,6 +12,12 @@ import { expect, videoTest, type TrainingVideo } from '../helpers/video';
 const test = videoTest(captions);
 
 const CHARGE_TITLE = 'شارژ تنخواه آبان';
+
+// رسید واریز خزانه‌دار اجباری است (PDF یا تصویر)
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
 
 function chargeCard(page: Page): Locator {
   return page.locator('div.rounded-2xl').filter({ hasText: 'شارژ تنخواه' }).filter({ has: page.getByRole('button') }).first();
@@ -55,7 +61,7 @@ test('video 4-a: petty account and charge', async ({ page, tv }) => {
   // ─── کارمند: درخواست شارژ ───
   await tv.loginAs('demo_employee');
   await tv.pickCompany();
-  await tv.openMenu('مدیریت تن‌خواه', '/app/finance/employee-petty-cash');
+  await tv.openMenu('تن‌خواه من', '/app/finance/employee-petty-cash');
   await expect(page.getByRole('button', { name: /درخواست شارژ/ }).first()).toBeVisible({ timeout: 30_000 });
   await tv.say('employee');
   await tv.act.click(page.getByRole('button', { name: /درخواست شارژ/ }).first());
@@ -97,6 +103,7 @@ test('video 4-a: petty account and charge', async ({ page, tv }) => {
   await expect(tracking).toBeVisible({ timeout: 30_000 });
   await tv.say('pay');
   await tv.act.fill(tracking, 'TRK-4001');
+  await page.locator('#payReceiptCh').setInputFiles({ name: 'deposit-4001.png', mimeType: 'image/png', buffer: PNG });
   await tv.act.click(page.getByRole('button', { name: 'ثبت واریز' }));
   await expect(tracking).toBeHidden({ timeout: 30_000 });
   await page.waitForTimeout(1500);
@@ -105,7 +112,7 @@ test('video 4-a: petty account and charge', async ({ page, tv }) => {
   // ─── کارمند: موجودی ───
   await tv.loginAs('demo_employee');
   await tv.pickCompany();
-  await tv.openMenu('مدیریت تن‌خواه', '/app/finance/employee-petty-cash');
+  await tv.openMenu('تن‌خواه من', '/app/finance/employee-petty-cash');
   await expect(page.locator('#balanceCard')).toBeVisible({ timeout: 30_000 });
   await tv.say('balance');
   await tv.expectNoErrors();
